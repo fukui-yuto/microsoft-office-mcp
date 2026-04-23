@@ -330,3 +330,164 @@ def excel_create_checklist(
         return f"[{result['sheet']}] チェックリスト '{result['title']}' を作成しました（{result['items']}項目）"
     except Exception as e:
         return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_create_budget_template(
+    title: str,
+    categories: str,
+    periods: list[str],
+    style: str = "detailed",
+    sheet: str | None = None,
+) -> str:
+    """予算テンプレートを作成します。カテゴリ・期間・差異計算式付き。categoriesはJSON文字列: [{"name":"人件費","subcategories":["給与","賞与"]}]。style: detailed(サブカテゴリ付き), summary, quarterly。"""
+    try:
+        categories_data = json.loads(categories)
+        result = excel_advanced.create_budget_template(sheet, title, categories_data, periods, style=style)
+        return (
+            f"[{result['sheet']}] 予算テンプレートを作成しました（タイトル: {result['title']}、"
+            f"カテゴリ数: {result['categories']}、期間数: {result['periods']}、スタイル: {result['style']}）"
+        )
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_create_project_tracker(
+    title: str,
+    tasks: str,
+    style: str = "gantt_lite",
+    sheet: str | None = None,
+) -> str:
+    """プロジェクトトラッカーを作成します。tasksはJSON文字列: [{"name":"タスク名","assignee":"担当者","status":"Not Started","priority":"High","start_date":"2024-01-01","end_date":"2024-01-15"}]。style: gantt_lite(ステータス色付き), kanban(ステータス別グループ), simple。"""
+    try:
+        tasks_data = json.loads(tasks)
+        result = excel_advanced.create_project_tracker(sheet, title, tasks_data, style=style)
+        return (
+            f"[{result['sheet']}] プロジェクトトラッカーを作成しました（タイトル: {result['title']}、"
+            f"タスク数: {result['task_count']}、スタイル: {result['style']}）"
+        )
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_create_expense_report(
+    employee_name: str,
+    department: str,
+    expenses: str,
+    approval_chain: str | None = None,
+    sheet: str | None = None,
+) -> str:
+    """経費精算書を作成します。expensesはJSON文字列: [{"date":"2024-01-15","category":"交通費","description":"出張","amount":15000}]。approval_chain: [{"name":"承認者名","title":"部長"}]。"""
+    try:
+        expenses_data = json.loads(expenses)
+        approval_data = json.loads(approval_chain) if approval_chain else None
+        result = excel_advanced.create_expense_report(sheet, employee_name, department,
+                                                       expenses_data, approval_chain=approval_data)
+        return (
+            f"[{result['sheet']}] 経費精算書を作成しました（社員: {result['employee']}、"
+            f"経費件数: {result['expense_count']}、合計: {result['total']:,.0f}）"
+        )
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_create_inventory_tracker(
+    title: str,
+    items: str,
+    style: str = "standard",
+    sheet: str | None = None,
+) -> str:
+    """在庫管理シートを作成します。自動ステータス・合計値計算式付き。itemsはJSON文字列: [{"sku":"SKU001","name":"商品名","quantity":100,"min_stock":10,"unit_price":500,"location":"倉庫A"}]。"""
+    try:
+        items_data = json.loads(items)
+        result = excel_advanced.create_inventory_tracker(sheet, title, items_data, style=style)
+        return (
+            f"[{result['sheet']}] 在庫管理シートを作成しました（タイトル: {result['title']}、"
+            f"アイテム数: {result['item_count']}）"
+        )
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_create_sales_report(
+    title: str,
+    sales_data: str,
+    period: str = "monthly",
+    style: str = "dashboard",
+    sheet: str | None = None,
+) -> str:
+    """売上レポートを作成します。KPIカード・データテーブル・ランキング付き。sales_dataはJSON文字列: [{"product":"商品A","revenue":1000000,"units":500,"target":1200000}]。period: monthly, quarterly, yearly。style: dashboard, simple。"""
+    try:
+        sales_data_parsed = json.loads(sales_data)
+        result = excel_advanced.create_sales_report(sheet, title, sales_data_parsed,
+                                                      period=period, style=style)
+        return (
+            f"[{result['sheet']}] 売上レポートを作成しました（タイトル: {result['title']}、"
+            f"商品数: {result['product_count']}、総売上: {result['total_revenue']:,.0f}、"
+            f"期間: {result['period']}）"
+        )
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_create_employee_roster(
+    title: str,
+    employees: str,
+    style: str = "detailed",
+    sheet: str | None = None,
+) -> str:
+    """従業員名簿を作成します。部門別サマリー付き。employeesはJSON文字列: [{"name":"山田太郎","department":"営業部","position":"課長","email":"yamada@example.com","phone":"090-1234-5678"}]。"""
+    try:
+        employees_data = json.loads(employees)
+        result = excel_advanced.create_employee_roster(sheet, title, employees_data, style=style)
+        return (
+            f"[{result['sheet']}] 従業員名簿を作成しました（タイトル: {result['title']}、"
+            f"従業員数: {result['employee_count']}、部門数: {result['department_count']}）"
+        )
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_create_risk_matrix(
+    title: str,
+    risks: str,
+    style: str = "heatmap",
+    sheet: str | None = None,
+) -> str:
+    """リスク評価マトリクスを作成します。ヒートマップ・5x5マトリクス付き。risksはJSON文字列: [{"name":"リスク名","probability":3,"impact":4,"mitigation":"対策内容","owner":"担当者"}]。probability/impact: 1-5。style: heatmap, simple。"""
+    try:
+        risks_data = json.loads(risks)
+        result = excel_advanced.create_risk_matrix(sheet, title, risks_data, style=style)
+        return (
+            f"[{result['sheet']}] リスクマトリクスを作成しました（タイトル: {result['title']}、"
+            f"リスク数: {result['risk_count']}、スタイル: {result['style']}）"
+        )
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_create_attendance_tracker(
+    title: str,
+    employees: list[str],
+    month: int,
+    year: int,
+    style: str = "calendar",
+    sheet: str | None = None,
+) -> str:
+    """月間出勤管理シートを作成します。条件付き書式・データ入力規則・日別集計付き。P=出勤, A=欠勤, L=休暇, H=祝日, WFH=在宅勤務。"""
+    try:
+        result = excel_advanced.create_attendance_tracker(sheet, title, employees,
+                                                            month, year, style=style)
+        return (
+            f"[{result['sheet']}] 出勤管理シートを作成しました（タイトル: {result['title']}、"
+            f"従業員数: {result['employee_count']}、期間: {result['month']}、日数: {result['days']}）"
+        )
+    except Exception as e:
+        return f"エラー: {e}"

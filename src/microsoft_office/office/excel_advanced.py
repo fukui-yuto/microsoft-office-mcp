@@ -2062,3 +2062,1147 @@ def create_checklist(sheet, title, items, start_cell="A1"):
     ws.Columns(col_start + 2).ColumnWidth = 40
 
     return {"sheet": ws.Name, "title": title, "items": len(items)}
+
+
+# ---------------------------------------------------------------------------
+# 22. Budget Template
+# ---------------------------------------------------------------------------
+
+def create_budget_template(sheet, title, categories, periods,
+                           style="detailed"):
+    """Create a budget template with categories, periods, and variance formulas.
+
+    Args:
+        sheet: Sheet name or None for active sheet.
+        title: Budget title.
+        categories: [{"name": "...", "subcategories": ["..."]}] for detailed,
+                    or [{"name": "..."}] for summary/quarterly.
+        periods: List of period labels (e.g., ["Jan", "Feb", "Mar"]).
+        style: detailed (with subcategories), summary, quarterly.
+
+    Returns:
+        dict with status info.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    scheme = _get_scheme("corporate_blue")
+    primary = scheme["primary"]
+    light = scheme["light"]
+
+    # Title row
+    title_range = ws.Range(f"A1:{_col_letter(len(periods) + 3)}1")
+    title_range.Merge()
+    ws.Cells(1, 1).Value = title
+    _apply_fill(title_range, primary)
+    _apply_font(title_range, bold=True, size=16, name="Segoe UI", color=(255, 255, 255))
+    _set_alignment(title_range, h_align=XL_HALIGN_CENTER, v_align=XL_VALIGN_CENTER)
+    ws.Rows(1).RowHeight = 40
+
+    # Subtitle
+    ws.Cells(2, 1).Value = f"Prepared: {datetime.date.today().strftime('%B %d, %Y')}"
+    _apply_font(ws.Cells(2, 1), italic=True, size=9, name="Segoe UI", color=(120, 120, 130))
+    ws.Rows(2).RowHeight = 22
+
+    # Header row
+    header_row = 4
+    ws.Cells(header_row, 1).Value = "Category"
+    for p_idx, period in enumerate(periods):
+        ws.Cells(header_row, 2 + p_idx).Value = period
+    budget_col = 2 + len(periods)
+    actual_col = budget_col + 1
+    variance_col = actual_col + 1
+    ws.Cells(header_row, budget_col).Value = "Budget Total"
+    ws.Cells(header_row, actual_col).Value = "Actual Total"
+    ws.Cells(header_row, variance_col).Value = "Variance"
+
+    last_col = variance_col
+    header_range = ws.Range(f"A{header_row}:{_col_letter(last_col)}{header_row}")
+    _apply_fill(header_range, primary)
+    _apply_font(header_range, bold=True, size=10, name="Segoe UI", color=(255, 255, 255))
+    _set_alignment(header_range, h_align=XL_HALIGN_CENTER, v_align=XL_VALIGN_CENTER)
+    ws.Rows(header_row).RowHeight = 28
+
+    cur_row = header_row + 1
+
+    if style == "detailed":
+        for cat in categories:
+            cat_name = cat.get("name", "")
+            subcats = cat.get("subcategories", [])
+
+            # Category header row
+            ws.Cells(cur_row, 1).Value = cat_name
+            cat_range = ws.Range(f"A{cur_row}:{_col_letter(last_col)}{cur_row}")
+            _apply_fill(cat_range, (217, 226, 243))
+            _apply_font(cat_range, bold=True, size=10, name="Segoe UI", color=(41, 65, 122))
+            ws.Rows(cur_row).RowHeight = 24
+            cur_row += 1
+
+            sub_start = cur_row
+            for sub in subcats:
+                ws.Cells(cur_row, 1).Value = f"    {sub}"
+                _apply_font(ws.Cells(cur_row, 1), size=10, name="Segoe UI")
+                # Budget total formula = sum of periods
+                period_start = _col_letter(2)
+                period_end = _col_letter(1 + len(periods))
+                ws.Cells(cur_row, budget_col).Formula = f"=SUM({period_start}{cur_row}:{period_end}{cur_row})"
+                # Number format for all value cells
+                for c in range(2, last_col + 1):
+                    ws.Cells(cur_row, c).NumberFormat = "#,##0"
+                # Variance
+                bc = _col_letter(budget_col)
+                ac = _col_letter(actual_col)
+                ws.Cells(cur_row, variance_col).Formula = f"={ac}{cur_row}-{bc}{cur_row}"
+                cur_row += 1
+            sub_end = cur_row - 1
+
+            # Subtotal row
+            ws.Cells(cur_row, 1).Value = f"  Total {cat_name}"
+            _apply_font(ws.Cells(cur_row, 1), bold=True, size=10, name="Segoe UI")
+            for c in range(2, last_col + 1):
+                cl = _col_letter(c)
+                ws.Cells(cur_row, c).Formula = f"=SUM({cl}{sub_start}:{cl}{sub_end})"
+                ws.Cells(cur_row, c).NumberFormat = "#,##0"
+                _apply_font(ws.Cells(cur_row, c), bold=True, size=10, name="Segoe UI")
+            subtotal_range = ws.Range(f"A{cur_row}:{_col_letter(last_col)}{cur_row}")
+            _apply_borders(subtotal_range, edges=[XL_BORDER_TOP, XL_BORDER_BOTTOM],
+                          weight=XL_BORDER_WEIGHT_MEDIUM)
+            cur_row += 1
+
+    else:  # summary or quarterly
+        for cat in categories:
+            cat_name = cat.get("name", "")
+            ws.Cells(cur_row, 1).Value = cat_name
+            _apply_font(ws.Cells(cur_row, 1), size=10, name="Segoe UI")
+            period_start = _col_letter(2)
+            period_end = _col_letter(1 + len(periods))
+            ws.Cells(cur_row, budget_col).Formula = f"=SUM({period_start}{cur_row}:{period_end}{cur_row})"
+            bc = _col_letter(budget_col)
+            ac = _col_letter(actual_col)
+            ws.Cells(cur_row, variance_col).Formula = f"={ac}{cur_row}-{bc}{cur_row}"
+            for c in range(2, last_col + 1):
+                ws.Cells(cur_row, c).NumberFormat = "#,##0"
+            if cur_row % 2 == 0:
+                row_range = ws.Range(f"A{cur_row}:{_col_letter(last_col)}{cur_row}")
+                _apply_fill(row_range, (248, 249, 250))
+            cur_row += 1
+
+    # Grand total row
+    _add_empty_row = cur_row
+    ws.Cells(cur_row, 1).Value = "GRAND TOTAL"
+    grand_range = ws.Range(f"A{cur_row}:{_col_letter(last_col)}{cur_row}")
+    _apply_fill(grand_range, (33, 37, 41))
+    _apply_font(grand_range, bold=True, size=11, name="Segoe UI", color=(255, 255, 255))
+    ws.Rows(cur_row).RowHeight = 28
+
+    for c in range(2, last_col + 1):
+        cl = _col_letter(c)
+        ws.Cells(cur_row, c).Formula = f"=SUM({cl}{header_row + 1}:{cl}{cur_row - 1})"
+        ws.Cells(cur_row, c).NumberFormat = "#,##0"
+
+    # Conditional formatting for variance column
+    vc = _col_letter(variance_col)
+    var_range = ws.Range(f"{vc}{header_row + 1}:{vc}{cur_row}")
+    try:
+        fc1 = var_range.FormatConditions.Add(Type=1, Operator=5, Formula1="0")  # xlGreater
+        fc1.Font.Color = rgb(0, 128, 0)
+        fc2 = var_range.FormatConditions.Add(Type=1, Operator=6, Formula1="0")  # xlLess
+        fc2.Font.Color = rgb(220, 53, 69)
+    except Exception:
+        pass
+
+    # Column widths
+    ws.Columns(1).ColumnWidth = 28
+    for c in range(2, last_col + 1):
+        ws.Columns(c).ColumnWidth = 14
+
+    # Borders
+    full_range = ws.Range(f"A{header_row}:{_col_letter(last_col)}{cur_row}")
+    _apply_borders(full_range, weight=XL_BORDER_WEIGHT_THIN, color=(200, 200, 210))
+
+    return {"sheet": ws.Name, "title": title, "categories": len(categories),
+            "periods": len(periods), "style": style}
+
+
+# ---------------------------------------------------------------------------
+# 23. Project Tracker
+# ---------------------------------------------------------------------------
+
+def create_project_tracker(sheet, title, tasks, style="gantt_lite"):
+    """Create a project tracking sheet.
+
+    Args:
+        sheet: Sheet name or None.
+        title: Tracker title.
+        tasks: [{"name": "...", "assignee": "...", "status": "Not Started",
+                 "priority": "High", "start_date": "...", "end_date": "..."}]
+        style: gantt_lite (with status colors), kanban (status-grouped), simple.
+
+    Returns:
+        dict with status info.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    primary = (41, 65, 122)
+    accent = (68, 114, 196)
+
+    STATUS_COLORS = {
+        "Not Started": (220, 220, 220),
+        "In Progress": (0, 123, 255),
+        "Completed": (40, 167, 69),
+        "On Hold": (255, 193, 7),
+        "Cancelled": (220, 53, 69),
+    }
+
+    PRIORITY_COLORS = {
+        "Critical": (220, 53, 69),
+        "High": (255, 128, 0),
+        "Medium": (255, 193, 7),
+        "Low": (40, 167, 69),
+    }
+
+    # Title
+    title_range = ws.Range("A1:H1")
+    title_range.Merge()
+    ws.Cells(1, 1).Value = title
+    _apply_fill(title_range, primary)
+    _apply_font(title_range, bold=True, size=16, name="Segoe UI", color=(255, 255, 255))
+    _set_alignment(title_range, h_align=XL_HALIGN_CENTER, v_align=XL_VALIGN_CENTER)
+    ws.Rows(1).RowHeight = 40
+
+    # Date
+    ws.Cells(2, 1).Value = f"Last Updated: {datetime.date.today().strftime('%B %d, %Y')}"
+    _apply_font(ws.Cells(2, 1), italic=True, size=9, name="Segoe UI", color=(120, 120, 130))
+
+    if style in ("gantt_lite", "simple"):
+        headers = ["#", "Task Name", "Assignee", "Status", "Priority", "Start Date", "End Date", "Notes"]
+        header_row = 4
+
+        for c_idx, h in enumerate(headers, 1):
+            ws.Cells(header_row, c_idx).Value = h
+        h_range = ws.Range(f"A{header_row}:H{header_row}")
+        _apply_fill(h_range, primary)
+        _apply_font(h_range, bold=True, size=10, name="Segoe UI", color=(255, 255, 255))
+        _set_alignment(h_range, h_align=XL_HALIGN_CENTER, v_align=XL_VALIGN_CENTER)
+        ws.Rows(header_row).RowHeight = 28
+
+        for i, task in enumerate(tasks):
+            r = header_row + 1 + i
+            ws.Cells(r, 1).Value = i + 1
+            ws.Cells(r, 2).Value = task.get("name", "")
+            ws.Cells(r, 3).Value = task.get("assignee", "")
+            status = task.get("status", "Not Started")
+            ws.Cells(r, 4).Value = status
+            priority = task.get("priority", "Medium")
+            ws.Cells(r, 5).Value = priority
+            ws.Cells(r, 6).Value = task.get("start_date", "")
+            ws.Cells(r, 7).Value = task.get("end_date", "")
+            ws.Cells(r, 8).Value = task.get("notes", "")
+
+            _apply_font(ws.Range(f"A{r}:H{r}"), size=10, name="Segoe UI")
+            _set_alignment(ws.Cells(r, 1), h_align=XL_HALIGN_CENTER)
+
+            # Status color
+            if style == "gantt_lite" and status in STATUS_COLORS:
+                sc = STATUS_COLORS[status]
+                _apply_fill(ws.Cells(r, 4), sc)
+                if status in ("In Progress", "Completed", "Cancelled"):
+                    _apply_font(ws.Cells(r, 4), color=(255, 255, 255), bold=True)
+
+            # Priority color
+            if style == "gantt_lite" and priority in PRIORITY_COLORS:
+                pc = PRIORITY_COLORS[priority]
+                _apply_fill(ws.Cells(r, 5), pc)
+                if priority in ("Critical", "High"):
+                    _apply_font(ws.Cells(r, 5), color=(255, 255, 255), bold=True)
+
+            # Alternating rows for simple
+            if style == "simple" and i % 2 == 1:
+                _apply_fill(ws.Range(f"A{r}:H{r}"), (248, 249, 250))
+
+        last_row = header_row + len(tasks)
+
+        # Borders
+        _apply_borders(ws.Range(f"A{header_row}:H{last_row}"),
+                      weight=XL_BORDER_WEIGHT_THIN, color=(200, 200, 210))
+
+        # Summary row
+        summary_row = last_row + 2
+        ws.Cells(summary_row, 1).Value = "Summary:"
+        _apply_font(ws.Cells(summary_row, 1), bold=True, size=10, name="Segoe UI")
+        for si, (status_name, sc) in enumerate(STATUS_COLORS.items()):
+            col = 2 + si
+            ws.Cells(summary_row, col).Value = status_name
+            ws.Cells(summary_row + 1, col).Formula = f'=COUNTIF(D{header_row + 1}:D{last_row},"{status_name}")'
+            _apply_font(ws.Cells(summary_row, col), bold=True, size=9, name="Segoe UI")
+            _apply_fill(ws.Cells(summary_row, col), sc)
+            if status_name in ("In Progress", "Completed", "Cancelled"):
+                _apply_font(ws.Cells(summary_row, col), color=(255, 255, 255), bold=True, size=9)
+            _apply_font(ws.Cells(summary_row + 1, col), bold=True, size=12, name="Segoe UI", color=primary)
+            _set_alignment(ws.Cells(summary_row + 1, col), h_align=XL_HALIGN_CENTER)
+
+    elif style == "kanban":
+        # Group by status
+        statuses = list(STATUS_COLORS.keys())
+        col_offset = 1
+
+        for s_idx, status_name in enumerate(statuses):
+            col = col_offset + s_idx * 2
+            status_tasks = [t for t in tasks if t.get("status", "Not Started") == status_name]
+
+            # Status header
+            ws.Cells(4, col).Value = status_name
+            ws.Cells(4, col + 1).Value = ""
+            h_rng = ws.Range(f"{_col_letter(col)}4:{_col_letter(col + 1)}4")
+            h_rng.Merge()
+            sc = STATUS_COLORS[status_name]
+            _apply_fill(h_rng, sc)
+            if status_name in ("In Progress", "Completed", "Cancelled"):
+                _apply_font(h_rng, bold=True, size=11, name="Segoe UI", color=(255, 255, 255))
+            else:
+                _apply_font(h_rng, bold=True, size=11, name="Segoe UI", color=(51, 51, 51))
+            _set_alignment(h_rng, h_align=XL_HALIGN_CENTER)
+            ws.Rows(4).RowHeight = 28
+
+            for t_idx, task in enumerate(status_tasks):
+                r = 5 + t_idx
+                ws.Cells(r, col).Value = task.get("name", "")
+                ws.Cells(r, col + 1).Value = task.get("assignee", "")
+                _apply_font(ws.Cells(r, col), size=10, name="Segoe UI", bold=True)
+                _apply_font(ws.Cells(r, col + 1), size=9, name="Segoe UI", color=(100, 100, 100))
+
+            ws.Columns(col).ColumnWidth = 22
+            ws.Columns(col + 1).ColumnWidth = 14
+
+    # Column widths for gantt_lite/simple
+    if style in ("gantt_lite", "simple"):
+        widths = [5, 30, 16, 14, 12, 13, 13, 22]
+        for i, w in enumerate(widths, 1):
+            ws.Columns(i).ColumnWidth = w
+
+    return {"sheet": ws.Name, "title": title, "task_count": len(tasks), "style": style}
+
+
+# ---------------------------------------------------------------------------
+# 24. Expense Report
+# ---------------------------------------------------------------------------
+
+def create_expense_report(sheet, employee_name, department, expenses,
+                          approval_chain=None):
+    """Create an expense report.
+
+    Args:
+        sheet: Sheet name or None.
+        employee_name: Employee name.
+        department: Department name.
+        expenses: [{"date": "...", "category": "...", "description": "...", "amount": 0}]
+        approval_chain: Optional [{"name": "...", "title": "..."}]
+
+    Returns:
+        dict with status info.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    primary = (41, 65, 122)
+
+    # Title
+    title_range = ws.Range("A1:F1")
+    title_range.Merge()
+    ws.Cells(1, 1).Value = "EXPENSE REPORT"
+    _apply_fill(title_range, primary)
+    _apply_font(title_range, bold=True, size=18, name="Segoe UI", color=(255, 255, 255))
+    _set_alignment(title_range, h_align=XL_HALIGN_CENTER, v_align=XL_VALIGN_CENTER)
+    ws.Rows(1).RowHeight = 44
+
+    # Employee info
+    info_labels = ["Employee Name:", "Department:", "Date Submitted:", "Report Period:"]
+    info_values = [employee_name, department,
+                   datetime.date.today().strftime("%B %d, %Y"), ""]
+
+    for i, (label, value) in enumerate(zip(info_labels, info_values)):
+        r = 3 + i
+        ws.Cells(r, 1).Value = label
+        ws.Cells(r, 2).Value = value
+        _apply_font(ws.Cells(r, 1), bold=True, size=10, name="Segoe UI")
+        _apply_font(ws.Cells(r, 2), size=10, name="Segoe UI")
+        _apply_fill(ws.Cells(r, 1), (217, 226, 243))
+
+    # Expense table
+    header_row = 8
+    headers = ["Date", "Category", "Description", "Amount", "Receipt", "Notes"]
+    for c, h in enumerate(headers, 1):
+        ws.Cells(header_row, c).Value = h
+    h_range = ws.Range(f"A{header_row}:F{header_row}")
+    _apply_fill(h_range, primary)
+    _apply_font(h_range, bold=True, size=10, name="Segoe UI", color=(255, 255, 255))
+    _set_alignment(h_range, h_align=XL_HALIGN_CENTER, v_align=XL_VALIGN_CENTER)
+    ws.Rows(header_row).RowHeight = 28
+
+    for i, exp in enumerate(expenses):
+        r = header_row + 1 + i
+        ws.Cells(r, 1).Value = exp.get("date", "")
+        ws.Cells(r, 2).Value = exp.get("category", "")
+        ws.Cells(r, 3).Value = exp.get("description", "")
+        ws.Cells(r, 4).Value = exp.get("amount", 0)
+        ws.Cells(r, 5).Value = exp.get("receipt", "")
+        ws.Cells(r, 6).Value = exp.get("notes", "")
+
+        _apply_font(ws.Range(f"A{r}:F{r}"), size=10, name="Segoe UI")
+        ws.Cells(r, 4).NumberFormat = "#,##0.00"
+
+        if i % 2 == 1:
+            _apply_fill(ws.Range(f"A{r}:F{r}"), (248, 249, 250))
+
+    last_data_row = header_row + len(expenses)
+
+    # Total row
+    total_row = last_data_row + 1
+    ws.Cells(total_row, 1).Value = "TOTAL"
+    total_range = ws.Range(f"A{total_row}:F{total_row}")
+    _apply_fill(total_range, (33, 37, 41))
+    _apply_font(total_range, bold=True, size=11, name="Segoe UI", color=(255, 255, 255))
+    ws.Cells(total_row, 4).Formula = f"=SUM(D{header_row + 1}:D{last_data_row})"
+    ws.Cells(total_row, 4).NumberFormat = "#,##0.00"
+    ws.Rows(total_row).RowHeight = 28
+
+    # Borders
+    _apply_borders(ws.Range(f"A{header_row}:F{total_row}"),
+                  weight=XL_BORDER_WEIGHT_THIN, color=(200, 200, 210))
+
+    # Approval chain
+    if approval_chain:
+        approve_row = total_row + 3
+        ws.Cells(approve_row, 1).Value = "APPROVALS"
+        _apply_font(ws.Cells(approve_row, 1), bold=True, size=12, name="Segoe UI", color=primary)
+        ws.Rows(approve_row).RowHeight = 26
+
+        for j, approver in enumerate(approval_chain):
+            r = approve_row + 1 + j
+            ws.Cells(r, 1).Value = approver.get("title", "")
+            ws.Cells(r, 2).Value = approver.get("name", "")
+            ws.Cells(r, 3).Value = "Signature: ________________"
+            ws.Cells(r, 4).Value = "Date: ________"
+            _apply_font(ws.Cells(r, 1), bold=True, size=10, name="Segoe UI")
+            _apply_font(ws.Cells(r, 2), size=10, name="Segoe UI")
+            _apply_font(ws.Cells(r, 3), size=9, name="Segoe UI", color=(120, 120, 130))
+            _apply_font(ws.Cells(r, 4), size=9, name="Segoe UI", color=(120, 120, 130))
+
+    # Column widths
+    widths = [14, 16, 30, 14, 10, 20]
+    for i, w in enumerate(widths, 1):
+        ws.Columns(i).ColumnWidth = w
+
+    # Calculate total for return
+    total_amount = sum(e.get("amount", 0) for e in expenses)
+
+    return {"sheet": ws.Name, "employee": employee_name, "expense_count": len(expenses),
+            "total": total_amount}
+
+
+# ---------------------------------------------------------------------------
+# 25. Inventory Tracker
+# ---------------------------------------------------------------------------
+
+def create_inventory_tracker(sheet, title, items, style="standard"):
+    """Create an inventory management sheet.
+
+    Args:
+        sheet: Sheet name or None.
+        title: Tracker title.
+        items: [{"sku": "...", "name": "...", "quantity": 0, "min_stock": 0,
+                 "unit_price": 0, "location": "..."}]
+        style: standard.
+
+    Returns:
+        dict with status info.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    primary = (41, 65, 122)
+
+    # Title
+    title_range = ws.Range("A1:I1")
+    title_range.Merge()
+    ws.Cells(1, 1).Value = title
+    _apply_fill(title_range, primary)
+    _apply_font(title_range, bold=True, size=16, name="Segoe UI", color=(255, 255, 255))
+    _set_alignment(title_range, h_align=XL_HALIGN_CENTER, v_align=XL_VALIGN_CENTER)
+    ws.Rows(1).RowHeight = 40
+
+    ws.Cells(2, 1).Value = f"Last Updated: {datetime.date.today().strftime('%B %d, %Y')}"
+    _apply_font(ws.Cells(2, 1), italic=True, size=9, name="Segoe UI", color=(120, 120, 130))
+
+    # Headers
+    header_row = 4
+    headers = ["SKU", "Item Name", "Category", "Quantity", "Min Stock",
+               "Unit Price", "Total Value", "Location", "Status"]
+    for c, h in enumerate(headers, 1):
+        ws.Cells(header_row, c).Value = h
+    h_range = ws.Range(f"A{header_row}:I{header_row}")
+    _apply_fill(h_range, primary)
+    _apply_font(h_range, bold=True, size=10, name="Segoe UI", color=(255, 255, 255))
+    _set_alignment(h_range, h_align=XL_HALIGN_CENTER, v_align=XL_VALIGN_CENTER)
+    ws.Rows(header_row).RowHeight = 28
+
+    for i, item in enumerate(items):
+        r = header_row + 1 + i
+        ws.Cells(r, 1).Value = item.get("sku", "")
+        ws.Cells(r, 2).Value = item.get("name", "")
+        ws.Cells(r, 3).Value = item.get("category", "")
+        qty = item.get("quantity", 0)
+        min_stock = item.get("min_stock", 0)
+        unit_price = item.get("unit_price", 0)
+        ws.Cells(r, 4).Value = qty
+        ws.Cells(r, 5).Value = min_stock
+        ws.Cells(r, 6).Value = unit_price
+        ws.Cells(r, 6).NumberFormat = "#,##0.00"
+        # Total value formula
+        ws.Cells(r, 7).Formula = f"=D{r}*F{r}"
+        ws.Cells(r, 7).NumberFormat = "#,##0.00"
+        ws.Cells(r, 8).Value = item.get("location", "")
+        # Status formula
+        ws.Cells(r, 9).Formula = f'=IF(D{r}<=0,"Out of Stock",IF(D{r}<=E{r},"Low Stock","In Stock"))'
+
+        _apply_font(ws.Range(f"A{r}:I{r}"), size=10, name="Segoe UI")
+        _set_alignment(ws.Cells(r, 4), h_align=XL_HALIGN_CENTER)
+        _set_alignment(ws.Cells(r, 5), h_align=XL_HALIGN_CENTER)
+
+        if i % 2 == 1:
+            _apply_fill(ws.Range(f"A{r}:I{r}"), (248, 249, 250))
+
+    last_row = header_row + len(items)
+
+    # Conditional formatting for status column
+    status_range = ws.Range(f"I{header_row + 1}:I{last_row}")
+    try:
+        fc1 = status_range.FormatConditions.Add(
+            Type=2, Formula1=f'=I{header_row + 1}="Out of Stock"')
+        fc1.Interior.Color = rgb(255, 200, 200)
+        fc1.Font.Color = rgb(180, 0, 0)
+        fc1.Font.Bold = True
+        fc2 = status_range.FormatConditions.Add(
+            Type=2, Formula1=f'=I{header_row + 1}="Low Stock"')
+        fc2.Interior.Color = rgb(255, 243, 205)
+        fc2.Font.Color = rgb(180, 100, 0)
+        fc2.Font.Bold = True
+        fc3 = status_range.FormatConditions.Add(
+            Type=2, Formula1=f'=I{header_row + 1}="In Stock"')
+        fc3.Interior.Color = rgb(212, 237, 218)
+        fc3.Font.Color = rgb(0, 100, 0)
+    except Exception:
+        pass
+
+    # Summary row
+    summary_row = last_row + 2
+    ws.Cells(summary_row, 1).Value = "SUMMARY"
+    _apply_font(ws.Cells(summary_row, 1), bold=True, size=12, name="Segoe UI", color=primary)
+
+    ws.Cells(summary_row + 1, 1).Value = "Total Items:"
+    ws.Cells(summary_row + 1, 2).Formula = f"=COUNTA(B{header_row + 1}:B{last_row})"
+    ws.Cells(summary_row + 2, 1).Value = "Total Value:"
+    ws.Cells(summary_row + 2, 2).Formula = f"=SUM(G{header_row + 1}:G{last_row})"
+    ws.Cells(summary_row + 2, 2).NumberFormat = "#,##0.00"
+    ws.Cells(summary_row + 3, 1).Value = "Low Stock Items:"
+    ws.Cells(summary_row + 3, 2).Formula = f'=COUNTIF(I{header_row + 1}:I{last_row},"Low Stock")'
+    ws.Cells(summary_row + 4, 1).Value = "Out of Stock:"
+    ws.Cells(summary_row + 4, 2).Formula = f'=COUNTIF(I{header_row + 1}:I{last_row},"Out of Stock")'
+
+    for r in range(summary_row + 1, summary_row + 5):
+        _apply_font(ws.Cells(r, 1), bold=True, size=10, name="Segoe UI")
+        _apply_font(ws.Cells(r, 2), bold=True, size=10, name="Segoe UI", color=primary)
+
+    # Borders
+    _apply_borders(ws.Range(f"A{header_row}:I{last_row}"),
+                  weight=XL_BORDER_WEIGHT_THIN, color=(200, 200, 210))
+
+    # Column widths
+    widths = [12, 24, 14, 10, 10, 12, 14, 14, 12]
+    for i, w in enumerate(widths, 1):
+        ws.Columns(i).ColumnWidth = w
+
+    return {"sheet": ws.Name, "title": title, "item_count": len(items)}
+
+
+# ---------------------------------------------------------------------------
+# 26. Sales Report
+# ---------------------------------------------------------------------------
+
+def create_sales_report(sheet, title, sales_data, period="monthly",
+                        style="dashboard"):
+    """Create a sales report.
+
+    Args:
+        sheet: Sheet name or None.
+        title: Report title.
+        sales_data: [{"product": "...", "revenue": 0, "units": 0, "target": 0}]
+        period: monthly, quarterly, yearly.
+        style: dashboard, simple.
+
+    Returns:
+        dict with status info.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    primary = (41, 65, 122)
+    accent = (68, 114, 196)
+
+    # Title
+    title_range = ws.Range("A1:H1")
+    title_range.Merge()
+    ws.Cells(1, 1).Value = title
+    _apply_fill(title_range, primary)
+    _apply_font(title_range, bold=True, size=16, name="Segoe UI", color=(255, 255, 255))
+    _set_alignment(title_range, h_align=XL_HALIGN_CENTER, v_align=XL_VALIGN_CENTER)
+    ws.Rows(1).RowHeight = 40
+
+    # Period and date
+    ws.Cells(2, 1).Value = f"Period: {period.capitalize()} | Generated: {datetime.date.today().strftime('%B %d, %Y')}"
+    _apply_font(ws.Cells(2, 1), italic=True, size=9, name="Segoe UI", color=(120, 120, 130))
+
+    if style == "dashboard":
+        # KPI cards row
+        kpi_row = 4
+        total_revenue = sum(d.get("revenue", 0) for d in sales_data)
+        total_units = sum(d.get("units", 0) for d in sales_data)
+        total_target = sum(d.get("target", 0) for d in sales_data)
+        achievement = (total_revenue / total_target * 100) if total_target > 0 else 0
+
+        kpis = [
+            ("Total Revenue", f"${total_revenue:,.0f}", primary),
+            ("Units Sold", f"{total_units:,}", accent),
+            ("Target", f"${total_target:,.0f}", (40, 167, 69)),
+            ("Achievement", f"{achievement:.1f}%", (230, 126, 34) if achievement < 100 else (40, 167, 69)),
+        ]
+
+        for k_idx, (kpi_label, kpi_value, kpi_color) in enumerate(kpis):
+            col = 1 + k_idx * 2
+            kpi_rng = ws.Range(f"{_col_letter(col)}{kpi_row}:{_col_letter(col + 1)}{kpi_row + 1}")
+            kpi_rng.Merge()
+
+            ws.Cells(kpi_row, col).Value = kpi_label
+            _apply_font(ws.Cells(kpi_row, col), size=9, name="Segoe UI", color=(120, 120, 130))
+
+            val_rng = ws.Range(f"{_col_letter(col)}{kpi_row + 1}:{_col_letter(col + 1)}{kpi_row + 1}")
+            try:
+                val_rng.Merge()
+            except Exception:
+                pass
+            ws.Cells(kpi_row + 1, col).Value = kpi_value
+            _apply_font(ws.Cells(kpi_row + 1, col), bold=True, size=16, name="Segoe UI", color=kpi_color)
+
+            _set_alignment(ws.Cells(kpi_row, col), h_align=XL_HALIGN_CENTER)
+            _set_alignment(ws.Cells(kpi_row + 1, col), h_align=XL_HALIGN_CENTER)
+
+        data_start_row = kpi_row + 3
+    else:
+        data_start_row = 4
+
+    # Data table
+    headers = ["Product", "Revenue", "Units", "Target", "Variance", "% of Target", "Avg Price", "Rank"]
+    for c, h in enumerate(headers, 1):
+        ws.Cells(data_start_row, c).Value = h
+    h_range = ws.Range(f"A{data_start_row}:H{data_start_row}")
+    _apply_fill(h_range, primary)
+    _apply_font(h_range, bold=True, size=10, name="Segoe UI", color=(255, 255, 255))
+    _set_alignment(h_range, h_align=XL_HALIGN_CENTER, v_align=XL_VALIGN_CENTER)
+    ws.Rows(data_start_row).RowHeight = 28
+
+    for i, sd in enumerate(sales_data):
+        r = data_start_row + 1 + i
+        revenue = sd.get("revenue", 0)
+        units = sd.get("units", 0)
+        target = sd.get("target", 0)
+        variance = revenue - target
+        pct = (revenue / target * 100) if target > 0 else 0
+        avg_price = (revenue / units) if units > 0 else 0
+
+        ws.Cells(r, 1).Value = sd.get("product", "")
+        ws.Cells(r, 2).Value = revenue
+        ws.Cells(r, 3).Value = units
+        ws.Cells(r, 4).Value = target
+        ws.Cells(r, 5).Value = variance
+        ws.Cells(r, 6).Value = pct / 100
+        ws.Cells(r, 7).Value = avg_price
+
+        ws.Cells(r, 2).NumberFormat = "#,##0"
+        ws.Cells(r, 3).NumberFormat = "#,##0"
+        ws.Cells(r, 4).NumberFormat = "#,##0"
+        ws.Cells(r, 5).NumberFormat = "#,##0"
+        ws.Cells(r, 6).NumberFormat = "0.0%"
+        ws.Cells(r, 7).NumberFormat = "#,##0.00"
+
+        _apply_font(ws.Range(f"A{r}:H{r}"), size=10, name="Segoe UI")
+
+        # Variance color
+        if variance >= 0:
+            _apply_font(ws.Cells(r, 5), color=(40, 167, 69))
+        else:
+            _apply_font(ws.Cells(r, 5), color=(220, 53, 69))
+
+        if i % 2 == 1:
+            _apply_fill(ws.Range(f"A{r}:H{r}"), (248, 249, 250))
+
+    last_data = data_start_row + len(sales_data)
+
+    # Rank formula
+    for i in range(len(sales_data)):
+        r = data_start_row + 1 + i
+        ws.Cells(r, 8).Formula = f"=RANK(B{r},B{data_start_row + 1}:B{last_data})"
+        _set_alignment(ws.Cells(r, 8), h_align=XL_HALIGN_CENTER)
+
+    # Total row
+    total_row = last_data + 1
+    ws.Cells(total_row, 1).Value = "TOTAL"
+    for c in [2, 3, 4, 5]:
+        cl = _col_letter(c)
+        ws.Cells(total_row, c).Formula = f"=SUM({cl}{data_start_row + 1}:{cl}{last_data})"
+    ws.Cells(total_row, 6).Formula = f"=IF(D{total_row}>0,B{total_row}/D{total_row},0)"
+    ws.Cells(total_row, 7).Formula = f"=IF(C{total_row}>0,B{total_row}/C{total_row},0)"
+    for c in [2, 3, 4, 5]:
+        ws.Cells(total_row, c).NumberFormat = "#,##0"
+    ws.Cells(total_row, 6).NumberFormat = "0.0%"
+    ws.Cells(total_row, 7).NumberFormat = "#,##0.00"
+
+    t_range = ws.Range(f"A{total_row}:H{total_row}")
+    _apply_fill(t_range, (33, 37, 41))
+    _apply_font(t_range, bold=True, size=11, name="Segoe UI", color=(255, 255, 255))
+    ws.Rows(total_row).RowHeight = 28
+
+    # Borders
+    _apply_borders(ws.Range(f"A{data_start_row}:H{total_row}"),
+                  weight=XL_BORDER_WEIGHT_THIN, color=(200, 200, 210))
+
+    # Column widths
+    widths = [20, 14, 10, 14, 14, 12, 12, 8]
+    for i, w in enumerate(widths, 1):
+        ws.Columns(i).ColumnWidth = w
+
+    return {"sheet": ws.Name, "title": title, "product_count": len(sales_data),
+            "total_revenue": sum(d.get("revenue", 0) for d in sales_data),
+            "period": period, "style": style}
+
+
+# ---------------------------------------------------------------------------
+# 27. Employee Roster
+# ---------------------------------------------------------------------------
+
+def create_employee_roster(sheet, title, employees, style="detailed"):
+    """Create an employee directory/roster.
+
+    Args:
+        sheet: Sheet name or None.
+        title: Roster title.
+        employees: [{"name": "...", "department": "...", "position": "...",
+                     "email": "...", "phone": "..."}]
+        style: detailed, compact.
+
+    Returns:
+        dict with status info.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    primary = (41, 65, 122)
+
+    # Title
+    title_range = ws.Range("A1:G1")
+    title_range.Merge()
+    ws.Cells(1, 1).Value = title
+    _apply_fill(title_range, primary)
+    _apply_font(title_range, bold=True, size=16, name="Segoe UI", color=(255, 255, 255))
+    _set_alignment(title_range, h_align=XL_HALIGN_CENTER, v_align=XL_VALIGN_CENTER)
+    ws.Rows(1).RowHeight = 40
+
+    ws.Cells(2, 1).Value = f"Total Employees: {len(employees)} | Updated: {datetime.date.today().strftime('%B %d, %Y')}"
+    _apply_font(ws.Cells(2, 1), italic=True, size=9, name="Segoe UI", color=(120, 120, 130))
+
+    header_row = 4
+    if style == "detailed":
+        headers = ["#", "Name", "Department", "Position", "Email", "Phone", "Start Date"]
+    else:
+        headers = ["#", "Name", "Department", "Position", "Email", "Phone", "Start Date"]
+
+    for c, h in enumerate(headers, 1):
+        ws.Cells(header_row, c).Value = h
+    last_col = len(headers)
+    h_range = ws.Range(f"A{header_row}:{_col_letter(last_col)}{header_row}")
+    _apply_fill(h_range, primary)
+    _apply_font(h_range, bold=True, size=10, name="Segoe UI", color=(255, 255, 255))
+    _set_alignment(h_range, h_align=XL_HALIGN_CENTER, v_align=XL_VALIGN_CENTER)
+    ws.Rows(header_row).RowHeight = 28
+
+    for i, emp in enumerate(employees):
+        r = header_row + 1 + i
+        ws.Cells(r, 1).Value = i + 1
+        ws.Cells(r, 2).Value = emp.get("name", "")
+        ws.Cells(r, 3).Value = emp.get("department", "")
+        ws.Cells(r, 4).Value = emp.get("position", "")
+        ws.Cells(r, 5).Value = emp.get("email", "")
+        ws.Cells(r, 6).Value = emp.get("phone", "")
+        ws.Cells(r, 7).Value = emp.get("start_date", "")
+
+        _apply_font(ws.Range(f"A{r}:{_col_letter(last_col)}{r}"), size=10, name="Segoe UI")
+        _set_alignment(ws.Cells(r, 1), h_align=XL_HALIGN_CENTER)
+        _apply_font(ws.Cells(r, 2), bold=True)
+
+        if i % 2 == 1:
+            _apply_fill(ws.Range(f"A{r}:{_col_letter(last_col)}{r}"), (248, 249, 250))
+
+    last_row = header_row + len(employees)
+
+    # Borders
+    _apply_borders(ws.Range(f"A{header_row}:{_col_letter(last_col)}{last_row}"),
+                  weight=XL_BORDER_WEIGHT_THIN, color=(200, 200, 210))
+
+    # Department summary
+    summary_row = last_row + 3
+    ws.Cells(summary_row, 1).Value = "Department Summary"
+    _apply_font(ws.Cells(summary_row, 1), bold=True, size=12, name="Segoe UI", color=primary)
+    ws.Rows(summary_row).RowHeight = 26
+
+    departments = list(set(e.get("department", "") for e in employees if e.get("department")))
+    departments.sort()
+    ws.Cells(summary_row + 1, 1).Value = "Department"
+    ws.Cells(summary_row + 1, 2).Value = "Count"
+    _apply_font(ws.Range(f"A{summary_row + 1}:B{summary_row + 1}"), bold=True, size=10, name="Segoe UI")
+    _apply_fill(ws.Range(f"A{summary_row + 1}:B{summary_row + 1}"), (217, 226, 243))
+
+    for d_idx, dept in enumerate(departments):
+        r = summary_row + 2 + d_idx
+        ws.Cells(r, 1).Value = dept
+        ws.Cells(r, 2).Formula = f'=COUNTIF(C{header_row + 1}:C{last_row},"{dept}")'
+        _apply_font(ws.Cells(r, 1), size=10, name="Segoe UI")
+        _apply_font(ws.Cells(r, 2), bold=True, size=10, name="Segoe UI", color=primary)
+        _set_alignment(ws.Cells(r, 2), h_align=XL_HALIGN_CENTER)
+
+    # Column widths
+    widths = [5, 22, 18, 20, 26, 16, 12]
+    for i, w in enumerate(widths, 1):
+        ws.Columns(i).ColumnWidth = w
+
+    return {"sheet": ws.Name, "title": title, "employee_count": len(employees),
+            "department_count": len(departments)}
+
+
+# ---------------------------------------------------------------------------
+# 28. Risk Matrix
+# ---------------------------------------------------------------------------
+
+def create_risk_matrix(sheet, title, risks, style="heatmap"):
+    """Create a risk assessment matrix.
+
+    Args:
+        sheet: Sheet name or None.
+        title: Matrix title.
+        risks: [{"name": "...", "probability": 1-5, "impact": 1-5, "mitigation": "..."}]
+        style: heatmap, simple.
+
+    Returns:
+        dict with status info.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    primary = (41, 65, 122)
+
+    RISK_COLORS = {
+        "Critical": (220, 53, 69),
+        "High": (255, 128, 0),
+        "Medium": (255, 193, 7),
+        "Low": (40, 167, 69),
+        "Very Low": (144, 202, 249),
+    }
+
+    def _risk_level(prob, impact):
+        score = prob * impact
+        if score >= 20:
+            return "Critical"
+        elif score >= 12:
+            return "High"
+        elif score >= 8:
+            return "Medium"
+        elif score >= 4:
+            return "Low"
+        else:
+            return "Very Low"
+
+    # Title
+    title_range = ws.Range("A1:H1")
+    title_range.Merge()
+    ws.Cells(1, 1).Value = title
+    _apply_fill(title_range, primary)
+    _apply_font(title_range, bold=True, size=16, name="Segoe UI", color=(255, 255, 255))
+    _set_alignment(title_range, h_align=XL_HALIGN_CENTER, v_align=XL_VALIGN_CENTER)
+    ws.Rows(1).RowHeight = 40
+
+    ws.Cells(2, 1).Value = f"Assessment Date: {datetime.date.today().strftime('%B %d, %Y')}"
+    _apply_font(ws.Cells(2, 1), italic=True, size=9, name="Segoe UI", color=(120, 120, 130))
+
+    # Risk register table
+    header_row = 4
+    headers = ["#", "Risk Name", "Probability (1-5)", "Impact (1-5)",
+               "Risk Score", "Risk Level", "Mitigation Strategy", "Owner"]
+    for c, h in enumerate(headers, 1):
+        ws.Cells(header_row, c).Value = h
+    h_range = ws.Range(f"A{header_row}:H{header_row}")
+    _apply_fill(h_range, primary)
+    _apply_font(h_range, bold=True, size=10, name="Segoe UI", color=(255, 255, 255))
+    _set_alignment(h_range, h_align=XL_HALIGN_CENTER, v_align=XL_VALIGN_CENTER, wrap=True)
+    ws.Rows(header_row).RowHeight = 32
+
+    for i, risk in enumerate(risks):
+        r = header_row + 1 + i
+        prob = risk.get("probability", 1)
+        impact = risk.get("impact", 1)
+        score = prob * impact
+        level = _risk_level(prob, impact)
+
+        ws.Cells(r, 1).Value = i + 1
+        ws.Cells(r, 2).Value = risk.get("name", "")
+        ws.Cells(r, 3).Value = prob
+        ws.Cells(r, 4).Value = impact
+        ws.Cells(r, 5).Formula = f"=C{r}*D{r}"
+        ws.Cells(r, 6).Value = level
+        ws.Cells(r, 7).Value = risk.get("mitigation", "")
+        ws.Cells(r, 8).Value = risk.get("owner", "")
+
+        _apply_font(ws.Range(f"A{r}:H{r}"), size=10, name="Segoe UI")
+        _set_alignment(ws.Cells(r, 1), h_align=XL_HALIGN_CENTER)
+        _set_alignment(ws.Cells(r, 3), h_align=XL_HALIGN_CENTER)
+        _set_alignment(ws.Cells(r, 4), h_align=XL_HALIGN_CENTER)
+        _set_alignment(ws.Cells(r, 5), h_align=XL_HALIGN_CENTER)
+        _set_alignment(ws.Cells(r, 6), h_align=XL_HALIGN_CENTER)
+
+        # Color the risk level cell
+        if style == "heatmap" and level in RISK_COLORS:
+            rc = RISK_COLORS[level]
+            _apply_fill(ws.Cells(r, 6), rc)
+            if level in ("Critical", "High"):
+                _apply_font(ws.Cells(r, 6), bold=True, color=(255, 255, 255))
+            else:
+                _apply_font(ws.Cells(r, 6), bold=True)
+
+            # Also color score cell
+            _apply_fill(ws.Cells(r, 5), rc)
+            if level in ("Critical", "High"):
+                _apply_font(ws.Cells(r, 5), bold=True, color=(255, 255, 255))
+
+    last_row = header_row + len(risks)
+
+    # Borders
+    _apply_borders(ws.Range(f"A{header_row}:H{last_row}"),
+                  weight=XL_BORDER_WEIGHT_THIN, color=(200, 200, 210))
+
+    # 5x5 heatmap matrix
+    if style == "heatmap":
+        matrix_start_row = last_row + 3
+        ws.Cells(matrix_start_row, 1).Value = "Risk Heatmap Matrix"
+        _apply_font(ws.Cells(matrix_start_row, 1), bold=True, size=12, name="Segoe UI", color=primary)
+
+        # Matrix header: Impact 1-5 across columns
+        for imp in range(1, 6):
+            ws.Cells(matrix_start_row + 1, 2 + imp - 1).Value = f"Impact {imp}"
+            _apply_font(ws.Cells(matrix_start_row + 1, 2 + imp - 1), bold=True, size=9, name="Segoe UI")
+            _set_alignment(ws.Cells(matrix_start_row + 1, 2 + imp - 1), h_align=XL_HALIGN_CENTER)
+
+        # Matrix rows: Probability 5 (top) to 1 (bottom)
+        for prob in range(5, 0, -1):
+            mr = matrix_start_row + 2 + (5 - prob)
+            ws.Cells(mr, 1).Value = f"Prob {prob}"
+            _apply_font(ws.Cells(mr, 1), bold=True, size=9, name="Segoe UI")
+            _set_alignment(ws.Cells(mr, 1), h_align=XL_HALIGN_CENTER)
+
+            for imp in range(1, 6):
+                mc = 2 + imp - 1
+                score = prob * imp
+                level = _risk_level(prob, imp)
+                ws.Cells(mr, mc).Value = score
+                _set_alignment(ws.Cells(mr, mc), h_align=XL_HALIGN_CENTER, v_align=XL_VALIGN_CENTER)
+                _apply_font(ws.Cells(mr, mc), bold=True, size=10, name="Segoe UI")
+
+                rc = RISK_COLORS.get(level, (200, 200, 200))
+                _apply_fill(ws.Cells(mr, mc), rc)
+                if level in ("Critical", "High"):
+                    _apply_font(ws.Cells(mr, mc), color=(255, 255, 255), bold=True)
+
+                ws.Rows(mr).RowHeight = 28
+                ws.Columns(mc).ColumnWidth = 12
+
+        # Borders on matrix
+        m_range = ws.Range(f"A{matrix_start_row + 1}:F{matrix_start_row + 7}")
+        _apply_borders(m_range, weight=XL_BORDER_WEIGHT_THIN, color=(180, 180, 180))
+
+    # Legend
+    legend_row = (last_row + 10) if style == "heatmap" else (last_row + 3)
+    ws.Cells(legend_row, 1).Value = "Legend:"
+    _apply_font(ws.Cells(legend_row, 1), bold=True, size=10, name="Segoe UI")
+    for l_idx, (level_name, lc) in enumerate(RISK_COLORS.items()):
+        col = 2 + l_idx
+        ws.Cells(legend_row, col).Value = level_name
+        _apply_fill(ws.Cells(legend_row, col), lc)
+        if level_name in ("Critical", "High"):
+            _apply_font(ws.Cells(legend_row, col), bold=True, size=9, name="Segoe UI", color=(255, 255, 255))
+        else:
+            _apply_font(ws.Cells(legend_row, col), bold=True, size=9, name="Segoe UI")
+        _set_alignment(ws.Cells(legend_row, col), h_align=XL_HALIGN_CENTER)
+
+    # Column widths
+    widths = [5, 26, 14, 12, 10, 12, 30, 14]
+    for i, w in enumerate(widths, 1):
+        ws.Columns(i).ColumnWidth = w
+
+    return {"sheet": ws.Name, "title": title, "risk_count": len(risks), "style": style}
+
+
+# ---------------------------------------------------------------------------
+# 29. Attendance Tracker
+# ---------------------------------------------------------------------------
+
+def create_attendance_tracker(sheet, title, employees, month, year,
+                              style="calendar"):
+    """Create a monthly attendance tracking sheet.
+
+    Args:
+        sheet: Sheet name or None.
+        title: Tracker title.
+        employees: List of employee names.
+        month: Month number (1-12).
+        year: Year (e.g., 2025).
+        style: calendar.
+
+    Returns:
+        dict with status info.
+    """
+    import calendar as cal_mod
+
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    primary = (41, 65, 122)
+    accent = (68, 114, 196)
+
+    days_in_month = cal_mod.monthrange(year, month)[1]
+    month_name = cal_mod.month_name[month]
+    day_names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+
+    # Title
+    last_col = 3 + days_in_month  # cols: #, Name, then days, then totals
+    title_range = ws.Range(f"A1:{_col_letter(last_col)}1")
+    title_range.Merge()
+    ws.Cells(1, 1).Value = f"{title} - {month_name} {year}"
+    _apply_fill(title_range, primary)
+    _apply_font(title_range, bold=True, size=14, name="Segoe UI", color=(255, 255, 255))
+    _set_alignment(title_range, h_align=XL_HALIGN_CENTER, v_align=XL_VALIGN_CENTER)
+    ws.Rows(1).RowHeight = 36
+
+    # Legend row
+    ws.Cells(2, 1).Value = "Legend: P=Present  A=Absent  L=Leave  H=Holiday  WFH=Work From Home"
+    _apply_font(ws.Cells(2, 1), italic=True, size=8, name="Segoe UI", color=(100, 100, 100))
+
+    # Header row
+    header_row = 4
+    ws.Cells(header_row, 1).Value = "#"
+    ws.Cells(header_row, 2).Value = "Employee Name"
+
+    # Day headers with day-of-week
+    for d in range(1, days_in_month + 1):
+        col = 2 + d
+        dow = cal_mod.weekday(year, month, d)
+        ws.Cells(header_row, col).Value = d
+        ws.Cells(header_row - 1, col).Value = day_names[dow][:2]
+        _apply_font(ws.Cells(header_row - 1, col), size=7, name="Segoe UI", color=(120, 120, 130))
+        _set_alignment(ws.Cells(header_row - 1, col), h_align=XL_HALIGN_CENTER)
+
+        # Weekend columns get different background
+        if dow >= 5:  # Saturday=5, Sunday=6
+            for er in range(header_row, header_row + len(employees) + 1):
+                _apply_fill(ws.Cells(er, col), (240, 240, 245))
+
+    total_col = 3 + days_in_month
+    ws.Cells(header_row, total_col).Value = "Present"
+
+    # Header formatting
+    h_range = ws.Range(f"A{header_row}:{_col_letter(total_col)}{header_row}")
+    _apply_fill(h_range, primary)
+    _apply_font(h_range, bold=True, size=9, name="Segoe UI", color=(255, 255, 255))
+    _set_alignment(h_range, h_align=XL_HALIGN_CENTER, v_align=XL_VALIGN_CENTER)
+    ws.Rows(header_row).RowHeight = 24
+
+    # Employee rows
+    for i, emp_name in enumerate(employees):
+        r = header_row + 1 + i
+        ws.Cells(r, 1).Value = i + 1
+        ws.Cells(r, 2).Value = emp_name
+        _apply_font(ws.Cells(r, 2), size=10, name="Segoe UI", bold=True)
+        _set_alignment(ws.Cells(r, 1), h_align=XL_HALIGN_CENTER)
+
+        # Present count formula
+        day_start_col = _col_letter(3)
+        day_end_col = _col_letter(2 + days_in_month)
+        ws.Cells(r, total_col).Formula = f'=COUNTIF({day_start_col}{r}:{day_end_col}{r},"P")+COUNTIF({day_start_col}{r}:{day_end_col}{r},"WFH")'
+        _apply_font(ws.Cells(r, total_col), bold=True, size=10, name="Segoe UI", color=primary)
+        _set_alignment(ws.Cells(r, total_col), h_align=XL_HALIGN_CENTER)
+
+        # Set alignment for day cells
+        for d in range(1, days_in_month + 1):
+            col = 2 + d
+            _set_alignment(ws.Cells(r, col), h_align=XL_HALIGN_CENTER)
+            _apply_font(ws.Cells(r, col), size=9, name="Segoe UI")
+
+        if i % 2 == 1:
+            row_range = ws.Range(f"A{r}:B{r}")
+            _apply_fill(row_range, (248, 249, 250))
+
+    last_row = header_row + len(employees)
+
+    # Data validation for attendance cells
+    att_range = ws.Range(f"C{header_row + 1}:{_col_letter(2 + days_in_month)}{last_row}")
+    try:
+        att_range.Validation.Delete()
+        att_range.Validation.Add(
+            Type=3,  # xlValidateList
+            Formula1="P,A,L,H,WFH"
+        )
+    except Exception:
+        pass
+
+    # Conditional formatting for attendance
+    try:
+        fc_p = att_range.FormatConditions.Add(Type=1, Operator=3, Formula1='"P"')
+        fc_p.Interior.Color = rgb(212, 237, 218)
+        fc_p.Font.Color = rgb(0, 100, 0)
+        fc_a = att_range.FormatConditions.Add(Type=1, Operator=3, Formula1='"A"')
+        fc_a.Interior.Color = rgb(255, 200, 200)
+        fc_a.Font.Color = rgb(180, 0, 0)
+        fc_l = att_range.FormatConditions.Add(Type=1, Operator=3, Formula1='"L"')
+        fc_l.Interior.Color = rgb(255, 243, 205)
+        fc_l.Font.Color = rgb(180, 100, 0)
+        fc_h = att_range.FormatConditions.Add(Type=1, Operator=3, Formula1='"H"')
+        fc_h.Interior.Color = rgb(217, 226, 243)
+        fc_h.Font.Color = rgb(41, 65, 122)
+        fc_w = att_range.FormatConditions.Add(Type=1, Operator=3, Formula1='"WFH"')
+        fc_w.Interior.Color = rgb(232, 245, 233)
+        fc_w.Font.Color = rgb(0, 128, 0)
+    except Exception:
+        pass
+
+    # Summary row
+    summary_row = last_row + 2
+    ws.Cells(summary_row, 2).Value = "Daily Present Count:"
+    _apply_font(ws.Cells(summary_row, 2), bold=True, size=9, name="Segoe UI")
+    for d in range(1, days_in_month + 1):
+        col = 2 + d
+        cl = _col_letter(col)
+        ws.Cells(summary_row, col).Formula = f'=COUNTIF({cl}{header_row + 1}:{cl}{last_row},"P")+COUNTIF({cl}{header_row + 1}:{cl}{last_row},"WFH")'
+        _apply_font(ws.Cells(summary_row, col), bold=True, size=9, name="Segoe UI", color=primary)
+        _set_alignment(ws.Cells(summary_row, col), h_align=XL_HALIGN_CENTER)
+
+    # Borders
+    _apply_borders(ws.Range(f"A{header_row}:{_col_letter(total_col)}{last_row}"),
+                  weight=XL_BORDER_WEIGHT_THIN, color=(200, 200, 210))
+
+    # Column widths
+    ws.Columns(1).ColumnWidth = 4
+    ws.Columns(2).ColumnWidth = 20
+    for d in range(1, days_in_month + 1):
+        ws.Columns(2 + d).ColumnWidth = 4
+    ws.Columns(total_col).ColumnWidth = 8
+
+    return {"sheet": ws.Name, "title": title, "employee_count": len(employees),
+            "month": f"{month_name} {year}", "days": days_in_month}

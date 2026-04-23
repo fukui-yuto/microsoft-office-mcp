@@ -268,3 +268,263 @@ def powerpoint_add_slide_number_footer(
         return f"{result['slides_affected']} 枚のスライドにページ番号（{result['format']}）を追加しました"
     except Exception as e:
         return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_create_chart_slide(
+    slide_number: int,
+    title: str,
+    chart_type: str,
+    data: str,
+    style: str = "modern",
+) -> str:
+    """チャート付きスライドを作成します。chart_type: bar, line, pie, doughnut。data: JSON文字列 {"categories": ["Q1","Q2"], "series": [{"name": "Revenue", "values": [100,200]}]}。style: modern, minimal, bold"""
+    try:
+        data_dict = json.loads(data) if isinstance(data, str) else data
+        result = ppt_adv.create_chart_slide(
+            slide_number, title, chart_type, data_dict, style=style,
+        )
+        return f"スライド {result['slide_number']} にチャートスライド（{chart_type}, {result['style']}）を作成しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_create_dashboard_slide(
+    slide_number: int,
+    title: str,
+    kpis: str,
+    chart_data: str | None = None,
+    style: str = "executive",
+) -> str:
+    """ダッシュボードスライドを作成します。kpis: JSON文字列 [{"label": "Revenue", "value": "$1.2M", "change": "+15%", "trend": "up"}]。style: executive, corporate, startup"""
+    try:
+        kpis_list = json.loads(kpis) if isinstance(kpis, str) else kpis
+        chart_dict = json.loads(chart_data) if isinstance(chart_data, str) and chart_data else chart_data
+        result = ppt_adv.create_dashboard_slide(
+            slide_number, title, kpis_list, chart_data=chart_dict, style=style,
+        )
+        return f"スライド {result['slide_number']} にダッシュボードスライド（{result['style']}）を作成しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_create_two_column_slide(
+    slide_number: int,
+    title: str,
+    left_content: str,
+    right_content: str,
+    style: str = "balanced",
+) -> str:
+    """2カラムレイアウトスライドを作成します。content: JSON文字列 {"heading": "...", "items": ["..."]}。style: balanced, emphasis_left, emphasis_right"""
+    try:
+        left = json.loads(left_content) if isinstance(left_content, str) else left_content
+        right = json.loads(right_content) if isinstance(right_content, str) else right_content
+        result = ppt_adv.create_two_column_slide(
+            slide_number, title, left, right, style=style,
+        )
+        return f"スライド {result['slide_number']} に2カラムレイアウト（{result['style']}）を作成しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_create_image_text_slide(
+    slide_number: int,
+    title: str,
+    text_items: list[str],
+    image_path: str | None = None,
+    image_position: str = "right",
+    style: str = "modern",
+) -> str:
+    """テキストと画像のスライドを作成します。image_position: left, right。style: modern, clean, overlap"""
+    try:
+        result = ppt_adv.create_image_text_slide(
+            slide_number, title, text_items, image_path=image_path,
+            image_position=image_position, style=style,
+        )
+        return f"スライド {result['slide_number']} にテキスト＋画像レイアウト（{result['style']}）を作成しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_create_three_column_slide(
+    slide_number: int,
+    title: str,
+    columns: str,
+    style: str = "cards",
+) -> str:
+    """3カラムレイアウトスライドを作成します。columns: JSON文字列 [{"heading": "...", "items": ["..."]}] (3つ)。style: cards, clean, icons"""
+    try:
+        cols = json.loads(columns) if isinstance(columns, str) else columns
+        result = ppt_adv.create_three_column_slide(
+            slide_number, title, cols, style=style,
+        )
+        return f"スライド {result['slide_number']} に3カラムレイアウト（{result['style']}）を作成しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_create_stat_highlight(
+    slide_number: int,
+    stats: str,
+    style: str = "big_numbers",
+) -> str:
+    """統計ハイライトスライドを作成します。stats: JSON文字列 [{"value": "95%", "label": "Customer Satisfaction", "color": [0,150,255]}]。style: big_numbers, circles, bars"""
+    try:
+        stats_list = json.loads(stats) if isinstance(stats, str) else stats
+        result = ppt_adv.create_stat_highlight(
+            slide_number, stats_list, style=style,
+        )
+        return f"スライド {result['slide_number']} に統計ハイライト（{result['style']}）を作成しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_create_timeline_slide(
+    slide_number: int,
+    title: str,
+    events: str,
+    style: str = "horizontal",
+) -> str:
+    """タイムラインスライドを作成します。events: JSON文字列 [{"date": "2024 Q1", "title": "Launch", "description": "..."}]。style: horizontal, vertical, alternating"""
+    try:
+        events_list = json.loads(events) if isinstance(events, str) else events
+        result = ppt_adv.create_timeline_slide(
+            slide_number, title, events_list, style=style,
+        )
+        return f"スライド {result['slide_number']} にタイムライン（{result['style']}）を作成しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_create_funnel_diagram(
+    slide_number: int,
+    title: str,
+    stages: str,
+    style: str = "gradient",
+) -> str:
+    """ファネル図スライドを作成します。stages: JSON文字列 [{"label": "Visitors", "value": "10,000"}]。style: gradient, flat, 3d"""
+    try:
+        stages_list = json.loads(stages) if isinstance(stages, str) else stages
+        result = ppt_adv.create_funnel_diagram(
+            slide_number, title, stages_list, style=style,
+        )
+        return f"スライド {result['slide_number']} にファネル図（{result['style']}）を作成しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_create_swot_slide(
+    slide_number: int,
+    strengths: list[str],
+    weaknesses: list[str],
+    opportunities: list[str],
+    threats: list[str],
+    style: str = "colored",
+) -> str:
+    """SWOT分析スライドを作成します。各パラメータは文字列のリストです。style: colored, minimal, icons"""
+    try:
+        result = ppt_adv.create_swot_slide(
+            slide_number, strengths, weaknesses, opportunities, threats,
+            style=style,
+        )
+        return f"スライド {result['slide_number']} にSWOT分析（{result['style']}）を作成しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_create_roadmap_slide(
+    slide_number: int,
+    title: str,
+    phases: str,
+    style: str = "arrow",
+) -> str:
+    """ロードマップスライドを作成します。phases: JSON文字列 [{"name": "Phase 1", "period": "Q1 2024", "items": ["Task 1"]}]。style: arrow, lane, milestone"""
+    try:
+        phases_list = json.loads(phases) if isinstance(phases, str) else phases
+        result = ppt_adv.create_roadmap_slide(
+            slide_number, title, phases_list, style=style,
+        )
+        return f"スライド {result['slide_number']} にロードマップ（{result['style']}）を作成しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_create_pricing_table(
+    slide_number: int,
+    title: str,
+    plans: str,
+    style: str = "cards",
+) -> str:
+    """料金表スライドを作成します。plans: JSON文字列 [{"name": "Basic", "price": "$9/mo", "features": ["Feature 1"], "highlighted": false}]。style: cards, table, minimal"""
+    try:
+        plans_list = json.loads(plans) if isinstance(plans, str) else plans
+        result = ppt_adv.create_pricing_table(
+            slide_number, title, plans_list, style=style,
+        )
+        return f"スライド {result['slide_number']} に料金表（{result['style']}）を作成しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_create_icon_list_slide(
+    slide_number: int,
+    title: str,
+    items: str,
+    style: str = "horizontal",
+) -> str:
+    """アイコン付きリストスライドを作成します。items: JSON文字列 [{"icon_text": "01", "title": "Step One", "description": "Details..."}]。style: horizontal, vertical, grid"""
+    try:
+        items_list = json.loads(items) if isinstance(items, str) else items
+        result = ppt_adv.create_icon_list_slide(
+            slide_number, title, items_list, style=style,
+        )
+        return f"スライド {result['slide_number']} にアイコンリスト（{result['style']}）を作成しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_create_testimonial_slide(
+    slide_number: int,
+    testimonials: str,
+    style: str = "cards",
+) -> str:
+    """お客様の声スライドを作成します。testimonials: JSON文字列 [{"quote": "Great!", "author": "John", "company": "Acme Inc"}]。style: cards, single_large, minimal"""
+    try:
+        test_list = json.loads(testimonials) if isinstance(testimonials, str) else testimonials
+        result = ppt_adv.create_testimonial_slide(
+            slide_number, test_list, style=style,
+        )
+        return f"スライド {result['slide_number']} にお客様の声（{result['style']}）を作成しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_apply_consistent_branding(
+    primary_color: list[int],
+    secondary_color: list[int],
+    accent_color: list[int],
+    font_title: str = "Segoe UI",
+    font_body: str = "Segoe UI",
+) -> str:
+    """プレゼンテーション全体に統一ブランディングを適用します。各colorは[R,G,B]のリストです。"""
+    try:
+        result = ppt_adv.apply_consistent_branding(
+            tuple(primary_color), tuple(secondary_color), tuple(accent_color),
+            font_title=font_title, font_body=font_body,
+        )
+        return f"{result['slides_affected']} 枚のスライドにブランディングを適用しました"
+    except Exception as e:
+        return f"エラー: {e}"

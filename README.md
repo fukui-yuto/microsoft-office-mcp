@@ -102,7 +102,7 @@ Claude Code で普通に会話するだけです：
 「PDFで出力して」
 ```
 
-## ツール一覧（394ツール）
+## ツール一覧（424ツール）
 
 ### PowerPoint 基本（105ツール）
 
@@ -137,16 +137,20 @@ Claude Code で普通に会話するだけです：
 | ダイアグラム | `create_org_chart` `create_pyramid_diagram` `create_circular_diagram` `create_matrix_diagram` |
 | プレゼン全体 | `set_all_slides_background` `apply_font_to_all` `get_presentation_summary` |
 
-### PowerPoint デザインプリセット（15ツール）
+### PowerPoint デザインプリセット（29ツール）
 
 | カテゴリ | ツール |
 |----------|--------|
-| テーマ・マスター | `apply_theme_colors` `set_master_font` |
+| テーマ・マスター | `apply_theme_colors` `set_master_font` `apply_consistent_branding` |
 | 透かし | `add_watermark` |
 | スライドデザイン | `create_title_slide_design` `create_content_slide_design` `create_section_divider` `create_closing_slide` |
 | 装飾要素 | `add_decorative_element` `add_progress_bar` |
 | 構造化スライド | `create_agenda_slide` `create_comparison_slide` `create_process_flow` `create_quote_slide` `create_team_slide` |
 | スライド番号 | `add_slide_number_footer` |
+| データ可視化 | `create_chart_slide` `create_dashboard_slide` `create_stat_highlight` |
+| レイアウト | `create_two_column_slide` `create_image_text_slide` `create_three_column_slide` `create_icon_list_slide` |
+| インフォグラフィック | `create_timeline_slide` `create_funnel_diagram` |
+| ビジネステンプレート | `create_swot_slide` `create_roadmap_slide` `create_pricing_table` `create_testimonial_slide` |
 
 ### Word 基本（109ツール）
 
@@ -181,7 +185,7 @@ Claude Code で普通に会話するだけです：
 | 検索詳細 | `find_text` `find_all` `highlight_found_text` |
 | 差し込み印刷 | `start_mail_merge` `insert_merge_field` `execute_mail_merge` |
 
-### Word テンプレート（15ツール）
+### Word テンプレート（23ツール）
 
 | カテゴリ | ツール |
 |----------|--------|
@@ -191,6 +195,9 @@ Claude Code で普通に会話するだけです：
 | 書式一括設定 | `format_all_headings` |
 | 装飾要素 | `add_sidebar` `add_callout_box` |
 | 参照 | `create_table_of_figures` `insert_caption` |
+| ビジネス文書 | `create_proposal` `create_sop` `create_project_charter` `create_meeting_agenda` |
+| HR・管理 | `create_employee_handbook_section` `create_faq_document` `create_checklist_document` |
+| 署名 | `add_signature_block` |
 
 ### Excel 基本（130ツール）
 
@@ -232,7 +239,7 @@ Claude Code で普通に会話するだけです：
 | バリデーション拡張 | `add_number_validation` `add_date_validation` `add_text_length_validation` |
 | 監査 | `trace_precedents` `trace_dependents` `check_errors` `get_cell_formula` |
 
-### Excel テンプレート（20ツール）
+### Excel テンプレート（28ツール）
 
 | カテゴリ | ツール |
 |----------|--------|
@@ -242,6 +249,8 @@ Claude Code で普通に会話するだけです：
 | ナビゲーション | `add_sheet_navigation` |
 | 印刷準備 | `setup_print_ready` |
 | 数値書式 | `format_as_currency` `format_as_percentage` |
+| ビジネステンプレート | `create_budget_template` `create_project_tracker` `create_expense_report` `create_sales_report` |
+| 管理テンプレート | `create_inventory_tracker` `create_employee_roster` `create_risk_matrix` `create_attendance_tracker` |
 
 ## 技術構成
 
@@ -265,8 +274,8 @@ src/microsoft_office/
     └── excel_advanced.py    # 332行 - 20ツール
 ```
 
-- **総コード行数**: 22,896行+
-- **総ツール数**: 394ツール
+- **総コード行数**: 28,112行+
+- **総ツール数**: 424ツール
 - **MCP SDK**: `mcp[cli]` (FastMCP)
 - **Office 制御**: `pywin32` (win32com.client) による COM オートメーション
 - **パッケージ管理**: `uv`

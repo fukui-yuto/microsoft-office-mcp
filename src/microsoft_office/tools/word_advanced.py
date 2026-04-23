@@ -287,3 +287,182 @@ def word_insert_caption(
         return f"キャプションを挿入しました（{result['label']}: {result['text']}、位置: {result['position']}）"
     except Exception as e:
         return f"エラー: {e}"
+
+
+@mcp.tool()
+def word_create_proposal(
+    title: str,
+    client_name: str,
+    sections: list[dict],
+    author: str | None = None,
+    date: str | None = None,
+    style: str = "professional",
+) -> str:
+    """ビジネス提案書を作成します。表紙・目次・セクション構成のプロフェッショナルな提案書。sections: [{"title": "セクション名", "content": "内容"}]。style: professional(青系), creative(大胆デザイン), minimal(ミニマル)。"""
+    try:
+        result = word_advanced.create_proposal(
+            title, client_name, sections,
+            author=author, date=date, style=style,
+        )
+        return (
+            f"提案書を作成しました（タイトル: {result['title']}、"
+            f"クライアント: {result['client']}、スタイル: {result['style']}、"
+            f"セクション数: {result['section_count']}）"
+        )
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def word_create_sop(
+    title: str,
+    purpose: str,
+    scope: str,
+    procedures: list[dict],
+    responsibilities: list[dict] | None = None,
+    style: str = "standard",
+) -> str:
+    """標準作業手順書（SOP）を作成します。目的・範囲・手順・責任を含む構造化文書。procedures: [{"step": 1, "title": "手順名", "details": "詳細", "caution": "注意事項"}]。responsibilities: [{"role": "役割", "responsibility": "責任内容"}]。"""
+    try:
+        result = word_advanced.create_sop(
+            title, purpose, scope, procedures,
+            responsibilities=responsibilities, style=style,
+        )
+        return (
+            f"SOPを作成しました（タイトル: {result['title']}、"
+            f"手順数: {result['procedure_count']}、"
+            f"責任者数: {result['responsibility_count']}）"
+        )
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def word_create_project_charter(
+    project_name: str,
+    sponsor: str,
+    manager: str,
+    objectives: list[str],
+    scope: str,
+    milestones: list[dict],
+    budget: str | None = None,
+) -> str:
+    """プロジェクト憲章を作成します。目標・範囲・マイルストーン・承認欄を含む標準フォーマット。milestones: [{"name": "マイルストーン名", "date": "日付", "deliverable": "成果物"}]。"""
+    try:
+        result = word_advanced.create_project_charter(
+            project_name, sponsor, manager, objectives,
+            scope, milestones, budget=budget,
+        )
+        return (
+            f"プロジェクト憲章を作成しました（プロジェクト: {result['project_name']}、"
+            f"目標数: {result['objective_count']}、"
+            f"マイルストーン数: {result['milestone_count']}）"
+        )
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def word_create_meeting_agenda(
+    title: str,
+    date: str,
+    time: str,
+    location: str,
+    attendees: list[str],
+    agenda_items: list[dict],
+    notes: str | None = None,
+) -> str:
+    """会議アジェンダを作成します。日時・場所・出席者・議題・アクションアイテム表を含むプロフェッショナルな書式。agenda_items: [{"topic": "議題", "presenter": "発表者", "duration": "10min"}]。"""
+    try:
+        result = word_advanced.create_meeting_agenda(
+            title, date, time, location, attendees,
+            agenda_items, notes=notes,
+        )
+        return (
+            f"会議アジェンダを作成しました（タイトル: {result['title']}、"
+            f"出席者: {result['attendee_count']}名、"
+            f"議題数: {result['agenda_item_count']}）"
+        )
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def word_create_employee_handbook_section(
+    title: str,
+    policies: list[dict],
+    effective_date: str | None = None,
+) -> str:
+    """従業員ハンドブックのセクションを作成します。ポリシー・確認署名欄付き。policies: [{"title": "ポリシー名", "content": "内容", "important": false}]。importantがtrueの場合、強調表示されます。"""
+    try:
+        result = word_advanced.create_employee_handbook_section(
+            title, policies, effective_date=effective_date,
+        )
+        return (
+            f"ハンドブックセクションを作成しました（タイトル: {result['title']}、"
+            f"ポリシー数: {result['policy_count']}、"
+            f"施行日: {result['effective_date']}）"
+        )
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def word_create_faq_document(
+    title: str,
+    faqs: list[dict],
+    style: str = "accordion",
+) -> str:
+    """FAQドキュメントを作成します。faqs: [{"question": "質問", "answer": "回答"}]。style: accordion(Q&Aブロック), numbered(番号付きリスト), table(表形式)。"""
+    try:
+        result = word_advanced.create_faq_document(
+            title, faqs, style=style,
+        )
+        return (
+            f"FAQドキュメントを作成しました（タイトル: {result['title']}、"
+            f"FAQ数: {result['faq_count']}、スタイル: {result['style']}）"
+        )
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def word_create_checklist_document(
+    title: str,
+    categories: list[dict],
+    style: str = "checkbox",
+) -> str:
+    """チェックリストドキュメントを作成します。categories: [{"name": "カテゴリ名", "items": ["項目1", "項目2"]}]。style: checkbox(チェックボックス付き), numbered(番号付き), bullet(箇条書き)。"""
+    try:
+        result = word_advanced.create_checklist_document(
+            title, categories, style=style,
+        )
+        return (
+            f"チェックリストを作成しました（タイトル: {result['title']}、"
+            f"カテゴリ数: {result['category_count']}、"
+            f"総項目数: {result['total_items']}、スタイル: {result['style']}）"
+        )
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def word_add_signature_block(
+    names: list[str],
+    titles: list[str] | None = None,
+    date_line: bool = True,
+    witness: bool = False,
+) -> str:
+    """プロフェッショナルな署名ブロックを追加します。署名線・名前・肩書・日付欄を含む。witnessがtrueの場合、証人署名欄も追加。"""
+    try:
+        result = word_advanced.add_signature_block(
+            names, titles=titles, date_line=date_line, witness=witness,
+        )
+        return (
+            f"署名ブロックを追加しました（署名者数: {result['signatory_count']}、"
+            f"肩書: {'あり' if result['has_titles'] else 'なし'}、"
+            f"日付欄: {'あり' if result['date_line'] else 'なし'}、"
+            f"証人: {'あり' if result['witness'] else 'なし'}）"
+        )
+    except Exception as e:
+        return f"エラー: {e}"
