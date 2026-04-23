@@ -592,3 +592,900 @@ def excel_unprotect_sheet(password: str | None = None, sheet: str | None = None)
         return f"[{result['sheet']}] シートの保護を解除しました"
     except Exception as e:
         return f"エラー: {e}"
+
+
+# ---------------------------------------------------------------------------
+# Sparklines
+# ---------------------------------------------------------------------------
+
+@mcp.tool()
+def excel_add_sparkline(
+    data_range: str,
+    location_cell: str,
+    sheet: str | None = None,
+    sparkline_type: str = "line",
+    color: list[int] | None = None,
+) -> str:
+    """スパークラインを追加します。data_range: データ範囲（例: "A1:A10"）。location_cell: 配置先セル。sparkline_type: "line","column","win_loss"。color: [R,G,B]形式。"""
+    try:
+        result = excel.add_sparkline(
+            sheet=sheet,
+            data_range=data_range,
+            location_cell=location_cell,
+            sparkline_type=sparkline_type,
+            color=tuple(color) if color else None,
+        )
+        return f"[{result['sheet']}] {result['location']} にスパークラインを追加しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_format_sparkline(
+    location_cell: str,
+    sheet: str | None = None,
+    high_point: bool = False,
+    low_point: bool = False,
+    first_point: bool = False,
+    last_point: bool = False,
+    negative_points: bool = False,
+    markers: bool = False,
+    line_weight: float | None = None,
+) -> str:
+    """スパークラインの表示オプションを設定します。location_cell: スパークラインのセル。high_point/low_point: 最高/最低ポイント表示。markers: マーカー表示。"""
+    try:
+        result = excel.format_sparkline(
+            sheet=sheet,
+            location_cell=location_cell,
+            high_point=high_point,
+            low_point=low_point,
+            first_point=first_point,
+            last_point=last_point,
+            negative_points=negative_points,
+            markers=markers,
+            line_weight=line_weight,
+        )
+        return f"[{result['sheet']}] {result['location']} のスパークラインを設定しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+# ---------------------------------------------------------------------------
+# Advanced Conditional Formatting
+# ---------------------------------------------------------------------------
+
+@mcp.tool()
+def excel_set_conditional_formatting_color_scale(
+    range_address: str,
+    min_color: list[int],
+    mid_color: list[int] | None = None,
+    max_color: list[int] | None = None,
+    sheet: str | None = None,
+) -> str:
+    """カラースケール条件付き書式を設定します。2色または3色スケール。min_color/mid_color/max_color: [R,G,B]形式。mid_colorを指定すると3色スケール。"""
+    try:
+        result = excel.set_conditional_formatting_color_scale(
+            sheet=sheet,
+            range_str=range_address,
+            min_color=tuple(min_color),
+            mid_color=tuple(mid_color) if mid_color else None,
+            max_color=tuple(max_color) if max_color else None,
+        )
+        return f"[{result['sheet']}] {result['range']} にカラースケールを設定しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_set_conditional_formatting_data_bar(
+    range_address: str,
+    bar_color: list[int],
+    show_value: bool = True,
+    min_type: int | None = None,
+    max_type: int | None = None,
+    sheet: str | None = None,
+) -> str:
+    """データバー条件付き書式を設定します。bar_color: [R,G,B]形式。show_value: セル値を表示するか。"""
+    try:
+        result = excel.set_conditional_formatting_data_bar(
+            sheet=sheet,
+            range_str=range_address,
+            bar_color=tuple(bar_color),
+            show_value=show_value,
+            min_type=min_type,
+            max_type=max_type,
+        )
+        return f"[{result['sheet']}] {result['range']} にデータバーを設定しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_set_conditional_formatting_icon_set(
+    range_address: str,
+    icon_style: str = "3_arrows",
+    reverse: bool = False,
+    show_icon_only: bool = False,
+    sheet: str | None = None,
+) -> str:
+    """アイコンセット条件付き書式を設定します。icon_style: "3_arrows","3_traffic_lights","3_stars","4_arrows","5_arrows","3_flags","3_symbols"。"""
+    try:
+        result = excel.set_conditional_formatting_icon_set(
+            sheet=sheet,
+            range_str=range_address,
+            icon_style=icon_style,
+            reverse=reverse,
+            show_icon_only=show_icon_only,
+        )
+        return f"[{result['sheet']}] {result['range']} にアイコンセットを設定しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+# ---------------------------------------------------------------------------
+# Grouping & Outline
+# ---------------------------------------------------------------------------
+
+@mcp.tool()
+def excel_group_rows(start_row: int, end_row: int, sheet: str | None = None) -> str:
+    """行をグループ化します（折りたたみ可能）。start_row: 開始行番号、end_row: 終了行番号。"""
+    try:
+        result = excel.group_rows(sheet=sheet, start_row=start_row, end_row=end_row)
+        return f"[{result['sheet']}] 行 {result['rows']} をグループ化しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_ungroup_rows(start_row: int, end_row: int, sheet: str | None = None) -> str:
+    """行のグループ化を解除します。start_row: 開始行番号、end_row: 終了行番号。"""
+    try:
+        result = excel.ungroup_rows(sheet=sheet, start_row=start_row, end_row=end_row)
+        return f"[{result['sheet']}] 行 {result['rows']} のグループ化を解除しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_group_columns(start_col: str, end_col: str, sheet: str | None = None) -> str:
+    """列をグループ化します（折りたたみ可能）。start_col: 開始列（例: "B"）、end_col: 終了列（例: "D"）。"""
+    try:
+        result = excel.group_columns(sheet=sheet, start_col=start_col, end_col=end_col)
+        return f"[{result['sheet']}] 列 {result['columns']} をグループ化しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_ungroup_columns(start_col: str, end_col: str, sheet: str | None = None) -> str:
+    """列のグループ化を解除します。start_col: 開始列、end_col: 終了列。"""
+    try:
+        result = excel.ungroup_columns(sheet=sheet, start_col=start_col, end_col=end_col)
+        return f"[{result['sheet']}] 列 {result['columns']} のグループ化を解除しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_set_outline_level(
+    sheet: str | None = None,
+    show_detail: bool = True,
+    summary_below: bool = True,
+    summary_right: bool = True,
+) -> str:
+    """アウトラインの設定を変更します。summary_below: 集計行を下に配置。summary_right: 集計列を右に配置。"""
+    try:
+        result = excel.set_outline_level(
+            sheet=sheet,
+            show_detail=show_detail,
+            summary_below=summary_below,
+            summary_right=summary_right,
+        )
+        return f"[{result['sheet']}] アウトライン設定を変更しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_collapse_group(level: int, sheet: str | None = None) -> str:
+    """アウトラインを指定レベルまで折りたたみます。level: 表示するレベル（1-8）。"""
+    try:
+        result = excel.collapse_group(sheet=sheet, level=level)
+        return f"[{result['sheet']}] アウトラインをレベル {result['level']} に折りたたみました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+# ---------------------------------------------------------------------------
+# Hyperlinks
+# ---------------------------------------------------------------------------
+
+@mcp.tool()
+def excel_add_hyperlink(
+    cell: str,
+    url: str,
+    display_text: str | None = None,
+    tooltip: str | None = None,
+    sheet: str | None = None,
+) -> str:
+    """セルにハイパーリンクを追加します。cell: セルアドレス。url: リンク先URL。display_text: 表示テキスト。tooltip: ツールチップ。"""
+    try:
+        result = excel.add_hyperlink(
+            sheet=sheet,
+            cell=cell,
+            url=url,
+            display_text=display_text,
+            tooltip=tooltip,
+        )
+        return f"[{result['sheet']}] {result['cell']} にハイパーリンクを追加しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_add_internal_link(
+    cell: str,
+    target_sheet: str,
+    target_cell: str,
+    display_text: str | None = None,
+    sheet: str | None = None,
+) -> str:
+    """セルにブック内リンク（別シート/セルへのリンク）を追加します。target_sheet: リンク先シート名。target_cell: リンク先セル。"""
+    try:
+        result = excel.add_internal_link(
+            sheet=sheet,
+            cell=cell,
+            target_sheet=target_sheet,
+            target_cell=target_cell,
+            display_text=display_text,
+        )
+        return f"[{result['sheet']}] {result['cell']} に内部リンクを追加しました（{result['target_sheet']}!{result['target_cell']}）"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+# ---------------------------------------------------------------------------
+# Images & Shapes
+# ---------------------------------------------------------------------------
+
+@mcp.tool()
+def excel_insert_image(
+    image_path: str,
+    cell: str = "A1",
+    width: float | None = None,
+    height: float | None = None,
+    sheet: str | None = None,
+) -> str:
+    """ワークシートに画像を挿入します。image_path: 画像ファイルのパス。cell: 配置先セル。width/height: サイズ（ポイント）。"""
+    try:
+        result = excel.insert_image(
+            sheet=sheet,
+            image_path=image_path,
+            cell=cell,
+            width=width,
+            height=height,
+        )
+        return f"[{result['sheet']}] セル {result['cell']} 付近に画像を挿入しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_add_shape(
+    shape_type: int,
+    left: float,
+    top: float,
+    width: float,
+    height: float,
+    fill_color: list[int] | None = None,
+    line_color: list[int] | None = None,
+    text: str | None = None,
+    sheet: str | None = None,
+) -> str:
+    """ワークシートに図形を追加します。shape_type: 1=四角形,5=角丸四角形,9=楕円,4=ひし形。fill_color/line_color: [R,G,B]形式。text: 図形内テキスト。"""
+    try:
+        result = excel.add_shape(
+            sheet=sheet,
+            shape_type=shape_type,
+            left=left,
+            top=top,
+            width=width,
+            height=height,
+            fill_color=tuple(fill_color) if fill_color else None,
+            line_color=tuple(line_color) if line_color else None,
+            text=text,
+        )
+        return f"[{result['sheet']}] 図形 '{result['name']}' を追加しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_add_textbox(
+    left: float,
+    top: float,
+    width: float,
+    height: float,
+    text: str,
+    font_size: float | None = None,
+    font_color: list[int] | None = None,
+    bold: bool = False,
+    sheet: str | None = None,
+) -> str:
+    """ワークシートにテキストボックスを追加します。left/top: 位置（ポイント）。width/height: サイズ。font_color: [R,G,B]形式。"""
+    try:
+        result = excel.add_textbox(
+            sheet=sheet,
+            left=left,
+            top=top,
+            width=width,
+            height=height,
+            text=text,
+            font_size=font_size,
+            font_color=tuple(font_color) if font_color else None,
+            bold=bold,
+        )
+        return f"[{result['sheet']}] テキストボックス '{result['name']}' を追加しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+# ---------------------------------------------------------------------------
+# Advanced Cell Formatting
+# ---------------------------------------------------------------------------
+
+@mcp.tool()
+def excel_set_cell_style(range_address: str, style_name: str, sheet: str | None = None) -> str:
+    """セルに組み込みスタイルを適用します。style_name: "Heading 1","Total","Accent1"など。range_address: 対象範囲。"""
+    try:
+        result = excel.set_cell_style(sheet=sheet, range_str=range_address, style_name=style_name)
+        return f"[{result['sheet']}] {result['range']} にスタイル '{result['style']}' を適用しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_auto_fit_columns(range_address: str | None = None, sheet: str | None = None) -> str:
+    """列幅をコンテンツに合わせて自動調整します。range_address: 対象範囲（省略時は使用範囲全体）。"""
+    try:
+        result = excel.auto_fit_columns(sheet=sheet, range_str=range_address)
+        return f"[{result['sheet']}] {result['range']} の列幅を自動調整しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_auto_fit_rows(range_address: str | None = None, sheet: str | None = None) -> str:
+    """行の高さをコンテンツに合わせて自動調整します。range_address: 対象範囲（省略時は使用範囲全体）。"""
+    try:
+        result = excel.auto_fit_rows(sheet=sheet, range_str=range_address)
+        return f"[{result['sheet']}] {result['range']} の行の高さを自動調整しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_set_cell_indent(range_address: str, indent_level: int, sheet: str | None = None) -> str:
+    """セルのインデントレベルを設定します。indent_level: インデントレベル（0以上）。"""
+    try:
+        result = excel.set_cell_indent(sheet=sheet, range_str=range_address, indent_level=indent_level)
+        return f"[{result['sheet']}] {result['range']} のインデントを {result['indent']} に設定しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_set_text_rotation(range_address: str, angle: int, sheet: str | None = None) -> str:
+    """セルのテキスト回転角度を設定します。angle: -90〜90度。"""
+    try:
+        result = excel.set_text_rotation(sheet=sheet, range_str=range_address, angle=angle)
+        return f"[{result['sheet']}] {result['range']} のテキスト回転を {result['angle']}度 に設定しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_set_wrap_text(range_address: str, wrap: bool = True, sheet: str | None = None) -> str:
+    """セルのテキスト折り返しを設定します。wrap: Trueで折り返し有効。"""
+    try:
+        result = excel.set_wrap_text(sheet=sheet, range_str=range_address, wrap=wrap)
+        return f"[{result['sheet']}] {result['range']} の折り返しを {'有効' if result['wrap'] else '無効'} にしました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_set_cell_pattern(
+    range_address: str,
+    pattern_type: int,
+    fore_color: list[int] | None = None,
+    back_color: list[int] | None = None,
+    sheet: str | None = None,
+) -> str:
+    """セルのパターン塗りつぶしを設定します。pattern_type: パターン種類（1-18）。fore_color/back_color: [R,G,B]形式。"""
+    try:
+        result = excel.set_cell_pattern(
+            sheet=sheet,
+            range_str=range_address,
+            pattern_type=pattern_type,
+            fore_color=tuple(fore_color) if fore_color else None,
+            back_color=tuple(back_color) if back_color else None,
+        )
+        return f"[{result['sheet']}] {result['range']} にパターンを設定しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+# ---------------------------------------------------------------------------
+# Data Features (Advanced)
+# ---------------------------------------------------------------------------
+
+@mcp.tool()
+def excel_copy_range(
+    source_range: str,
+    target_cell: str,
+    target_sheet: str | None = None,
+    sheet: str | None = None,
+) -> str:
+    """範囲を別の場所にコピーします。source_range: コピー元範囲。target_cell: コピー先セル。target_sheet: コピー先シート（省略時は同じシート）。"""
+    try:
+        result = excel.copy_range(
+            sheet=sheet,
+            source_range=source_range,
+            target_cell=target_cell,
+            target_sheet=target_sheet,
+        )
+        return f"[{result['sheet']}] {result['source']} を [{result['target_sheet']}] {result['target']} にコピーしました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_clear_range(
+    range_address: str,
+    clear_type: str = "all",
+    sheet: str | None = None,
+) -> str:
+    """範囲をクリアします。clear_type: "all"=全て,"contents"=値のみ,"formats"=書式のみ,"comments"=コメントのみ。"""
+    try:
+        result = excel.clear_range(sheet=sheet, range_str=range_address, clear_type=clear_type)
+        return f"[{result['sheet']}] {result['range']} をクリアしました（{result['clear_type']}）"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_find_value(
+    value: str,
+    match_case: bool = False,
+    match_entire: bool = False,
+    sheet: str | None = None,
+) -> str:
+    """シート内で値を検索します。value: 検索値。match_case: 大文字小文字を区別。match_entire: セル全体と一致。"""
+    try:
+        result = excel.find_value(sheet=sheet, value=value, match_case=match_case, match_entire=match_entire)
+        if result["found"]:
+            return f"[{result['sheet']}] '{result['value']}' が見つかりました: {result['found']}"
+        else:
+            return f"[{result['sheet']}] '{result['value']}' は見つかりませんでした"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_replace_value(
+    find_text: str,
+    replace_text: str,
+    match_case: bool = False,
+    match_entire: bool = False,
+    sheet: str | None = None,
+) -> str:
+    """シート内で値を検索して置換します。find_text: 検索文字列。replace_text: 置換文字列。"""
+    try:
+        result = excel.replace_value(
+            sheet=sheet,
+            find_text=find_text,
+            replace_text=replace_text,
+            match_case=match_case,
+            match_entire=match_entire,
+        )
+        return f"[{result['sheet']}] '{result['find']}' を '{result['replace']}' に置換しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_remove_duplicates(
+    range_address: str,
+    columns: list[int] | None = None,
+    sheet: str | None = None,
+) -> str:
+    """範囲から重複行を削除します。columns: チェックする列番号リスト（1始まり、省略時は全列）。"""
+    try:
+        result = excel.remove_duplicates(sheet=sheet, range_str=range_address, columns=columns)
+        return f"[{result['sheet']}] {result['range']} の重複を削除しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_text_to_columns(
+    range_address: str,
+    delimiter: str = ",",
+    sheet: str | None = None,
+) -> str:
+    """テキストを列に分割します。delimiter: 区切り文字（","、"\\t"、";"、" "など）。"""
+    try:
+        result = excel.text_to_columns(sheet=sheet, range_str=range_address, delimiter=delimiter)
+        return f"[{result['sheet']}] {result['range']} を区切り文字 '{result['delimiter']}' で分割しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_transpose_range(
+    source_range: str,
+    target_cell: str,
+    sheet: str | None = None,
+) -> str:
+    """データを転置（行列入替）します。source_range: 元の範囲。target_cell: 転置先セル。"""
+    try:
+        result = excel.transpose_range(sheet=sheet, source_range=source_range, target_cell=target_cell)
+        return f"[{result['sheet']}] {result['source']} を {result['target']} に転置しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+# ---------------------------------------------------------------------------
+# Advanced Chart
+# ---------------------------------------------------------------------------
+
+@mcp.tool()
+def excel_format_chart(
+    chart_index: int = 1,
+    title: str | None = None,
+    x_axis_title: str | None = None,
+    y_axis_title: str | None = None,
+    legend_position: str | None = None,
+    style: int | None = None,
+    sheet: str | None = None,
+) -> str:
+    """既存のグラフを書式設定します。chart_index: グラフ番号（1始まり）。legend_position: "bottom","top","left","right","none"。style: スタイル番号。"""
+    try:
+        result = excel.format_chart(
+            sheet=sheet,
+            chart_index=chart_index,
+            title=title,
+            x_axis_title=x_axis_title,
+            y_axis_title=y_axis_title,
+            legend_position=legend_position,
+            style=style,
+        )
+        return f"[{result['sheet']}] グラフ '{result['chart']}' を書式設定しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_format_chart_series(
+    chart_index: int = 1,
+    series_index: int = 1,
+    color: list[int] | None = None,
+    line_weight: float | None = None,
+    marker_style: int | None = None,
+    marker_size: int | None = None,
+    sheet: str | None = None,
+) -> str:
+    """グラフの個別データ系列を書式設定します。series_index: 系列番号（1始まり）。color: [R,G,B]形式。marker_style: -4142=なし,8=丸,1=四角。"""
+    try:
+        result = excel.format_chart_series(
+            sheet=sheet,
+            chart_index=chart_index,
+            series_index=series_index,
+            color=tuple(color) if color else None,
+            line_weight=line_weight,
+            marker_style=marker_style,
+            marker_size=marker_size,
+        )
+        return f"[{result['sheet']}] グラフのデータ系列 {result['series_index']} を書式設定しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_add_chart_trendline(
+    chart_index: int = 1,
+    series_index: int = 1,
+    trend_type: str = "linear",
+    display_equation: bool = False,
+    display_r_squared: bool = False,
+    sheet: str | None = None,
+) -> str:
+    """グラフにトレンドラインを追加します。trend_type: "linear","exponential","logarithmic","polynomial","power","moving_average"。"""
+    try:
+        result = excel.add_chart_trendline(
+            sheet=sheet,
+            chart_index=chart_index,
+            series_index=series_index,
+            trend_type=trend_type,
+            display_equation=display_equation,
+            display_r_squared=display_r_squared,
+        )
+        return f"[{result['sheet']}] グラフにトレンドライン（{result['trend_type']}）を追加しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_set_chart_area_format(
+    chart_index: int = 1,
+    fill_color: list[int] | None = None,
+    border_color: list[int] | None = None,
+    border_weight: float | None = None,
+    sheet: str | None = None,
+) -> str:
+    """グラフエリアの背景と枠線を書式設定します。fill_color/border_color: [R,G,B]形式。"""
+    try:
+        result = excel.set_chart_area_format(
+            sheet=sheet,
+            chart_index=chart_index,
+            fill_color=tuple(fill_color) if fill_color else None,
+            border_color=tuple(border_color) if border_color else None,
+            border_weight=border_weight,
+        )
+        return f"[{result['sheet']}] グラフエリアを書式設定しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+# ---------------------------------------------------------------------------
+# Pivot Table Advanced
+# ---------------------------------------------------------------------------
+
+@mcp.tool()
+def excel_format_pivot_table(
+    pivot_name: str,
+    style: str | None = None,
+    show_grand_total_rows: bool | None = None,
+    show_grand_total_cols: bool | None = None,
+    repeat_item_labels: bool | None = None,
+    sheet: str | None = None,
+) -> str:
+    """ピボットテーブルを書式設定します。style: スタイル名（例: "PivotStyleMedium9"）。show_grand_total_rows/cols: 総計表示。"""
+    try:
+        result = excel.format_pivot_table(
+            sheet=sheet,
+            pivot_name=pivot_name,
+            style=style,
+            show_grand_total_rows=show_grand_total_rows,
+            show_grand_total_cols=show_grand_total_cols,
+            repeat_item_labels=repeat_item_labels,
+        )
+        return f"[{result['sheet']}] ピボットテーブル '{result['pivot_name']}' を書式設定しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_add_pivot_field(
+    pivot_name: str,
+    field_name: str,
+    area: str = "row",
+    position: int | None = None,
+    sheet: str | None = None,
+) -> str:
+    """ピボットテーブルにフィールドを追加します。area: "row","column","data","filter"。position: エリア内の位置。"""
+    try:
+        result = excel.add_pivot_field(
+            sheet=sheet,
+            pivot_name=pivot_name,
+            field_name=field_name,
+            area=area,
+            position=position,
+        )
+        return f"[{result['sheet']}] ピボットテーブル '{result['pivot_name']}' にフィールド '{result['field']}' を追加しました（{result['area']}）"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_refresh_pivot_table(pivot_name: str | None = None, sheet: str | None = None) -> str:
+    """ピボットテーブルを更新します。pivot_name: 特定のピボットテーブル名（省略時は全て更新）。"""
+    try:
+        result = excel.refresh_pivot_table(sheet=sheet, pivot_name=pivot_name)
+        if "pivot_name" in result:
+            return f"[{result['sheet']}] ピボットテーブル '{result['pivot_name']}' を更新しました"
+        else:
+            return f"[{result['sheet']}] {result['refreshed_count']} 個のピボットテーブルを更新しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+# ---------------------------------------------------------------------------
+# Workbook Features
+# ---------------------------------------------------------------------------
+
+@mcp.tool()
+def excel_set_workbook_properties(
+    title: str | None = None,
+    author: str | None = None,
+    subject: str | None = None,
+    keywords: str | None = None,
+    comments: str | None = None,
+) -> str:
+    """ブックのドキュメントプロパティを設定します。title: タイトル。author: 作成者。subject: 件名。keywords: キーワード。"""
+    try:
+        result = excel.set_workbook_properties(
+            title=title,
+            author=author,
+            subject=subject,
+            keywords=keywords,
+            comments=comments,
+        )
+        return f"ブック '{result['name']}' のプロパティを設定しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_get_workbook_statistics() -> str:
+    """ブックの統計情報を取得します（シート数、使用範囲など）。結果はJSON形式で返します。"""
+    try:
+        result = excel.get_workbook_statistics()
+        return json.dumps(result, ensure_ascii=False, default=str)
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_set_tab_color(color: list[int], sheet: str | None = None) -> str:
+    """ワークシートのタブの色を設定します。color: [R,G,B]形式（例: [255,0,0]で赤）。"""
+    try:
+        result = excel.set_tab_color(sheet=sheet, color=tuple(color))
+        return f"[{result['sheet']}] タブの色を設定しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_hide_sheet(sheet: str) -> str:
+    """ワークシートを非表示にします。sheet: 非表示にするシート名。"""
+    try:
+        result = excel.hide_sheet(sheet)
+        return f"シート '{result['sheet']}' を非表示にしました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_unhide_sheet(sheet: str) -> str:
+    """非表示のワークシートを再表示します。sheet: 再表示するシート名。"""
+    try:
+        result = excel.unhide_sheet(sheet)
+        return f"シート '{result['sheet']}' を再表示しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_copy_sheet(
+    source_sheet: str,
+    target_name: str | None = None,
+    before: str | None = None,
+    after: str | None = None,
+) -> str:
+    """ワークシートをコピーします。source_sheet: コピー元シート名。target_name: 新しいシート名。before/after: 配置位置のシート名。"""
+    try:
+        result = excel.copy_sheet(
+            source_sheet=source_sheet,
+            target_name=target_name,
+            before=before,
+            after=after,
+        )
+        return f"シート '{result['source']}' を '{result['new_sheet']}' としてコピーしました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_move_sheet(
+    sheet: str,
+    before: str | None = None,
+    after: str | None = None,
+) -> str:
+    """ワークシートを移動します。sheet: 移動するシート名。before/after: 移動先のシート名。"""
+    try:
+        result = excel.move_sheet(sheet=sheet, before=before, after=after)
+        return f"シート '{result['sheet']}' を移動しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+# ---------------------------------------------------------------------------
+# Print & Page Setup Advanced
+# ---------------------------------------------------------------------------
+
+@mcp.tool()
+def excel_set_print_area(range_address: str, sheet: str | None = None) -> str:
+    """印刷範囲を設定します。range_address: 印刷範囲（例: "A1:F20"）。"""
+    try:
+        result = excel.set_print_area(sheet=sheet, range_str=range_address)
+        return f"[{result['sheet']}] 印刷範囲を {result['print_area']} に設定しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_set_print_titles(
+    rows: str | None = None,
+    columns: str | None = None,
+    sheet: str | None = None,
+) -> str:
+    """各ページに繰り返し印刷する行/列を設定します。rows: 繰り返し行（例: "1:2"）。columns: 繰り返し列（例: "A:B"）。"""
+    try:
+        result = excel.set_print_titles(sheet=sheet, rows=rows, columns=columns)
+        return f"[{result['sheet']}] 印刷タイトルを設定しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_add_page_break(
+    row: int | None = None,
+    col: int | None = None,
+    sheet: str | None = None,
+) -> str:
+    """改ページを挿入します。row: 水平改ページの行番号。col: 垂直改ページの列番号。"""
+    try:
+        result = excel.add_page_break(sheet=sheet, row=row, col=col)
+        msg = f"[{result['sheet']}] 改ページを挿入しました"
+        if result['row']:
+            msg += f"（行: {result['row']}）"
+        if result['col']:
+            msg += f"（列: {result['col']}）"
+        return msg
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+# ---------------------------------------------------------------------------
+# Protection Advanced
+# ---------------------------------------------------------------------------
+
+@mcp.tool()
+def excel_protect_workbook(
+    password: str | None = None,
+    structure: bool = True,
+    windows: bool = False,
+) -> str:
+    """ブック全体を保護します。structure: 構造の保護（シートの追加/削除を防止）。windows: ウィンドウの保護。"""
+    try:
+        result = excel.protect_workbook(password=password, structure=structure, windows=windows)
+        return f"ブック '{result['name']}' を保護しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_unprotect_workbook(password: str | None = None) -> str:
+    """ブックの保護を解除します。password: 保護時に設定したパスワード（省略可）。"""
+    try:
+        result = excel.unprotect_workbook(password=password)
+        return f"ブック '{result['name']}' の保護を解除しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_lock_cells(
+    range_address: str,
+    locked: bool = True,
+    sheet: str | None = None,
+) -> str:
+    """セルのロック/ロック解除を設定します（シート保護と併用）。locked: Trueでロック、Falseでロック解除。"""
+    try:
+        result = excel.lock_cells(sheet=sheet, range_str=range_address, locked=locked)
+        status = "ロック" if result['locked'] else "ロック解除"
+        return f"[{result['sheet']}] {result['range']} を{status}しました"
+    except Exception as e:
+        return f"エラー: {e}"

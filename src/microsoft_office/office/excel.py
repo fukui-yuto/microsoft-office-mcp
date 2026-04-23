@@ -1176,3 +1176,1539 @@ def unprotect_sheet(password: str | None = None, sheet: str | None = None) -> di
     else:
         ws.Unprotect()
     return {"sheet": ws.Name, "protected": False}
+
+
+# ---------------------------------------------------------------------------
+# Sparklines
+# ---------------------------------------------------------------------------
+
+# Sparkline type constants
+XL_SPARKLINE_LINE = 1
+XL_SPARKLINE_COLUMN = 2
+XL_SPARKLINE_STACKED = 3  # win_loss
+
+
+def add_sparkline(
+    sheet: str | None = None,
+    data_range: str = "",
+    location_cell: str = "",
+    sparkline_type: str = "line",
+    color: tuple[int, int, int] | None = None,
+) -> dict:
+    """Add a sparkline to a cell.
+
+    Args:
+        sheet: Optional sheet name.
+        data_range: Source data range (e.g. "A1:A10").
+        location_cell: Cell where the sparkline is placed.
+        sparkline_type: Type of sparkline ("line", "column", "win_loss").
+        color: Optional sparkline color as (R, G, B).
+
+    Returns:
+        dict with location cell and sheet name.
+    """
+    type_map = {
+        "line": XL_SPARKLINE_LINE,
+        "column": XL_SPARKLINE_COLUMN,
+        "win_loss": XL_SPARKLINE_STACKED,
+    }
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    sl_type = type_map.get(sparkline_type, XL_SPARKLINE_LINE)
+    loc = ws.Range(location_cell)
+    sg = loc.SparklineGroups.Add(Type=sl_type, SourceData=data_range)
+    if color is not None:
+        sg.SeriesColor.Color = rgb(*color)
+    return {"location": location_cell, "sheet": ws.Name}
+
+
+def format_sparkline(
+    sheet: str | None = None,
+    location_cell: str = "",
+    high_point: bool = False,
+    low_point: bool = False,
+    first_point: bool = False,
+    last_point: bool = False,
+    negative_points: bool = False,
+    markers: bool = False,
+    line_weight: float | None = None,
+) -> dict:
+    """Format sparkline display options.
+
+    Args:
+        sheet: Optional sheet name.
+        location_cell: Cell containing the sparkline.
+        high_point: Show high point marker.
+        low_point: Show low point marker.
+        first_point: Show first point marker.
+        last_point: Show last point marker.
+        negative_points: Show negative point markers.
+        markers: Show all markers (line sparklines).
+        line_weight: Line weight in points.
+
+    Returns:
+        dict with location cell and sheet name.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    rng = ws.Range(location_cell)
+    sg = rng.SparklineGroups(1)
+    sg.Points.Highpoint.Visible = high_point
+    sg.Points.Lowpoint.Visible = low_point
+    sg.Points.Firstpoint.Visible = first_point
+    sg.Points.Lastpoint.Visible = last_point
+    sg.Points.Negative.Visible = negative_points
+    sg.Points.Markers.Visible = markers
+    if line_weight is not None:
+        sg.LineWeight = line_weight
+    return {"location": location_cell, "sheet": ws.Name}
+
+
+# ---------------------------------------------------------------------------
+# Advanced Conditional Formatting
+# ---------------------------------------------------------------------------
+
+# Conditional format types
+XL_CF_COLOR_SCALE = 3
+XL_CF_DATA_BAR = 4
+XL_CF_ICON_SET = 6
+
+# Condition value types
+XL_COND_VALUE_LOWEST = 1
+XL_COND_VALUE_HIGHEST = 2
+XL_COND_VALUE_NUMBER = 0
+XL_COND_VALUE_PERCENT = 3
+XL_COND_VALUE_PERCENTILE = 5
+XL_COND_VALUE_AUTOMATIC = 7
+
+# Icon set types
+XL_ICON_3_ARROWS = 1
+XL_ICON_3_TRAFFIC_LIGHTS = 4
+XL_ICON_3_STARS = 18
+XL_ICON_4_ARROWS = 8
+XL_ICON_5_ARROWS = 13
+XL_ICON_3_FLAGS = 3
+XL_ICON_3_SYMBOLS = 6
+
+
+def set_conditional_formatting_color_scale(
+    sheet: str | None = None,
+    range_str: str = "",
+    min_color: tuple[int, int, int] = (255, 255, 255),
+    mid_color: tuple[int, int, int] | None = None,
+    max_color: tuple[int, int, int] | None = None,
+) -> dict:
+    """Add a 2-color or 3-color scale conditional formatting rule.
+
+    Args:
+        sheet: Optional sheet name.
+        range_str: Target range address.
+        min_color: Color for the minimum value as (R, G, B).
+        mid_color: Color for the midpoint (if provided, uses 3-color scale).
+        max_color: Color for the maximum value as (R, G, B).
+
+    Returns:
+        dict with range and sheet name.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    rng = ws.Range(range_str)
+    if mid_color is not None:
+        # 3-color scale
+        cs = rng.FormatConditions.AddColorScale(ColorScaleType=3)
+        cs.ColorScaleCriteria(1).Type = XL_COND_VALUE_LOWEST
+        cs.ColorScaleCriteria(1).FormatColor.Color = rgb(*min_color)
+        cs.ColorScaleCriteria(2).Type = XL_COND_VALUE_PERCENTILE
+        cs.ColorScaleCriteria(2).Value = 50
+        cs.ColorScaleCriteria(2).FormatColor.Color = rgb(*mid_color)
+        cs.ColorScaleCriteria(3).Type = XL_COND_VALUE_HIGHEST
+        cs.ColorScaleCriteria(3).FormatColor.Color = rgb(*max_color) if max_color else rgb(255, 255, 255)
+    else:
+        # 2-color scale
+        cs = rng.FormatConditions.AddColorScale(ColorScaleType=2)
+        cs.ColorScaleCriteria(1).Type = XL_COND_VALUE_LOWEST
+        cs.ColorScaleCriteria(1).FormatColor.Color = rgb(*min_color)
+        cs.ColorScaleCriteria(2).Type = XL_COND_VALUE_HIGHEST
+        cs.ColorScaleCriteria(2).FormatColor.Color = rgb(*max_color) if max_color else rgb(255, 255, 255)
+    return {"range": range_str, "sheet": ws.Name}
+
+
+def set_conditional_formatting_data_bar(
+    sheet: str | None = None,
+    range_str: str = "",
+    bar_color: tuple[int, int, int] = (0, 0, 255),
+    show_value: bool = True,
+    min_type: int | None = None,
+    max_type: int | None = None,
+) -> dict:
+    """Add data bar conditional formatting to a range.
+
+    Args:
+        sheet: Optional sheet name.
+        range_str: Target range address.
+        bar_color: Bar color as (R, G, B).
+        show_value: Whether to show the cell value alongside the bar.
+        min_type: Minimum value type (0=Number, 1=Lowest, 3=Percent, 5=Percentile, 7=Automatic).
+        max_type: Maximum value type.
+
+    Returns:
+        dict with range and sheet name.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    rng = ws.Range(range_str)
+    db = rng.FormatConditions.AddDatabar()
+    db.BarColor.Color = rgb(*bar_color)
+    db.ShowValue = show_value
+    if min_type is not None:
+        db.MinPoint.Modify(newtype=min_type)
+    if max_type is not None:
+        db.MaxPoint.Modify(newtype=max_type)
+    return {"range": range_str, "sheet": ws.Name}
+
+
+def set_conditional_formatting_icon_set(
+    sheet: str | None = None,
+    range_str: str = "",
+    icon_style: str = "3_arrows",
+    reverse: bool = False,
+    show_icon_only: bool = False,
+) -> dict:
+    """Add icon set conditional formatting to a range.
+
+    Args:
+        sheet: Optional sheet name.
+        range_str: Target range address.
+        icon_style: Icon set style name (e.g. "3_arrows", "3_traffic_lights",
+                    "3_stars", "4_arrows", "5_arrows", "3_flags", "3_symbols").
+        reverse: Reverse the icon order.
+        show_icon_only: Show only icons without cell values.
+
+    Returns:
+        dict with range and sheet name.
+    """
+    icon_map = {
+        "3_arrows": XL_ICON_3_ARROWS,
+        "3_traffic_lights": XL_ICON_3_TRAFFIC_LIGHTS,
+        "3_stars": XL_ICON_3_STARS,
+        "4_arrows": XL_ICON_4_ARROWS,
+        "5_arrows": XL_ICON_5_ARROWS,
+        "3_flags": XL_ICON_3_FLAGS,
+        "3_symbols": XL_ICON_3_SYMBOLS,
+    }
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    rng = ws.Range(range_str)
+    icon_id = icon_map.get(icon_style, XL_ICON_3_ARROWS)
+    iset = rng.FormatConditions.AddIconSetCondition()
+    iset.IconSet = app.ActiveWorkbook.IconSets(icon_id)
+    iset.ReverseOrder = reverse
+    iset.ShowIconOnly = show_icon_only
+    return {"range": range_str, "sheet": ws.Name}
+
+
+# ---------------------------------------------------------------------------
+# Grouping & Outline
+# ---------------------------------------------------------------------------
+
+def group_rows(
+    sheet: str | None = None,
+    start_row: int = 1,
+    end_row: int = 1,
+) -> dict:
+    """Group rows (collapsible).
+
+    Args:
+        sheet: Optional sheet name.
+        start_row: First row number to group.
+        end_row: Last row number to group.
+
+    Returns:
+        dict with row range and sheet name.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    ws.Rows(f"{start_row}:{end_row}").Group()
+    return {"rows": f"{start_row}:{end_row}", "sheet": ws.Name}
+
+
+def ungroup_rows(
+    sheet: str | None = None,
+    start_row: int = 1,
+    end_row: int = 1,
+) -> dict:
+    """Ungroup rows.
+
+    Args:
+        sheet: Optional sheet name.
+        start_row: First row number to ungroup.
+        end_row: Last row number to ungroup.
+
+    Returns:
+        dict with row range and sheet name.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    ws.Rows(f"{start_row}:{end_row}").Ungroup()
+    return {"rows": f"{start_row}:{end_row}", "sheet": ws.Name}
+
+
+def group_columns(
+    sheet: str | None = None,
+    start_col: str = "A",
+    end_col: str = "A",
+) -> dict:
+    """Group columns (collapsible).
+
+    Args:
+        sheet: Optional sheet name.
+        start_col: First column letter to group.
+        end_col: Last column letter to group.
+
+    Returns:
+        dict with column range and sheet name.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    ws.Columns(f"{start_col}:{end_col}").Group()
+    return {"columns": f"{start_col}:{end_col}", "sheet": ws.Name}
+
+
+def ungroup_columns(
+    sheet: str | None = None,
+    start_col: str = "A",
+    end_col: str = "A",
+) -> dict:
+    """Ungroup columns.
+
+    Args:
+        sheet: Optional sheet name.
+        start_col: First column letter to ungroup.
+        end_col: Last column letter to ungroup.
+
+    Returns:
+        dict with column range and sheet name.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    ws.Columns(f"{start_col}:{end_col}").Ungroup()
+    return {"columns": f"{start_col}:{end_col}", "sheet": ws.Name}
+
+
+def set_outline_level(
+    sheet: str | None = None,
+    show_detail: bool = True,
+    summary_below: bool = True,
+    summary_right: bool = True,
+) -> dict:
+    """Configure outline settings for a worksheet.
+
+    Args:
+        sheet: Optional sheet name.
+        show_detail: Whether to show detail rows/columns.
+        summary_below: Place summary rows below detail.
+        summary_right: Place summary columns to the right of detail.
+
+    Returns:
+        dict with sheet name.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    ws.Outline.SummaryRow = 1 if summary_below else 0  # xlAbove=0, xlBelow=1
+    ws.Outline.SummaryColumn = 1 if summary_right else 0  # xlLeft=0, xlRight=1
+    if not show_detail:
+        ws.Outline.ShowLevels(RowLevels=1, ColumnLevels=1)
+    return {"sheet": ws.Name}
+
+
+def collapse_group(
+    sheet: str | None = None,
+    level: int = 1,
+) -> dict:
+    """Collapse outline to a specific level.
+
+    Args:
+        sheet: Optional sheet name.
+        level: Outline level to show (1-8).
+
+    Returns:
+        dict with level and sheet name.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    ws.Outline.ShowLevels(RowLevels=level, ColumnLevels=level)
+    return {"level": level, "sheet": ws.Name}
+
+
+# ---------------------------------------------------------------------------
+# Hyperlinks
+# ---------------------------------------------------------------------------
+
+def add_hyperlink(
+    sheet: str | None = None,
+    cell: str = "",
+    url: str = "",
+    display_text: str | None = None,
+    tooltip: str | None = None,
+) -> dict:
+    """Add a hyperlink to a cell.
+
+    Args:
+        sheet: Optional sheet name.
+        cell: Cell address for the hyperlink.
+        url: URL target.
+        display_text: Optional display text.
+        tooltip: Optional tooltip text.
+
+    Returns:
+        dict with cell and sheet name.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    anchor = ws.Range(cell)
+    kwargs = {"Anchor": anchor, "Address": url}
+    if display_text is not None:
+        kwargs["TextToDisplay"] = display_text
+    if tooltip is not None:
+        kwargs["ScreenTip"] = tooltip
+    ws.Hyperlinks.Add(**kwargs)
+    return {"cell": cell, "url": url, "sheet": ws.Name}
+
+
+def add_internal_link(
+    sheet: str | None = None,
+    cell: str = "",
+    target_sheet: str = "",
+    target_cell: str = "",
+    display_text: str | None = None,
+) -> dict:
+    """Add a hyperlink to another cell/sheet within the workbook.
+
+    Args:
+        sheet: Optional sheet name (source sheet).
+        cell: Source cell address.
+        target_sheet: Name of the target sheet.
+        target_cell: Target cell address.
+        display_text: Optional display text.
+
+    Returns:
+        dict with cell, target info, and sheet name.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    anchor = ws.Range(cell)
+    sub_address = f"'{target_sheet}'!{target_cell}"
+    kwargs = {"Anchor": anchor, "Address": "", "SubAddress": sub_address}
+    if display_text is not None:
+        kwargs["TextToDisplay"] = display_text
+    ws.Hyperlinks.Add(**kwargs)
+    return {"cell": cell, "target_sheet": target_sheet, "target_cell": target_cell, "sheet": ws.Name}
+
+
+# ---------------------------------------------------------------------------
+# Images & Shapes
+# ---------------------------------------------------------------------------
+
+# Shape type constants (msoAutoShapeType)
+MSO_SHAPE_RECTANGLE = 1
+MSO_SHAPE_ROUNDED_RECTANGLE = 5
+MSO_SHAPE_OVAL = 9
+MSO_SHAPE_DIAMOND = 4
+MSO_SHAPE_RIGHT_TRIANGLE = 8
+MSO_SHAPE_ISOSCELES_TRIANGLE = 7
+
+
+def insert_image(
+    sheet: str | None = None,
+    image_path: str = "",
+    cell: str = "A1",
+    width: float | None = None,
+    height: float | None = None,
+) -> dict:
+    """Insert an image near a cell on a worksheet.
+
+    Args:
+        sheet: Optional sheet name.
+        image_path: Path to the image file.
+        cell: Cell near which the image is placed.
+        width: Optional width in points.
+        height: Optional height in points.
+
+    Returns:
+        dict with image info and sheet name.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    abs_path = ensure_absolute_path(image_path)
+    anchor = ws.Range(cell)
+    left = anchor.Left
+    top = anchor.Top
+    pic = ws.Shapes.AddPicture(
+        Filename=abs_path,
+        LinkToFile=False,
+        SaveWithDocument=True,
+        Left=left,
+        Top=top,
+        Width=width if width is not None else -1,
+        Height=height if height is not None else -1,
+    )
+    # If width/height not specified, keep original size
+    if width is None and height is None:
+        pic.ScaleWidth(1, True)
+        pic.ScaleHeight(1, True)
+    return {"name": pic.Name, "cell": cell, "sheet": ws.Name}
+
+
+def add_shape(
+    sheet: str | None = None,
+    shape_type: int = MSO_SHAPE_RECTANGLE,
+    left: float = 100,
+    top: float = 100,
+    width: float = 100,
+    height: float = 50,
+    fill_color: tuple[int, int, int] | None = None,
+    line_color: tuple[int, int, int] | None = None,
+    text: str | None = None,
+) -> dict:
+    """Add an auto shape to a worksheet.
+
+    Args:
+        sheet: Optional sheet name.
+        shape_type: AutoShape type constant (1=Rectangle, 5=RoundedRect,
+                    9=Oval, 4=Diamond, 7=Triangle, 8=RightTriangle).
+        left: Left position in points.
+        top: Top position in points.
+        width: Width in points.
+        height: Height in points.
+        fill_color: Fill color as (R, G, B).
+        line_color: Line color as (R, G, B).
+        text: Optional text inside the shape.
+
+    Returns:
+        dict with shape name and sheet name.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    shp = ws.Shapes.AddShape(shape_type, left, top, width, height)
+    if fill_color is not None:
+        shp.Fill.ForeColor.RGB = rgb(*fill_color)
+    if line_color is not None:
+        shp.Line.ForeColor.RGB = rgb(*line_color)
+    if text is not None:
+        shp.TextFrame.Characters().Text = text
+    return {"name": shp.Name, "sheet": ws.Name}
+
+
+def add_textbox(
+    sheet: str | None = None,
+    left: float = 100,
+    top: float = 100,
+    width: float = 200,
+    height: float = 50,
+    text: str = "",
+    font_size: float | None = None,
+    font_color: tuple[int, int, int] | None = None,
+    bold: bool = False,
+) -> dict:
+    """Add a textbox to a worksheet.
+
+    Args:
+        sheet: Optional sheet name.
+        left: Left position in points.
+        top: Top position in points.
+        width: Width in points.
+        height: Height in points.
+        text: Text content.
+        font_size: Font size in points.
+        font_color: Font color as (R, G, B).
+        bold: Whether text is bold.
+
+    Returns:
+        dict with textbox name and sheet name.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    # msoTextOrientationHorizontal = 1
+    tb = ws.Shapes.AddTextbox(1, left, top, width, height)
+    tb.TextFrame.Characters().Text = text
+    if font_size is not None:
+        tb.TextFrame.Characters().Font.Size = font_size
+    if font_color is not None:
+        tb.TextFrame.Characters().Font.Color = rgb(*font_color)
+    if bold:
+        tb.TextFrame.Characters().Font.Bold = True
+    return {"name": tb.Name, "sheet": ws.Name}
+
+
+# ---------------------------------------------------------------------------
+# Advanced Cell Formatting
+# ---------------------------------------------------------------------------
+
+def set_cell_style(
+    sheet: str | None = None,
+    range_str: str = "",
+    style_name: str = "Normal",
+) -> dict:
+    """Apply a built-in Excel style to a range.
+
+    Args:
+        sheet: Optional sheet name.
+        range_str: Target range address.
+        style_name: Built-in style name (e.g. "Heading 1", "Total", "Accent1").
+
+    Returns:
+        dict with range and sheet name.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    ws.Range(range_str).Style = style_name
+    return {"range": range_str, "style": style_name, "sheet": ws.Name}
+
+
+def auto_fit_columns(
+    sheet: str | None = None,
+    range_str: str | None = None,
+) -> dict:
+    """Auto-fit column widths to content.
+
+    Args:
+        sheet: Optional sheet name.
+        range_str: Optional range to auto-fit. If None, fits all used columns.
+
+    Returns:
+        dict with sheet name.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    if range_str:
+        ws.Range(range_str).Columns.AutoFit()
+    else:
+        ws.UsedRange.Columns.AutoFit()
+    return {"range": range_str or "UsedRange", "sheet": ws.Name}
+
+
+def auto_fit_rows(
+    sheet: str | None = None,
+    range_str: str | None = None,
+) -> dict:
+    """Auto-fit row heights to content.
+
+    Args:
+        sheet: Optional sheet name.
+        range_str: Optional range to auto-fit. If None, fits all used rows.
+
+    Returns:
+        dict with sheet name.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    if range_str:
+        ws.Range(range_str).Rows.AutoFit()
+    else:
+        ws.UsedRange.Rows.AutoFit()
+    return {"range": range_str or "UsedRange", "sheet": ws.Name}
+
+
+def set_cell_indent(
+    sheet: str | None = None,
+    range_str: str = "",
+    indent_level: int = 0,
+) -> dict:
+    """Set the indent level for cells.
+
+    Args:
+        sheet: Optional sheet name.
+        range_str: Target range address.
+        indent_level: Indent level (0 or greater).
+
+    Returns:
+        dict with range and sheet name.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    ws.Range(range_str).IndentLevel = indent_level
+    return {"range": range_str, "indent": indent_level, "sheet": ws.Name}
+
+
+def set_text_rotation(
+    sheet: str | None = None,
+    range_str: str = "",
+    angle: int = 0,
+) -> dict:
+    """Set text rotation angle for cells.
+
+    Args:
+        sheet: Optional sheet name.
+        range_str: Target range address.
+        angle: Rotation angle (-90 to 90 degrees).
+
+    Returns:
+        dict with range and sheet name.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    ws.Range(range_str).Orientation = angle
+    return {"range": range_str, "angle": angle, "sheet": ws.Name}
+
+
+def set_wrap_text(
+    sheet: str | None = None,
+    range_str: str = "",
+    wrap: bool = True,
+) -> dict:
+    """Enable or disable text wrapping for cells.
+
+    Args:
+        sheet: Optional sheet name.
+        range_str: Target range address.
+        wrap: True to wrap text, False to disable.
+
+    Returns:
+        dict with range and sheet name.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    ws.Range(range_str).WrapText = wrap
+    return {"range": range_str, "wrap": wrap, "sheet": ws.Name}
+
+
+def set_cell_pattern(
+    sheet: str | None = None,
+    range_str: str = "",
+    pattern_type: int = 1,
+    fore_color: tuple[int, int, int] | None = None,
+    back_color: tuple[int, int, int] | None = None,
+) -> dict:
+    """Set pattern fill for cells.
+
+    Args:
+        sheet: Optional sheet name.
+        range_str: Target range address.
+        pattern_type: Pattern type constant (1-18).
+        fore_color: Pattern foreground color as (R, G, B).
+        back_color: Pattern background color as (R, G, B).
+
+    Returns:
+        dict with range and sheet name.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    rng = ws.Range(range_str)
+    rng.Interior.Pattern = pattern_type
+    if fore_color is not None:
+        rng.Interior.PatternColor = rgb(*fore_color)
+    if back_color is not None:
+        rng.Interior.Color = rgb(*back_color)
+    return {"range": range_str, "sheet": ws.Name}
+
+
+# ---------------------------------------------------------------------------
+# Data Features (Advanced)
+# ---------------------------------------------------------------------------
+
+def copy_range(
+    sheet: str | None = None,
+    source_range: str = "",
+    target_cell: str = "",
+    target_sheet: str | None = None,
+) -> dict:
+    """Copy a range to another location.
+
+    Args:
+        sheet: Optional source sheet name.
+        source_range: Source range address.
+        target_cell: Target cell address (top-left of paste area).
+        target_sheet: Optional target sheet name.
+
+    Returns:
+        dict with source, target, and sheet name.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    wb = app.ActiveWorkbook
+    dst_ws = wb.Worksheets(target_sheet) if target_sheet else ws
+    ws.Range(source_range).Copy(Destination=dst_ws.Range(target_cell))
+    return {"source": source_range, "target": target_cell, "sheet": ws.Name, "target_sheet": dst_ws.Name}
+
+
+def clear_range(
+    sheet: str | None = None,
+    range_str: str = "",
+    clear_type: str = "all",
+) -> dict:
+    """Clear a range of cells.
+
+    Args:
+        sheet: Optional sheet name.
+        range_str: Target range address.
+        clear_type: What to clear ("all", "contents", "formats", "comments").
+
+    Returns:
+        dict with range and sheet name.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    rng = ws.Range(range_str)
+    if clear_type == "contents":
+        rng.ClearContents()
+    elif clear_type == "formats":
+        rng.ClearFormats()
+    elif clear_type == "comments":
+        rng.ClearComments()
+    else:
+        rng.Clear()
+    return {"range": range_str, "clear_type": clear_type, "sheet": ws.Name}
+
+
+def find_value(
+    sheet: str | None = None,
+    value: str = "",
+    match_case: bool = False,
+    match_entire: bool = False,
+) -> dict:
+    """Find a value in a worksheet.
+
+    Args:
+        sheet: Optional sheet name.
+        value: Value to search for.
+        match_case: Case-sensitive search.
+        match_entire: Match entire cell contents only.
+
+    Returns:
+        dict with found cell address (or None) and sheet name.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    # xlPart = 2, xlWhole = 1
+    look_at = 1 if match_entire else 2
+    found = ws.UsedRange.Find(
+        What=value,
+        MatchCase=match_case,
+        LookAt=look_at,
+    )
+    address = found.Address if found else None
+    return {"value": value, "found": address, "sheet": ws.Name}
+
+
+def replace_value(
+    sheet: str | None = None,
+    find_text: str = "",
+    replace_text: str = "",
+    match_case: bool = False,
+    match_entire: bool = False,
+) -> dict:
+    """Find and replace values in a worksheet.
+
+    Args:
+        sheet: Optional sheet name.
+        find_text: Text to find.
+        replace_text: Replacement text.
+        match_case: Case-sensitive search.
+        match_entire: Match entire cell contents only.
+
+    Returns:
+        dict with find/replace info and sheet name.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    look_at = 1 if match_entire else 2
+    ws.UsedRange.Replace(
+        What=find_text,
+        Replacement=replace_text,
+        MatchCase=match_case,
+        LookAt=look_at,
+    )
+    return {"find": find_text, "replace": replace_text, "sheet": ws.Name}
+
+
+def remove_duplicates(
+    sheet: str | None = None,
+    range_str: str = "",
+    columns: list[int] | None = None,
+) -> dict:
+    """Remove duplicate rows from a range.
+
+    Args:
+        sheet: Optional sheet name.
+        range_str: Target range address.
+        columns: List of column numbers (1-based) to check for duplicates.
+                 If None, checks all columns.
+
+    Returns:
+        dict with range and sheet name.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    rng = ws.Range(range_str)
+    if columns is None:
+        col_count = rng.Columns.Count
+        columns = list(range(1, col_count + 1))
+    rng.RemoveDuplicates(Columns=columns, Header=1)  # xlYes=1
+    return {"range": range_str, "sheet": ws.Name}
+
+
+def text_to_columns(
+    sheet: str | None = None,
+    range_str: str = "",
+    delimiter: str = ",",
+) -> dict:
+    """Split text in cells into multiple columns.
+
+    Args:
+        sheet: Optional sheet name.
+        range_str: Source range address (typically a single column).
+        delimiter: Delimiter character.
+
+    Returns:
+        dict with range and sheet name.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    rng = ws.Range(range_str)
+    # xlDelimited = 1
+    delimiter_map = {
+        ",": {"Comma": True},
+        "\t": {"Tab": True},
+        ";": {"Semicolon": True},
+        " ": {"Space": True},
+    }
+    kwargs = delimiter_map.get(delimiter, {"Other": True, "OtherChar": delimiter})
+    rng.TextToColumns(
+        Destination=rng.Cells(1, 1),
+        DataType=1,
+        **kwargs,
+    )
+    return {"range": range_str, "delimiter": delimiter, "sheet": ws.Name}
+
+
+def transpose_range(
+    sheet: str | None = None,
+    source_range: str = "",
+    target_cell: str = "",
+) -> dict:
+    """Transpose data from source range to target location.
+
+    Args:
+        sheet: Optional sheet name.
+        source_range: Source range address.
+        target_cell: Target cell address (top-left of paste area).
+
+    Returns:
+        dict with source, target, and sheet name.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    src = ws.Range(source_range)
+    src.Copy()
+    dst = ws.Range(target_cell)
+    # xlPasteAll = -4104, xlPasteSpecialOperationNone = -4142
+    dst.PasteSpecial(Paste=-4104, Operation=-4142, Transpose=True)
+    app.CutCopyMode = False
+    return {"source": source_range, "target": target_cell, "sheet": ws.Name}
+
+
+# ---------------------------------------------------------------------------
+# Advanced Chart
+# ---------------------------------------------------------------------------
+
+# Legend position constants
+XL_LEGEND_BOTTOM = -4107
+XL_LEGEND_TOP = -4160
+XL_LEGEND_LEFT = -4131
+XL_LEGEND_RIGHT = -4152
+
+# Trendline types
+XL_TREND_LINEAR = -4132
+XL_TREND_EXPONENTIAL = 5
+XL_TREND_LOGARITHMIC = -4133
+XL_TREND_POLYNOMIAL = 3
+XL_TREND_POWER = 4
+XL_TREND_MOVING_AVERAGE = 6
+
+# Marker styles
+XL_MARKER_NONE = -4142
+XL_MARKER_CIRCLE = 8
+XL_MARKER_SQUARE = 1
+XL_MARKER_TRIANGLE = 3
+XL_MARKER_DIAMOND = 2
+
+
+def format_chart(
+    sheet: str | None = None,
+    chart_index: int = 1,
+    title: str | None = None,
+    x_axis_title: str | None = None,
+    y_axis_title: str | None = None,
+    legend_position: str | None = None,
+    style: int | None = None,
+) -> dict:
+    """Format an existing chart.
+
+    Args:
+        sheet: Optional sheet name.
+        chart_index: Index of the chart object (1-based).
+        title: Chart title text.
+        x_axis_title: X-axis title.
+        y_axis_title: Y-axis title.
+        legend_position: Legend position ("bottom", "top", "left", "right", "none").
+        style: Chart style number.
+
+    Returns:
+        dict with chart name and sheet name.
+    """
+    legend_map = {
+        "bottom": XL_LEGEND_BOTTOM,
+        "top": XL_LEGEND_TOP,
+        "left": XL_LEGEND_LEFT,
+        "right": XL_LEGEND_RIGHT,
+    }
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    chart_obj = ws.ChartObjects(chart_index)
+    chart = chart_obj.Chart
+    if title is not None:
+        chart.HasTitle = True
+        chart.ChartTitle.Text = title
+    if x_axis_title is not None:
+        # xlCategory = 1
+        axis = chart.Axes(1)
+        axis.HasTitle = True
+        axis.AxisTitle.Text = x_axis_title
+    if y_axis_title is not None:
+        # xlValue = 2
+        axis = chart.Axes(2)
+        axis.HasTitle = True
+        axis.AxisTitle.Text = y_axis_title
+    if legend_position is not None:
+        if legend_position == "none":
+            chart.HasLegend = False
+        else:
+            chart.HasLegend = True
+            chart.Legend.Position = legend_map.get(legend_position, XL_LEGEND_BOTTOM)
+    if style is not None:
+        chart.ChartStyle = style
+    return {"chart": chart_obj.Name, "sheet": ws.Name}
+
+
+def format_chart_series(
+    sheet: str | None = None,
+    chart_index: int = 1,
+    series_index: int = 1,
+    color: tuple[int, int, int] | None = None,
+    line_weight: float | None = None,
+    marker_style: int | None = None,
+    marker_size: int | None = None,
+) -> dict:
+    """Format an individual data series in a chart.
+
+    Args:
+        sheet: Optional sheet name.
+        chart_index: Index of the chart object (1-based).
+        series_index: Index of the data series (1-based).
+        color: Series color as (R, G, B).
+        line_weight: Line weight in points.
+        marker_style: Marker style constant (-4142=None, 8=Circle, 1=Square,
+                      3=Triangle, 2=Diamond).
+        marker_size: Marker size in points.
+
+    Returns:
+        dict with chart and series info.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    chart = ws.ChartObjects(chart_index).Chart
+    series = chart.SeriesCollection(series_index)
+    if color is not None:
+        series.Format.Fill.ForeColor.RGB = rgb(*color)
+        series.Format.Line.ForeColor.RGB = rgb(*color)
+    if line_weight is not None:
+        series.Format.Line.Weight = line_weight
+    if marker_style is not None:
+        series.MarkerStyle = marker_style
+    if marker_size is not None:
+        series.MarkerSize = marker_size
+    return {"chart_index": chart_index, "series_index": series_index, "sheet": ws.Name}
+
+
+def add_chart_trendline(
+    sheet: str | None = None,
+    chart_index: int = 1,
+    series_index: int = 1,
+    trend_type: str = "linear",
+    display_equation: bool = False,
+    display_r_squared: bool = False,
+) -> dict:
+    """Add a trendline to a chart series.
+
+    Args:
+        sheet: Optional sheet name.
+        chart_index: Index of the chart object (1-based).
+        series_index: Index of the data series (1-based).
+        trend_type: Trendline type ("linear", "exponential", "logarithmic",
+                    "polynomial", "power", "moving_average").
+        display_equation: Show the trendline equation.
+        display_r_squared: Show R-squared value.
+
+    Returns:
+        dict with chart and series info.
+    """
+    trend_map = {
+        "linear": XL_TREND_LINEAR,
+        "exponential": XL_TREND_EXPONENTIAL,
+        "logarithmic": XL_TREND_LOGARITHMIC,
+        "polynomial": XL_TREND_POLYNOMIAL,
+        "power": XL_TREND_POWER,
+        "moving_average": XL_TREND_MOVING_AVERAGE,
+    }
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    chart = ws.ChartObjects(chart_index).Chart
+    series = chart.SeriesCollection(series_index)
+    xl_type = trend_map.get(trend_type, XL_TREND_LINEAR)
+    tl = series.Trendlines().Add(Type=xl_type)
+    tl.DisplayEquation = display_equation
+    tl.DisplayRSquared = display_r_squared
+    return {"chart_index": chart_index, "series_index": series_index, "trend_type": trend_type, "sheet": ws.Name}
+
+
+def set_chart_area_format(
+    sheet: str | None = None,
+    chart_index: int = 1,
+    fill_color: tuple[int, int, int] | None = None,
+    border_color: tuple[int, int, int] | None = None,
+    border_weight: float | None = None,
+) -> dict:
+    """Format the chart area (background and border).
+
+    Args:
+        sheet: Optional sheet name.
+        chart_index: Index of the chart object (1-based).
+        fill_color: Chart area fill color as (R, G, B).
+        border_color: Chart area border color as (R, G, B).
+        border_weight: Border line weight in points.
+
+    Returns:
+        dict with chart info and sheet name.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    chart = ws.ChartObjects(chart_index).Chart
+    if fill_color is not None:
+        chart.ChartArea.Format.Fill.ForeColor.RGB = rgb(*fill_color)
+    if border_color is not None:
+        chart.ChartArea.Format.Line.ForeColor.RGB = rgb(*border_color)
+    if border_weight is not None:
+        chart.ChartArea.Format.Line.Weight = border_weight
+    return {"chart_index": chart_index, "sheet": ws.Name}
+
+
+# ---------------------------------------------------------------------------
+# Pivot Table Advanced
+# ---------------------------------------------------------------------------
+
+def format_pivot_table(
+    sheet: str | None = None,
+    pivot_name: str = "",
+    style: str | None = None,
+    show_grand_total_rows: bool | None = None,
+    show_grand_total_cols: bool | None = None,
+    repeat_item_labels: bool | None = None,
+) -> dict:
+    """Format a pivot table.
+
+    Args:
+        sheet: Optional sheet name.
+        pivot_name: Name of the pivot table.
+        style: Pivot table style name (e.g. "PivotStyleMedium9").
+        show_grand_total_rows: Show grand total for rows.
+        show_grand_total_cols: Show grand total for columns.
+        repeat_item_labels: Repeat all item labels.
+
+    Returns:
+        dict with pivot table name and sheet name.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    pt = ws.PivotTables(pivot_name)
+    if style is not None:
+        pt.TableStyle2 = style
+    if show_grand_total_rows is not None:
+        pt.RowGrand = show_grand_total_rows
+    if show_grand_total_cols is not None:
+        pt.ColumnGrand = show_grand_total_cols
+    if repeat_item_labels is not None:
+        pt.RepeatAllLabels(1 if repeat_item_labels else 2)  # xlRepeatLabels=1, xlDoNotRepeatLabels=2
+    return {"pivot_name": pivot_name, "sheet": ws.Name}
+
+
+def add_pivot_field(
+    sheet: str | None = None,
+    pivot_name: str = "",
+    field_name: str = "",
+    area: str = "row",
+    position: int | None = None,
+) -> dict:
+    """Add a field to a pivot table.
+
+    Args:
+        sheet: Optional sheet name.
+        pivot_name: Name of the pivot table.
+        field_name: Name of the field to add.
+        area: Target area ("row", "column", "data", "filter").
+        position: Optional position within the area.
+
+    Returns:
+        dict with pivot table and field info.
+    """
+    area_map = {
+        "row": XL_PIVOT_ROW,
+        "column": XL_PIVOT_COLUMN,
+        "data": XL_PIVOT_DATA,
+        "filter": XL_PIVOT_PAGE,
+    }
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    pt = ws.PivotTables(pivot_name)
+    pf = pt.PivotFields(field_name)
+    pf.Orientation = area_map.get(area, XL_PIVOT_ROW)
+    if position is not None:
+        pf.Position = position
+    return {"pivot_name": pivot_name, "field": field_name, "area": area, "sheet": ws.Name}
+
+
+def refresh_pivot_table(
+    sheet: str | None = None,
+    pivot_name: str | None = None,
+) -> dict:
+    """Refresh pivot table(s).
+
+    Args:
+        sheet: Optional sheet name.
+        pivot_name: Name of specific pivot table to refresh.
+                    If None, refreshes all pivot tables on the sheet.
+
+    Returns:
+        dict with refresh info and sheet name.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    if pivot_name:
+        ws.PivotTables(pivot_name).RefreshTable()
+        return {"pivot_name": pivot_name, "sheet": ws.Name}
+    else:
+        count = ws.PivotTables().Count
+        for i in range(1, count + 1):
+            ws.PivotTables(i).RefreshTable()
+        return {"refreshed_count": count, "sheet": ws.Name}
+
+
+# ---------------------------------------------------------------------------
+# Workbook Features
+# ---------------------------------------------------------------------------
+
+def set_workbook_properties(
+    title: str | None = None,
+    author: str | None = None,
+    subject: str | None = None,
+    keywords: str | None = None,
+    comments: str | None = None,
+) -> dict:
+    """Set document metadata properties.
+
+    Args:
+        title: Document title.
+        author: Document author.
+        subject: Document subject.
+        keywords: Document keywords.
+        comments: Document comments.
+
+    Returns:
+        dict with workbook name.
+    """
+    app = _get_app()
+    wb = app.ActiveWorkbook
+    props = wb.BuiltinDocumentProperties
+    if title is not None:
+        props("Title").Value = title
+    if author is not None:
+        props("Author").Value = author
+    if subject is not None:
+        props("Subject").Value = subject
+    if keywords is not None:
+        props("Keywords").Value = keywords
+    if comments is not None:
+        props("Comments").Value = comments
+    return {"name": wb.Name}
+
+
+def get_workbook_statistics() -> dict:
+    """Get workbook statistics including sheet count and used ranges.
+
+    Returns:
+        dict with workbook name, sheet count, and per-sheet info.
+    """
+    app = _get_app()
+    wb = app.ActiveWorkbook
+    sheets_info = []
+    for i in range(1, wb.Worksheets.Count + 1):
+        ws = wb.Worksheets(i)
+        used = ws.UsedRange
+        sheets_info.append({
+            "name": ws.Name,
+            "used_range": used.Address,
+            "rows": used.Rows.Count,
+            "cols": used.Columns.Count,
+        })
+    return {
+        "name": wb.Name,
+        "sheet_count": wb.Worksheets.Count,
+        "sheets": sheets_info,
+    }
+
+
+def set_tab_color(
+    sheet: str | None = None,
+    color: tuple[int, int, int] = (0, 0, 0),
+) -> dict:
+    """Set the worksheet tab color.
+
+    Args:
+        sheet: Optional sheet name.
+        color: Tab color as (R, G, B).
+
+    Returns:
+        dict with sheet name.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    ws.Tab.Color = rgb(*color)
+    return {"sheet": ws.Name}
+
+
+def hide_sheet(sheet: str) -> dict:
+    """Hide a worksheet.
+
+    Args:
+        sheet: Name of the sheet to hide.
+
+    Returns:
+        dict with sheet name.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    ws.Visible = False
+    return {"sheet": ws.Name, "visible": False}
+
+
+def unhide_sheet(sheet: str) -> dict:
+    """Unhide a worksheet.
+
+    Args:
+        sheet: Name of the sheet to unhide.
+
+    Returns:
+        dict with sheet name.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    ws.Visible = True
+    return {"sheet": ws.Name, "visible": True}
+
+
+def copy_sheet(
+    source_sheet: str,
+    target_name: str | None = None,
+    before: str | None = None,
+    after: str | None = None,
+) -> dict:
+    """Copy a worksheet.
+
+    Args:
+        source_sheet: Name of the sheet to copy.
+        target_name: New name for the copied sheet.
+        before: Name of sheet to place copy before.
+        after: Name of sheet to place copy after.
+
+    Returns:
+        dict with source and new sheet name.
+    """
+    app = _get_app()
+    wb = app.ActiveWorkbook
+    src = wb.Worksheets(source_sheet)
+    kwargs = {}
+    if before:
+        kwargs["Before"] = wb.Worksheets(before)
+    elif after:
+        kwargs["After"] = wb.Worksheets(after)
+    else:
+        kwargs["After"] = wb.Worksheets(wb.Worksheets.Count)
+    src.Copy(**kwargs)
+    new_ws = app.ActiveSheet
+    if target_name:
+        new_ws.Name = target_name
+    return {"source": source_sheet, "new_sheet": new_ws.Name}
+
+
+def move_sheet(
+    sheet: str,
+    before: str | None = None,
+    after: str | None = None,
+) -> dict:
+    """Move a worksheet to a new position.
+
+    Args:
+        sheet: Name of the sheet to move.
+        before: Name of sheet to place before.
+        after: Name of sheet to place after.
+
+    Returns:
+        dict with sheet name.
+    """
+    app = _get_app()
+    wb = app.ActiveWorkbook
+    ws = wb.Worksheets(sheet)
+    kwargs = {}
+    if before:
+        kwargs["Before"] = wb.Worksheets(before)
+    elif after:
+        kwargs["After"] = wb.Worksheets(after)
+    ws.Move(**kwargs)
+    return {"sheet": sheet}
+
+
+# ---------------------------------------------------------------------------
+# Print & Page Setup Advanced
+# ---------------------------------------------------------------------------
+
+def set_print_area(
+    sheet: str | None = None,
+    range_str: str = "",
+) -> dict:
+    """Set the print area for a worksheet.
+
+    Args:
+        sheet: Optional sheet name.
+        range_str: Range address to set as print area.
+
+    Returns:
+        dict with range and sheet name.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    ws.PageSetup.PrintArea = range_str
+    return {"print_area": range_str, "sheet": ws.Name}
+
+
+def set_print_titles(
+    sheet: str | None = None,
+    rows: str | None = None,
+    columns: str | None = None,
+) -> dict:
+    """Set rows/columns to repeat on each printed page.
+
+    Args:
+        sheet: Optional sheet name.
+        rows: Row range to repeat (e.g. "1:2").
+        columns: Column range to repeat (e.g. "A:B").
+
+    Returns:
+        dict with sheet name.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    if rows is not None:
+        ws.PageSetup.PrintTitleRows = f"${rows.replace(':', ':$')}" if not rows.startswith("$") else rows
+    if columns is not None:
+        ws.PageSetup.PrintTitleColumns = f"${columns.replace(':', ':$')}" if not columns.startswith("$") else columns
+    return {"rows": rows, "columns": columns, "sheet": ws.Name}
+
+
+def add_page_break(
+    sheet: str | None = None,
+    row: int | None = None,
+    col: int | None = None,
+) -> dict:
+    """Insert a page break.
+
+    Args:
+        sheet: Optional sheet name.
+        row: Row number for horizontal page break.
+        col: Column number for vertical page break.
+
+    Returns:
+        dict with break info and sheet name.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    if row is not None:
+        ws.HPageBreaks.Add(Before=ws.Rows(row))
+    if col is not None:
+        ws.VPageBreaks.Add(Before=ws.Columns(col))
+    return {"row": row, "col": col, "sheet": ws.Name}
+
+
+# ---------------------------------------------------------------------------
+# Protection Advanced
+# ---------------------------------------------------------------------------
+
+def protect_workbook(
+    password: str | None = None,
+    structure: bool = True,
+    windows: bool = False,
+) -> dict:
+    """Protect the workbook structure and/or windows.
+
+    Args:
+        password: Optional protection password.
+        structure: Protect workbook structure (prevent adding/deleting sheets).
+        windows: Protect workbook windows.
+
+    Returns:
+        dict with workbook name.
+    """
+    app = _get_app()
+    wb = app.ActiveWorkbook
+    kwargs = {"Structure": structure, "Windows": windows}
+    if password is not None:
+        kwargs["Password"] = password
+    wb.Protect(**kwargs)
+    return {"name": wb.Name, "protected": True}
+
+
+def unprotect_workbook(password: str | None = None) -> dict:
+    """Unprotect the workbook.
+
+    Args:
+        password: Password used to protect the workbook.
+
+    Returns:
+        dict with workbook name.
+    """
+    app = _get_app()
+    wb = app.ActiveWorkbook
+    if password is not None:
+        wb.Unprotect(Password=password)
+    else:
+        wb.Unprotect()
+    return {"name": wb.Name, "protected": False}
+
+
+def lock_cells(
+    sheet: str | None = None,
+    range_str: str = "",
+    locked: bool = True,
+) -> dict:
+    """Lock or unlock specific cells (works with sheet protection).
+
+    Args:
+        sheet: Optional sheet name.
+        range_str: Target range address.
+        locked: True to lock cells, False to unlock.
+
+    Returns:
+        dict with range and sheet name.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    ws.Range(range_str).Locked = locked
+    return {"range": range_str, "locked": locked, "sheet": ws.Name}

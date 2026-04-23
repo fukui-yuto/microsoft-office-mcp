@@ -849,3 +849,852 @@ def reject_all_changes() -> dict:
     doc = app.ActiveDocument
     doc.Revisions.RejectAll()
     return {"rejected": True}
+
+
+# ---------------------------------------------------------------------------
+# Style type constants
+# ---------------------------------------------------------------------------
+
+WD_STYLE_TYPE_PARAGRAPH = 1
+WD_STYLE_TYPE_CHARACTER = 2
+WD_STYLE_TYPE_TABLE = 3
+WD_STYLE_TYPE_LIST = 4
+
+_STYLE_TYPE_MAP = {
+    "paragraph": WD_STYLE_TYPE_PARAGRAPH,
+    "character": WD_STYLE_TYPE_CHARACTER,
+    "table": WD_STYLE_TYPE_TABLE,
+    "list": WD_STYLE_TYPE_LIST,
+}
+
+# Alignment constants (reuse existing ones for paragraph alignment)
+_ALIGNMENT_MAP = {
+    "left": 0,
+    "center": 1,
+    "right": 2,
+    "justify": 3,
+}
+
+# Tab alignment constants
+WD_TAB_ALIGN_LEFT = 0
+WD_TAB_ALIGN_CENTER = 1
+WD_TAB_ALIGN_RIGHT = 2
+WD_TAB_ALIGN_DECIMAL = 3
+
+_TAB_ALIGNMENT_MAP = {
+    "left": WD_TAB_ALIGN_LEFT,
+    "center": WD_TAB_ALIGN_CENTER,
+    "right": WD_TAB_ALIGN_RIGHT,
+    "decimal": WD_TAB_ALIGN_DECIMAL,
+}
+
+# Tab leader constants
+WD_TAB_LEADER_NONE = 0
+WD_TAB_LEADER_DOTS = 1
+WD_TAB_LEADER_DASHES = 2
+WD_TAB_LEADER_LINES = 3
+
+_TAB_LEADER_MAP = {
+    "none": WD_TAB_LEADER_NONE,
+    "dots": WD_TAB_LEADER_DOTS,
+    "dashes": WD_TAB_LEADER_DASHES,
+    "line": WD_TAB_LEADER_LINES,
+}
+
+# Content control type constants
+WD_CONTENT_CONTROL_RICH_TEXT = 0
+WD_CONTENT_CONTROL_TEXT = 1
+WD_CONTENT_CONTROL_COMBO_BOX = 3
+WD_CONTENT_CONTROL_DROP_DOWN = 4
+WD_CONTENT_CONTROL_DATE = 6
+WD_CONTENT_CONTROL_CHECKBOX = 8
+
+_CONTENT_CONTROL_MAP = {
+    "rich_text": WD_CONTENT_CONTROL_RICH_TEXT,
+    "plain_text": WD_CONTENT_CONTROL_TEXT,
+    "combo_box": WD_CONTENT_CONTROL_COMBO_BOX,
+    "drop_down": WD_CONTENT_CONTROL_DROP_DOWN,
+    "date_picker": WD_CONTENT_CONTROL_DATE,
+    "checkbox": WD_CONTENT_CONTROL_CHECKBOX,
+}
+
+# Protection type constants
+WD_PROTECT_READ_ONLY = 3
+WD_PROTECT_COMMENTS = 1
+WD_PROTECT_FORMS = 2
+WD_PROTECT_TRACKED_CHANGES = 0
+
+_PROTECTION_MAP = {
+    "read_only": WD_PROTECT_READ_ONLY,
+    "comments": WD_PROTECT_COMMENTS,
+    "forms": WD_PROTECT_FORMS,
+    "tracked_changes": WD_PROTECT_TRACKED_CHANGES,
+}
+
+# Cross-reference type constants
+WD_REF_TYPE_HEADING = 1
+WD_REF_TYPE_BOOKMARK = 2
+WD_REF_TYPE_FOOTNOTE = 5
+
+_REF_TYPE_MAP = {
+    "heading": WD_REF_TYPE_HEADING,
+    "bookmark": WD_REF_TYPE_BOOKMARK,
+    "footnote": WD_REF_TYPE_FOOTNOTE,
+}
+
+# Vertical alignment for table cells
+WD_CELL_ALIGN_TOP = 0
+WD_CELL_ALIGN_CENTER = 1
+WD_CELL_ALIGN_BOTTOM = 3
+
+_VERTICAL_ALIGNMENT_MAP = {
+    "top": WD_CELL_ALIGN_TOP,
+    "center": WD_CELL_ALIGN_CENTER,
+    "bottom": WD_CELL_ALIGN_BOTTOM,
+}
+
+# Table width type constants
+WD_TABLE_WIDTH_AUTO = 1
+WD_TABLE_WIDTH_FIXED = 2  # wdPreferredWidthPoints
+WD_TABLE_WIDTH_PERCENT = 3  # wdPreferredWidthPercent
+
+
+# ---------------------------------------------------------------------------
+# 1. Style Management
+# ---------------------------------------------------------------------------
+
+def create_style(
+    name: str,
+    style_type: str = "paragraph",
+    base_style: str | None = None,
+    font_name: str | None = None,
+    font_size: float | None = None,
+    font_color_rgb: tuple[int, int, int] | None = None,
+    bold: bool | None = None,
+    italic: bool | None = None,
+    space_before: float | None = None,
+    space_after: float | None = None,
+    line_spacing: float | None = None,
+    alignment: str | None = None,
+) -> dict:
+    """Create a custom style in the active document."""
+    app = _get_app()
+    doc = app.ActiveDocument
+    wdtype = _STYLE_TYPE_MAP.get(style_type, WD_STYLE_TYPE_PARAGRAPH)
+    style = doc.Styles.Add(Name=name, Type=wdtype)
+    if base_style is not None:
+        style.BaseStyle = doc.Styles(base_style)
+    if font_name is not None:
+        style.Font.Name = font_name
+    if font_size is not None:
+        style.Font.Size = font_size
+    if font_color_rgb is not None:
+        style.Font.Color = rgb(*font_color_rgb)
+    if bold is not None:
+        style.Font.Bold = bold
+    if italic is not None:
+        style.Font.Italic = italic
+    if wdtype == WD_STYLE_TYPE_PARAGRAPH:
+        if space_before is not None:
+            style.ParagraphFormat.SpaceBefore = space_before
+        if space_after is not None:
+            style.ParagraphFormat.SpaceAfter = space_after
+        if line_spacing is not None:
+            style.ParagraphFormat.LineSpacing = line_spacing
+        if alignment is not None:
+            style.ParagraphFormat.Alignment = _ALIGNMENT_MAP.get(alignment, 0)
+    return {"name": name, "style_type": style_type}
+
+
+def apply_style(paragraph_index: int, style_name: str) -> dict:
+    """Apply a style to a paragraph by name."""
+    app = _get_app()
+    doc = app.ActiveDocument
+    para = doc.Paragraphs(paragraph_index)
+    para.Style = style_name
+    return {"paragraph_index": paragraph_index, "style_name": style_name}
+
+
+def get_styles() -> dict:
+    """List all available styles in the active document."""
+    app = _get_app()
+    doc = app.ActiveDocument
+    styles = []
+    for i in range(1, doc.Styles.Count + 1):
+        try:
+            s = doc.Styles(i)
+            styles.append({
+                "name": s.NameLocal,
+                "type": s.Type,
+                "built_in": s.BuiltIn,
+            })
+        except Exception:
+            pass
+    return {"style_count": len(styles), "styles": styles}
+
+
+def modify_style(
+    style_name: str,
+    font_name: str | None = None,
+    font_size: float | None = None,
+    font_color_rgb: tuple[int, int, int] | None = None,
+    bold: bool | None = None,
+    italic: bool | None = None,
+    space_before: float | None = None,
+    space_after: float | None = None,
+    line_spacing: float | None = None,
+) -> dict:
+    """Modify an existing style."""
+    app = _get_app()
+    doc = app.ActiveDocument
+    style = doc.Styles(style_name)
+    if font_name is not None:
+        style.Font.Name = font_name
+    if font_size is not None:
+        style.Font.Size = font_size
+    if font_color_rgb is not None:
+        style.Font.Color = rgb(*font_color_rgb)
+    if bold is not None:
+        style.Font.Bold = bold
+    if italic is not None:
+        style.Font.Italic = italic
+    try:
+        if space_before is not None:
+            style.ParagraphFormat.SpaceBefore = space_before
+        if space_after is not None:
+            style.ParagraphFormat.SpaceAfter = space_after
+        if line_spacing is not None:
+            style.ParagraphFormat.LineSpacing = line_spacing
+    except Exception:
+        pass  # Character/table styles may not have ParagraphFormat
+    return {"style_name": style_name}
+
+
+# ---------------------------------------------------------------------------
+# 2. Footnotes & Endnotes
+# ---------------------------------------------------------------------------
+
+def add_footnote(paragraph_index: int, text: str) -> dict:
+    """Add a footnote at the end of a paragraph."""
+    app = _get_app()
+    doc = app.ActiveDocument
+    rng = doc.Paragraphs(paragraph_index).Range
+    rng.Collapse(WD_COLLAPSE_END)
+    # Move back one character to stay inside the paragraph (before \r)
+    rng.MoveEnd(1, -1)
+    fn = doc.Footnotes.Add(Range=rng, Text=text)
+    return {"paragraph_index": paragraph_index, "text": text, "footnote_count": doc.Footnotes.Count}
+
+
+def add_endnote(paragraph_index: int, text: str) -> dict:
+    """Add an endnote at the end of a paragraph."""
+    app = _get_app()
+    doc = app.ActiveDocument
+    rng = doc.Paragraphs(paragraph_index).Range
+    rng.Collapse(WD_COLLAPSE_END)
+    rng.MoveEnd(1, -1)
+    en = doc.Endnotes.Add(Range=rng, Text=text)
+    return {"paragraph_index": paragraph_index, "text": text, "endnote_count": doc.Endnotes.Count}
+
+
+def get_footnotes() -> dict:
+    """List all footnotes in the active document."""
+    app = _get_app()
+    doc = app.ActiveDocument
+    footnotes = []
+    for i in range(1, doc.Footnotes.Count + 1):
+        fn = doc.Footnotes(i)
+        footnotes.append({"index": i, "text": fn.Range.Text})
+    return {"footnote_count": doc.Footnotes.Count, "footnotes": footnotes}
+
+
+def get_endnotes() -> dict:
+    """List all endnotes in the active document."""
+    app = _get_app()
+    doc = app.ActiveDocument
+    endnotes = []
+    for i in range(1, doc.Endnotes.Count + 1):
+        en = doc.Endnotes(i)
+        endnotes.append({"index": i, "text": en.Range.Text})
+    return {"endnote_count": doc.Endnotes.Count, "endnotes": endnotes}
+
+
+# ---------------------------------------------------------------------------
+# 3. Advanced Table Operations
+# ---------------------------------------------------------------------------
+
+def merge_table_cells(
+    table_index: int,
+    start_row: int,
+    start_col: int,
+    end_row: int,
+    end_col: int,
+) -> dict:
+    """Merge a range of cells in a table."""
+    app = _get_app()
+    doc = app.ActiveDocument
+    table = doc.Tables(table_index)
+    cell_start = table.Cell(start_row, start_col)
+    cell_end = table.Cell(end_row, end_col)
+    cell_start.Merge(cell_end)
+    return {
+        "table_index": table_index,
+        "merged": f"({start_row},{start_col})-({end_row},{end_col})",
+    }
+
+
+def split_table_cell(
+    table_index: int,
+    row: int,
+    col: int,
+    num_rows: int,
+    num_cols: int,
+) -> dict:
+    """Split a table cell into multiple rows and columns."""
+    app = _get_app()
+    doc = app.ActiveDocument
+    table = doc.Tables(table_index)
+    cell = table.Cell(row, col)
+    cell.Split(NumRows=num_rows, NumColumns=num_cols)
+    return {
+        "table_index": table_index,
+        "cell": f"({row},{col})",
+        "split_into": f"{num_rows}x{num_cols}",
+    }
+
+
+def format_table_cell(
+    table_index: int,
+    row: int,
+    col: int,
+    fill_color_rgb: tuple[int, int, int] | None = None,
+    font_color_rgb: tuple[int, int, int] | None = None,
+    font_size: float | None = None,
+    bold: bool | None = None,
+    alignment: int | None = None,
+    vertical_alignment: str | None = None,
+) -> dict:
+    """Format an individual table cell."""
+    app = _get_app()
+    doc = app.ActiveDocument
+    table = doc.Tables(table_index)
+    cell = table.Cell(row, col)
+    if fill_color_rgb is not None:
+        cell.Shading.BackgroundPatternColor = rgb(*fill_color_rgb)
+    if font_color_rgb is not None:
+        cell.Range.Font.Color = rgb(*font_color_rgb)
+    if font_size is not None:
+        cell.Range.Font.Size = font_size
+    if bold is not None:
+        cell.Range.Font.Bold = bold
+    if alignment is not None:
+        cell.Range.ParagraphFormat.Alignment = alignment
+    if vertical_alignment is not None:
+        cell.VerticalAlignment = _VERTICAL_ALIGNMENT_MAP.get(vertical_alignment, 0)
+    return {"table_index": table_index, "cell": f"({row},{col})"}
+
+
+def set_table_cell_borders(
+    table_index: int,
+    row: int,
+    col: int,
+    border_type: str,
+    color_rgb: tuple[int, int, int] | None = None,
+    weight: float | None = None,
+    style: int | None = None,
+) -> dict:
+    """Set borders on a table cell. border_type: 'top','bottom','left','right','all'."""
+    app = _get_app()
+    doc = app.ActiveDocument
+    table = doc.Tables(table_index)
+    cell = table.Cell(row, col)
+
+    border_map = {
+        "top": [WD_BORDER_TOP],
+        "bottom": [WD_BORDER_BOTTOM],
+        "left": [WD_BORDER_LEFT],
+        "right": [WD_BORDER_RIGHT],
+        "all": [WD_BORDER_TOP, WD_BORDER_BOTTOM, WD_BORDER_LEFT, WD_BORDER_RIGHT],
+    }
+    border_ids = border_map.get(border_type, [WD_BORDER_TOP])
+    for bid in border_ids:
+        border = cell.Borders(bid)
+        if style is not None:
+            border.LineStyle = style
+        else:
+            border.LineStyle = 1  # single line default
+        if color_rgb is not None:
+            border.Color = rgb(*color_rgb)
+        if weight is not None:
+            border.LineWidth = weight
+    return {"table_index": table_index, "cell": f"({row},{col})", "border_type": border_type}
+
+
+def set_table_width(
+    table_index: int,
+    width_type: str,
+    width: float | None = None,
+) -> dict:
+    """Set table width. width_type: 'auto','fixed','percent'."""
+    app = _get_app()
+    doc = app.ActiveDocument
+    table = doc.Tables(table_index)
+    if width_type == "auto":
+        table.AutoFitBehavior(1)  # wdAutoFitContent
+    elif width_type == "fixed":
+        table.AutoFitBehavior(0)  # wdAutoFitFixed
+        if width is not None:
+            table.PreferredWidthType = WD_TABLE_WIDTH_FIXED
+            table.PreferredWidth = width
+    elif width_type == "percent":
+        if width is not None:
+            table.PreferredWidthType = WD_TABLE_WIDTH_PERCENT
+            table.PreferredWidth = width
+    return {"table_index": table_index, "width_type": width_type}
+
+
+# ---------------------------------------------------------------------------
+# 4. Shapes & Drawing
+# ---------------------------------------------------------------------------
+
+def add_shape(
+    shape_type: int,
+    left: float,
+    top: float,
+    width: float,
+    height: float,
+    fill_color_rgb: tuple[int, int, int] | None = None,
+    line_color_rgb: tuple[int, int, int] | None = None,
+) -> dict:
+    """Add an AutoShape to the document. shape_type: msoAutoShapeType constant (1=rect, 5=roundrect, 9=oval, etc.)."""
+    app = _get_app()
+    doc = app.ActiveDocument
+    shape = doc.Shapes.AddShape(shape_type, left, top, width, height)
+    if fill_color_rgb is not None:
+        shape.Fill.ForeColor.RGB = rgb(*fill_color_rgb)
+        shape.Fill.Visible = True
+    if line_color_rgb is not None:
+        shape.Line.Color.RGB = rgb(*line_color_rgb)
+        shape.Line.Visible = True
+    return {"shape_name": shape.Name, "shape_type": shape_type}
+
+
+def add_line(
+    start_x: float,
+    start_y: float,
+    end_x: float,
+    end_y: float,
+    color_rgb: tuple[int, int, int] | None = None,
+    weight: float = 1.0,
+    dash_style: int | None = None,
+) -> dict:
+    """Draw a line on the document."""
+    app = _get_app()
+    doc = app.ActiveDocument
+    shape = doc.Shapes.AddLine(start_x, start_y, end_x, end_y)
+    shape.Line.Weight = weight
+    if color_rgb is not None:
+        shape.Line.Color.RGB = rgb(*color_rgb)
+    if dash_style is not None:
+        shape.Line.DashStyle = dash_style
+    return {"shape_name": shape.Name}
+
+
+# ---------------------------------------------------------------------------
+# 5. Text Enhancements
+# ---------------------------------------------------------------------------
+
+def add_drop_cap(
+    paragraph_index: int,
+    lines_to_drop: int = 3,
+    font_name: str | None = None,
+) -> dict:
+    """Add a drop cap effect to a paragraph."""
+    app = _get_app()
+    doc = app.ActiveDocument
+    para = doc.Paragraphs(paragraph_index)
+    dc = para.DropCap
+    dc.Position = 1  # wdDropNormal
+    dc.LinesToDrop = lines_to_drop
+    if font_name is not None:
+        dc.FontName = font_name
+    return {"paragraph_index": paragraph_index, "lines_to_drop": lines_to_drop}
+
+
+def set_text_highlight(paragraph_index: int, color_index: int) -> dict:
+    """Set highlight color on a paragraph. color_index: WdColorIndex 1-16."""
+    app = _get_app()
+    doc = app.ActiveDocument
+    para = doc.Paragraphs(paragraph_index)
+    para.Range.HighlightColorIndex = color_index
+    return {"paragraph_index": paragraph_index, "color_index": color_index}
+
+
+def set_character_spacing(
+    paragraph_index: int,
+    spacing: float = 0,
+    kerning: float | None = None,
+    scale: int = 100,
+) -> dict:
+    """Set character spacing for a paragraph."""
+    app = _get_app()
+    doc = app.ActiveDocument
+    para = doc.Paragraphs(paragraph_index)
+    para.Range.Font.Spacing = spacing
+    para.Range.Font.Scaling = scale
+    if kerning is not None:
+        para.Range.Font.Kerning = kerning
+    return {"paragraph_index": paragraph_index, "spacing": spacing, "scale": scale}
+
+
+def add_text_effect(paragraph_index: int, effect_type: str) -> dict:
+    """Add text effect to a paragraph. effect_type: 'shadow','outline','emboss','engrave'."""
+    app = _get_app()
+    doc = app.ActiveDocument
+    para = doc.Paragraphs(paragraph_index)
+    font = para.Range.Font
+    if effect_type == "shadow":
+        font.Shadow = True
+    elif effect_type == "outline":
+        font.Outline = True
+    elif effect_type == "emboss":
+        font.Emboss = True
+    elif effect_type == "engrave":
+        font.Engrave = True
+    return {"paragraph_index": paragraph_index, "effect_type": effect_type}
+
+
+# ---------------------------------------------------------------------------
+# 6. Page Layout
+# ---------------------------------------------------------------------------
+
+def insert_page_break(paragraph_index: int | None = None) -> dict:
+    """Insert a page break after a paragraph (or at the end of the document)."""
+    app = _get_app()
+    doc = app.ActiveDocument
+    if paragraph_index is not None:
+        rng = doc.Paragraphs(paragraph_index).Range
+        rng.Collapse(WD_COLLAPSE_END)
+    else:
+        rng = doc.Content
+        rng.Collapse(WD_COLLAPSE_END)
+    rng.InsertBreak(Type=WD_PAGE_BREAK)
+    return {"paragraph_index": paragraph_index}
+
+
+def insert_column_break(paragraph_index: int | None = None) -> dict:
+    """Insert a column break after a paragraph (or at the end)."""
+    app = _get_app()
+    doc = app.ActiveDocument
+    if paragraph_index is not None:
+        rng = doc.Paragraphs(paragraph_index).Range
+        rng.Collapse(WD_COLLAPSE_END)
+    else:
+        rng = doc.Content
+        rng.Collapse(WD_COLLAPSE_END)
+    # wdColumnBreak = 8
+    rng.InsertBreak(Type=8)
+    return {"paragraph_index": paragraph_index}
+
+
+def set_paragraph_borders(
+    paragraph_index: int,
+    border_type: str,
+    color_rgb: tuple[int, int, int] | None = None,
+    weight: float | None = None,
+    style: int | None = None,
+) -> dict:
+    """Set borders on a paragraph. border_type: 'top','bottom','left','right','box'."""
+    app = _get_app()
+    doc = app.ActiveDocument
+    para = doc.Paragraphs(paragraph_index)
+
+    border_map = {
+        "top": [WD_BORDER_TOP],
+        "bottom": [WD_BORDER_BOTTOM],
+        "left": [WD_BORDER_LEFT],
+        "right": [WD_BORDER_RIGHT],
+        "box": [WD_BORDER_TOP, WD_BORDER_BOTTOM, WD_BORDER_LEFT, WD_BORDER_RIGHT],
+    }
+    border_ids = border_map.get(border_type, [WD_BORDER_TOP])
+    for bid in border_ids:
+        border = para.Borders(bid)
+        if style is not None:
+            border.LineStyle = style
+        else:
+            border.LineStyle = 1
+        if color_rgb is not None:
+            border.Color = rgb(*color_rgb)
+        if weight is not None:
+            border.LineWidth = weight
+    return {"paragraph_index": paragraph_index, "border_type": border_type}
+
+
+def set_paragraph_shading(paragraph_index: int, color_rgb: tuple[int, int, int]) -> dict:
+    """Set paragraph background shading color."""
+    app = _get_app()
+    doc = app.ActiveDocument
+    para = doc.Paragraphs(paragraph_index)
+    para.Shading.BackgroundPatternColor = rgb(*color_rgb)
+    return {"paragraph_index": paragraph_index}
+
+
+def add_horizontal_line(paragraph_index: int | None = None) -> dict:
+    """Add a decorative horizontal line."""
+    app = _get_app()
+    doc = app.ActiveDocument
+    if paragraph_index is not None:
+        rng = doc.Paragraphs(paragraph_index).Range
+        rng.Collapse(WD_COLLAPSE_END)
+    else:
+        rng = doc.Content
+        rng.Collapse(WD_COLLAPSE_END)
+    rng.InsertAfter("\r")
+    # Apply a bottom border to act as a horizontal line
+    para = doc.Paragraphs(doc.Paragraphs.Count)
+    border = para.Borders(WD_BORDER_BOTTOM)
+    border.LineStyle = 1
+    border.LineWidth = 2  # wdLineWidth150pt
+    return {"paragraph_index": doc.Paragraphs.Count}
+
+
+# ---------------------------------------------------------------------------
+# 7. Document Properties
+# ---------------------------------------------------------------------------
+
+def set_document_properties(
+    title: str | None = None,
+    author: str | None = None,
+    subject: str | None = None,
+    keywords: str | None = None,
+    category: str | None = None,
+    comments: str | None = None,
+) -> dict:
+    """Set document metadata properties."""
+    app = _get_app()
+    doc = app.ActiveDocument
+    props = doc.BuiltInDocumentProperties
+    if title is not None:
+        props("Title").Value = title
+    if author is not None:
+        props("Author").Value = author
+    if subject is not None:
+        props("Subject").Value = subject
+    if keywords is not None:
+        props("Keywords").Value = keywords
+    if category is not None:
+        props("Category").Value = category
+    if comments is not None:
+        props("Comments").Value = comments
+    return {"updated": True}
+
+
+def get_document_properties() -> dict:
+    """Get document metadata properties."""
+    app = _get_app()
+    doc = app.ActiveDocument
+    props = doc.BuiltInDocumentProperties
+    result = {}
+    for prop_name in ("Title", "Author", "Subject", "Keywords", "Category", "Comments"):
+        try:
+            result[prop_name.lower()] = str(props(prop_name).Value)
+        except Exception:
+            result[prop_name.lower()] = ""
+    return result
+
+
+def get_document_statistics() -> dict:
+    """Get document statistics: word count, page count, character count."""
+    app = _get_app()
+    doc = app.ActiveDocument
+    # Repaginate to get accurate page count
+    doc.Repaginate()
+    stats = doc.ComputeStatistics
+    # wdStatisticWords = 0, wdStatisticPages = 2, wdStatisticCharacters = 3
+    # wdStatisticParagraphs = 4, wdStatisticLines = 1
+    return {
+        "word_count": stats(0),
+        "line_count": stats(1),
+        "page_count": stats(2),
+        "character_count": stats(3),
+        "paragraph_count": stats(4),
+    }
+
+
+# ---------------------------------------------------------------------------
+# 8. Advanced Features
+# ---------------------------------------------------------------------------
+
+def add_cross_reference(
+    ref_type: str,
+    ref_item: int,
+    ref_format: int | None = None,
+) -> dict:
+    """Add a cross-reference. ref_type: 'heading','bookmark','footnote'. ref_item: 1-based index."""
+    app = _get_app()
+    doc = app.ActiveDocument
+    rng = doc.Content
+    rng.Collapse(WD_COLLAPSE_END)
+    wdtype = _REF_TYPE_MAP.get(ref_type, WD_REF_TYPE_HEADING)
+    # Default ref format: wdContentText = 0
+    fmt = ref_format if ref_format is not None else 0
+    doc.Fields.Add(
+        Range=rng,
+        Type=-1,  # wdFieldEmpty
+        Text=f" REF _Ref{ref_item} \\h ",
+        PreserveFormatting=True,
+    )
+    return {"ref_type": ref_type, "ref_item": ref_item}
+
+
+def insert_field(
+    field_code: str,
+    paragraph_index: int | None = None,
+) -> dict:
+    """Insert a Word field (e.g. 'DATE', 'PAGE', 'NUMPAGES', 'AUTHOR', 'TOC')."""
+    app = _get_app()
+    doc = app.ActiveDocument
+    if paragraph_index is not None:
+        rng = doc.Paragraphs(paragraph_index).Range
+        rng.Collapse(WD_COLLAPSE_END)
+    else:
+        rng = doc.Content
+        rng.Collapse(WD_COLLAPSE_END)
+    doc.Fields.Add(
+        Range=rng,
+        Type=-1,  # wdFieldEmpty
+        Text=f" {field_code} ",
+        PreserveFormatting=True,
+    )
+    return {"field_code": field_code, "field_count": doc.Fields.Count}
+
+
+def set_tab_stops(
+    paragraph_index: int,
+    positions: list[float],
+    alignments: list[str] | None = None,
+    leaders: list[str] | None = None,
+) -> dict:
+    """Set tab stops on a paragraph. positions in points."""
+    app = _get_app()
+    doc = app.ActiveDocument
+    para = doc.Paragraphs(paragraph_index)
+    tabs = para.Format.TabStops
+    tabs.ClearAll()
+    for idx, pos in enumerate(positions):
+        align = WD_TAB_ALIGN_LEFT
+        leader = WD_TAB_LEADER_NONE
+        if alignments and idx < len(alignments):
+            align = _TAB_ALIGNMENT_MAP.get(alignments[idx], WD_TAB_ALIGN_LEFT)
+        if leaders and idx < len(leaders):
+            leader = _TAB_LEADER_MAP.get(leaders[idx], WD_TAB_LEADER_NONE)
+        tabs.Add(Position=pos, Alignment=align, Leader=leader)
+    return {"paragraph_index": paragraph_index, "tab_count": len(positions)}
+
+
+def protect_document(
+    password: str | None = None,
+    protection_type: str = "read_only",
+) -> dict:
+    """Protect a document."""
+    app = _get_app()
+    doc = app.ActiveDocument
+    ptype = _PROTECTION_MAP.get(protection_type, WD_PROTECT_READ_ONLY)
+    if password:
+        doc.Protect(Type=ptype, Password=password)
+    else:
+        doc.Protect(Type=ptype)
+    return {"protection_type": protection_type}
+
+
+def unprotect_document(password: str | None = None) -> dict:
+    """Unprotect a document."""
+    app = _get_app()
+    doc = app.ActiveDocument
+    if password:
+        doc.Unprotect(Password=password)
+    else:
+        doc.Unprotect()
+    return {"unprotected": True}
+
+
+# ---------------------------------------------------------------------------
+# 9. Content Controls & Templates
+# ---------------------------------------------------------------------------
+
+def add_content_control(
+    control_type: str,
+    paragraph_index: int | None = None,
+    title: str | None = None,
+    placeholder_text: str | None = None,
+) -> dict:
+    """Add a content control. control_type: 'rich_text','plain_text','combo_box','drop_down','date_picker','checkbox'."""
+    app = _get_app()
+    doc = app.ActiveDocument
+    if paragraph_index is not None:
+        rng = doc.Paragraphs(paragraph_index).Range
+    else:
+        rng = doc.Content
+        rng.Collapse(WD_COLLAPSE_END)
+    wdtype = _CONTENT_CONTROL_MAP.get(control_type, WD_CONTENT_CONTROL_RICH_TEXT)
+    cc = doc.ContentControls.Add(wdtype, rng)
+    if title is not None:
+        cc.Title = title
+    if placeholder_text is not None:
+        cc.SetPlaceholderText(Text=placeholder_text)
+    return {"control_type": control_type, "title": title or ""}
+
+
+def insert_building_block(
+    name: str,
+    category: str | None = None,
+) -> dict:
+    """Insert a building block (Quick Part) by name."""
+    app = _get_app()
+    doc = app.ActiveDocument
+    rng = doc.Content
+    rng.Collapse(WD_COLLAPSE_END)
+    templates = app.Templates
+    for t_idx in range(1, templates.Count + 1):
+        tmpl = templates(t_idx)
+        try:
+            bbs = tmpl.BuildingBlockEntries
+            bb = bbs.Item(name)
+            bb.Insert(Where=rng, RichText=True)
+            return {"name": name, "inserted": True}
+        except Exception:
+            continue
+    return {"name": name, "inserted": False, "error": "Building block not found"}
+
+
+# ---------------------------------------------------------------------------
+# 10. Lists Advanced
+# ---------------------------------------------------------------------------
+
+def set_list_level(paragraph_index: int, level: int) -> dict:
+    """Set list indentation level (0-8) for a paragraph."""
+    app = _get_app()
+    doc = app.ActiveDocument
+    para = doc.Paragraphs(paragraph_index)
+    para.Range.ListFormat.ListLevelNumber = level + 1  # 1-based in COM
+    return {"paragraph_index": paragraph_index, "level": level}
+
+
+def restart_list_numbering(paragraph_index: int) -> dict:
+    """Restart list numbering at a paragraph."""
+    app = _get_app()
+    doc = app.ActiveDocument
+    para = doc.Paragraphs(paragraph_index)
+    para.Range.ListFormat.ListValue = 1
+    # Use ListFormat to restart
+    lf = para.Range.ListFormat
+    lf.ApplyNumberDefault()
+    # Set the restart property
+    try:
+        para.Range.ListFormat.List.ApplyListTemplate(
+            ListTemplate=para.Range.ListFormat.ListTemplate,
+            ContinuePreviousList=False,
+        )
+    except Exception:
+        pass
+    return {"paragraph_index": paragraph_index}

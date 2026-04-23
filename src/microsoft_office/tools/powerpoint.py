@@ -814,3 +814,614 @@ def powerpoint_set_shape_text(slide_number: int, shape_index: int, text: str) ->
         return f"スライド {result['slide_number']} のシェイプ {result['shape_index']} にテキストを設定しました"
     except Exception as e:
         return f"エラー: {e}"
+
+
+# ============================================================
+# Shape Management
+# ============================================================
+
+@mcp.tool()
+def powerpoint_align_shapes(slide_number: int, shape_indices: list[int], alignment: str) -> str:
+    """複数の図形を整列します。shape_indicesは1始まりのインデックスのリスト。
+    alignment: "left"=左揃え, "center"=中央揃え, "right"=右揃え, "top"=上揃え, "middle"=中央揃え(縦), "bottom"=下揃え。"""
+    try:
+        result = ppt.align_shapes(slide_number, shape_indices, alignment)
+        return f"スライド {result['slide_number']} の図形を {result['alignment']} に整列しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_distribute_shapes(slide_number: int, shape_indices: list[int], direction: str) -> str:
+    """複数の図形を均等に配置します。direction: "horizontal"=水平, "vertical"=垂直。"""
+    try:
+        result = ppt.distribute_shapes(slide_number, shape_indices, direction)
+        return f"スライド {result['slide_number']} の図形を {result['direction']} に均等配置しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_set_shape_z_order(slide_number: int, shape_index: int, order: str) -> str:
+    """図形のZオーダー（重なり順）を変更します。order: "front"=最前面, "back"=最背面, "forward"=1つ前面, "backward"=1つ背面。"""
+    try:
+        result = ppt.set_shape_z_order(slide_number, shape_index, order)
+        return f"スライド {result['slide_number']} の図形のZオーダーを {result['order']} に変更しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_duplicate_shape(slide_number: int, shape_index: int) -> str:
+    """図形を同じスライド上に複製します。shape_indexは1始まり。"""
+    try:
+        result = ppt.duplicate_shape(slide_number, shape_index)
+        return f"スライド {result['slide_number']} の図形を複製しました（新しい図形: {result['new_shape_name']}）"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_delete_shape(slide_number: int, shape_index: int) -> str:
+    """指定した図形を削除します。shape_indexは1始まり。"""
+    try:
+        result = ppt.delete_shape(slide_number, shape_index)
+        return f"スライド {result['slide_number']} の図形 '{result['shape_name']}' を削除しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_get_shape_properties(slide_number: int, shape_index: int) -> str:
+    """図形の詳細プロパティ（位置、サイズ、タイプ、テキスト、塗りつぶし情報）を取得します。shape_indexは1始まり。"""
+    try:
+        result = ppt.get_shape_properties(slide_number, shape_index)
+        lines = [f"スライド {result['slide_number']} のシェイプ {result['shape_index']}:"]
+        lines.append(f"  名前: {result['name']}")
+        lines.append(f"  位置: Left={result['left']}, Top={result['top']}")
+        lines.append(f"  サイズ: Width={result['width']}, Height={result['height']}")
+        lines.append(f"  回転: {result['rotation']}°")
+        lines.append(f"  タイプ: {result['shape_type']}")
+        if result.get("text"):
+            lines.append(f"  テキスト: {result['text']}")
+        if "fill_type" in result:
+            lines.append(f"  塗りつぶしタイプ: {result['fill_type']}")
+        return "\n".join(lines)
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_copy_shape_to_slide(source_slide: int, shape_index: int, target_slide: int) -> str:
+    """図形を別のスライドにコピーします。shape_indexは1始まり。"""
+    try:
+        result = ppt.copy_shape_to_slide(source_slide, shape_index, target_slide)
+        return f"スライド {result['source_slide']} の図形をスライド {result['target_slide']} にコピーしました（新しい図形: {result['new_shape_name']}）"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_set_shape_size(slide_number: int, shape_index: int, width: float, height: float) -> str:
+    """図形のサイズを変更します。shape_indexは1始まり。width/heightはポイント単位。"""
+    try:
+        result = ppt.set_shape_size(slide_number, shape_index, width, height)
+        return f"スライド {result['slide_number']} の図形 '{result['shape_name']}' のサイズを変更しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+# ============================================================
+# Advanced Text Effects
+# ============================================================
+
+@mcp.tool()
+def powerpoint_set_text_shadow(
+    slide_number: int,
+    shape_index: int,
+    blur_radius: float = 5,
+    distance: float = 3,
+    angle: float = 45,
+    color: list[int] | None = None,
+    transparency: float = 60,
+) -> str:
+    """テキストに影効果を追加します。color=[R,G,B]。transparency: 透明度（0-100）。"""
+    try:
+        result = ppt.set_text_shadow(
+            slide_number, shape_index,
+            blur_radius=blur_radius,
+            distance=distance,
+            angle=angle,
+            color_rgb=tuple(color) if color else (0, 0, 0),
+            transparency=transparency,
+        )
+        return f"スライド {result['slide_number']} のテキストに影効果を設定しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_set_text_glow(
+    slide_number: int,
+    shape_index: int,
+    radius: float = 5,
+    color: list[int] | None = None,
+    transparency: float = 40,
+) -> str:
+    """テキストに光彩（グロー）効果を追加します。color=[R,G,B]。transparency: 透明度（0-100）。"""
+    try:
+        result = ppt.set_text_glow(
+            slide_number, shape_index,
+            radius=radius,
+            color_rgb=tuple(color) if color else (255, 255, 0),
+            transparency=transparency,
+        )
+        return f"スライド {result['slide_number']} のテキストに光彩効果を設定しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_set_text_outline(
+    slide_number: int,
+    shape_index: int,
+    color: list[int] | None = None,
+    weight: float = 1.0,
+) -> str:
+    """テキストにアウトライン（縁取り）を追加します。color=[R,G,B]。"""
+    try:
+        result = ppt.set_text_outline(
+            slide_number, shape_index,
+            color_rgb=tuple(color) if color else (0, 0, 0),
+            weight=weight,
+        )
+        return f"スライド {result['slide_number']} のテキストにアウトラインを設定しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_set_text_gradient_fill(
+    slide_number: int,
+    shape_index: int,
+    color1: list[int] | None = None,
+    color2: list[int] | None = None,
+    angle: float = 0,
+) -> str:
+    """テキストにグラデーション塗りつぶしを適用します。color1/color2=[R,G,B]。"""
+    try:
+        result = ppt.set_text_gradient_fill(
+            slide_number, shape_index,
+            color1_rgb=tuple(color1) if color1 else (0, 0, 255),
+            color2_rgb=tuple(color2) if color2 else (255, 0, 255),
+            angle=angle,
+        )
+        return f"スライド {result['slide_number']} のテキストにグラデーションを設定しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_add_rich_textbox(
+    slide_number: int,
+    left: float,
+    top: float,
+    width: float,
+    height: float,
+    runs: list[dict],
+) -> str:
+    """リッチテキストボックスを追加します。runsはランごとの書式指定リスト。
+    runs=[{"text": "Hello ", "font_size": 24, "bold": true, "font_color": [255,0,0]}, {"text": "World", "font_size": 18, "italic": true}]"""
+    try:
+        # Convert font_color lists to tuples in runs
+        converted_runs = []
+        for run in runs:
+            r = dict(run)
+            if "font_color" in r and r["font_color"] is not None:
+                r["font_color"] = tuple(r["font_color"])
+            converted_runs.append(r)
+        result = ppt.add_rich_textbox(
+            slide_number, left, top, width, height, converted_runs,
+        )
+        return f"スライド {result['slide_number']} にリッチテキストボックス '{result['shape_name']}' を追加しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+# ============================================================
+# Advanced Fills
+# ============================================================
+
+@mcp.tool()
+def powerpoint_set_shape_pattern_fill(
+    slide_number: int,
+    shape_index: int,
+    pattern_type: int,
+    fore_color: list[int],
+    back_color: list[int],
+) -> str:
+    """図形にパターン塗りつぶしを適用します。pattern_type: msoPatternの値。fore_color/back_color=[R,G,B]。"""
+    try:
+        result = ppt.set_shape_pattern_fill(
+            slide_number, shape_index,
+            pattern_type=pattern_type,
+            fore_color_rgb=tuple(fore_color),
+            back_color_rgb=tuple(back_color),
+        )
+        return f"スライド {result['slide_number']} の図形にパターン塗りつぶしを設定しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_set_shape_texture_fill(
+    slide_number: int,
+    shape_index: int,
+    texture_path: str,
+) -> str:
+    """図形に画像ファイルからのテクスチャ塗りつぶしを適用します。"""
+    try:
+        result = ppt.set_shape_texture_fill(slide_number, shape_index, texture_path)
+        return f"スライド {result['slide_number']} の図形にテクスチャ塗りつぶしを設定しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_set_shape_picture_fill(
+    slide_number: int,
+    shape_index: int,
+    image_path: str,
+    stretch: bool = True,
+) -> str:
+    """図形に画像塗りつぶしを適用します。stretch=Trueで画像を伸縮して塗りつぶし。"""
+    try:
+        result = ppt.set_shape_picture_fill(
+            slide_number, shape_index, image_path, stretch=stretch,
+        )
+        return f"スライド {result['slide_number']} の図形に画像塗りつぶしを設定しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+# ============================================================
+# Freeform Shapes
+# ============================================================
+
+@mcp.tool()
+def powerpoint_add_freeform_shape(
+    slide_number: int,
+    points: list[list[float]],
+    fill_color: list[int] | None = None,
+    line_color: list[int] | None = None,
+    line_weight: float = 1.0,
+    closed: bool = True,
+) -> str:
+    """フリーフォーム（自由形状）図形を追加します。pointsは[[x,y],...]形式の座標リスト。
+    fill_color/line_color=[R,G,B]。closed=Trueでパスを閉じます。"""
+    try:
+        result = ppt.add_freeform_shape(
+            slide_number, points,
+            fill_color_rgb=tuple(fill_color) if fill_color else None,
+            line_color_rgb=tuple(line_color) if line_color else None,
+            line_weight=line_weight,
+            closed=closed,
+        )
+        return f"スライド {result['slide_number']} にフリーフォーム図形 '{result['shape_name']}' を追加しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+# ============================================================
+# Advanced Table
+# ============================================================
+
+@mcp.tool()
+def powerpoint_format_table_cell(
+    slide_number: int,
+    shape_index: int,
+    row: int,
+    col: int,
+    fill_color: list[int] | None = None,
+    font_color: list[int] | None = None,
+    font_size: float | None = None,
+    bold: bool | None = None,
+    alignment: int | None = None,
+) -> str:
+    """テーブルの個別セルの書式を設定します。row/colは1始まり。fill_color/font_color=[R,G,B]。
+    alignment: 1=左揃え, 2=中央, 3=右揃え。"""
+    try:
+        result = ppt.format_table_cell(
+            slide_number, shape_index, row, col,
+            fill_color_rgb=tuple(fill_color) if fill_color else None,
+            font_color_rgb=tuple(font_color) if font_color else None,
+            font_size=font_size,
+            bold=bold,
+            alignment=alignment,
+        )
+        return f"スライド {result['slide_number']} のテーブルセル({row},{col})の書式を設定しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_merge_table_cells(
+    slide_number: int,
+    shape_index: int,
+    start_row: int,
+    start_col: int,
+    end_row: int,
+    end_col: int,
+) -> str:
+    """テーブルのセルを結合します。start_row/start_col/end_row/end_colは1始まり。"""
+    try:
+        result = ppt.merge_table_cells(
+            slide_number, shape_index,
+            start_row, start_col, end_row, end_col,
+        )
+        return f"スライド {result['slide_number']} のテーブルセルを結合しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_set_table_border(
+    slide_number: int,
+    shape_index: int,
+    border_type: str,
+    color: list[int] | None = None,
+    weight: float | None = None,
+) -> str:
+    """テーブルの罫線を設定します。border_type: "all"=すべて, "outside"=外枠, "inside"=内側, "none"=なし。
+    color=[R,G,B]。"""
+    try:
+        result = ppt.set_table_border(
+            slide_number, shape_index, border_type,
+            color_rgb=tuple(color) if color else None,
+            weight=weight,
+        )
+        return f"スライド {result['slide_number']} のテーブル罫線を設定しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+# ============================================================
+# Slide Master & Layout
+# ============================================================
+
+@mcp.tool()
+def powerpoint_get_slide_layouts() -> str:
+    """利用可能なスライドレイアウトの一覧を取得します。"""
+    try:
+        result = ppt.get_slide_layouts()
+        if not result["layouts"]:
+            return "利用可能なレイアウトはありません"
+        lines = ["スライドレイアウト一覧:"]
+        for layout in result["layouts"]:
+            lines.append(f"  {layout['index']}. {layout['name']}")
+        return "\n".join(lines)
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_apply_slide_layout(slide_number: int, layout_index: int) -> str:
+    """スライドにレイアウトを適用します。layout_indexはget_slide_layoutsで取得したインデックス。"""
+    try:
+        result = ppt.apply_slide_layout(slide_number, layout_index)
+        return f"スライド {result['slide_number']} にレイアウト {result['layout_index']} を適用しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_set_slide_number_visibility(visible: bool = True, start_number: int = 1) -> str:
+    """スライド番号の表示/非表示を切り替えます。start_numberで開始番号を指定。"""
+    try:
+        result = ppt.set_slide_number_visibility(visible=visible, start_number=start_number)
+        status = "表示" if result["visible"] else "非表示"
+        return f"スライド番号を{status}に設定しました（開始番号: {result['start_number']}）"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+# ============================================================
+# Media
+# ============================================================
+
+@mcp.tool()
+def powerpoint_add_video(
+    slide_number: int,
+    file_path: str,
+    left: float,
+    top: float,
+    width: float,
+    height: float,
+) -> str:
+    """スライドに動画を埋め込みます。座標はポイント単位。"""
+    try:
+        result = ppt.add_video(slide_number, file_path, left, top, width, height)
+        return f"スライド {result['slide_number']} に動画 '{result['shape_name']}' を埋め込みました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_add_audio(
+    slide_number: int,
+    file_path: str,
+    left: float = 0,
+    top: float = 0,
+    play_across_slides: bool = False,
+) -> str:
+    """スライドに音声ファイルを埋め込みます。play_across_slides=Trueでスライド間再生。"""
+    try:
+        result = ppt.add_audio(
+            slide_number, file_path,
+            left=left, top=top,
+            play_across_slides=play_across_slides,
+        )
+        return f"スライド {result['slide_number']} に音声 '{result['shape_name']}' を埋め込みました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+# ============================================================
+# Advanced Animation
+# ============================================================
+
+@mcp.tool()
+def powerpoint_add_motion_path(
+    slide_number: int,
+    shape_index: int,
+    path_type: str,
+    duration: float = 1.0,
+) -> str:
+    """図形にモーションパスアニメーションを追加します。path_type: "line", "arc", "circle", "diamond", "custom"。"""
+    try:
+        result = ppt.add_motion_path(
+            slide_number, shape_index,
+            path_type=path_type,
+            duration=duration,
+        )
+        return f"スライド {result['slide_number']} の図形にモーションパスを追加しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_set_animation_trigger(
+    slide_number: int,
+    shape_index: int,
+    trigger_type: str,
+    trigger_shape_index: int | None = None,
+) -> str:
+    """アニメーションのトリガーを設定します。trigger_type: "on_click", "with_previous", "after_previous"。"""
+    try:
+        result = ppt.set_animation_trigger(
+            slide_number, shape_index,
+            trigger_type=trigger_type,
+            trigger_shape_index=trigger_shape_index,
+        )
+        return f"スライド {result['slide_number']} のアニメーショントリガーを設定しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_set_animation_order(
+    slide_number: int,
+    effect_index: int,
+    new_position: int,
+) -> str:
+    """アニメーションの再生順序を変更します。effect_index/new_positionは1始まり。"""
+    try:
+        result = ppt.set_animation_order(
+            slide_number, effect_index, new_position,
+        )
+        return f"スライド {result['slide_number']} のアニメーション順序を変更しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+# ============================================================
+# Advanced Shape Effects
+# ============================================================
+
+@mcp.tool()
+def powerpoint_set_shape_border(
+    slide_number: int,
+    shape_index: int,
+    color: list[int] | None = None,
+    weight: float | None = None,
+    dash_style: str | None = None,
+) -> str:
+    """図形の枠線を設定します。color=[R,G,B]。dash_style: "solid", "dash", "dot", "dash_dot"。"""
+    try:
+        result = ppt.set_shape_border(
+            slide_number, shape_index,
+            color_rgb=tuple(color) if color else None,
+            weight=weight,
+            dash_style=dash_style,
+        )
+        return f"スライド {result['slide_number']} の図形の枠線を設定しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+# ============================================================
+# Export (Single Slide)
+# ============================================================
+
+@mcp.tool()
+def powerpoint_export_slide_as_image(
+    slide_number: int,
+    file_path: str,
+    width: int = 1920,
+    height: int = 1080,
+) -> str:
+    """スライドを画像ファイル（PNG/JPG）としてエクスポートします。"""
+    try:
+        result = ppt.export_slide_as_image(
+            slide_number, file_path,
+            width=width, height=height,
+        )
+        return f"スライド {result['slide_number']} を画像として出力しました: {result['file_path']}"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+# ============================================================
+# Shape Text Advanced
+# ============================================================
+
+@mcp.tool()
+def powerpoint_set_shape_text_vertical(
+    slide_number: int,
+    shape_index: int,
+    orientation: str,
+) -> str:
+    """テキストの方向を設定します。orientation: "horizontal"=横書き, "vertical"=縦書き, "vertical270"=270度回転, "stacked"=縦中横。"""
+    try:
+        result = ppt.set_shape_text_vertical(
+            slide_number, shape_index, orientation,
+        )
+        return f"スライド {result['slide_number']} の図形のテキスト方向を設定しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_set_shape_text_margin(
+    slide_number: int,
+    shape_index: int,
+    left: float = 7.2,
+    top: float = 3.6,
+    right: float = 7.2,
+    bottom: float = 3.6,
+) -> str:
+    """図形の内部テキストマージンを設定します。単位はポイント。"""
+    try:
+        result = ppt.set_shape_text_margin(
+            slide_number, shape_index,
+            left=left, top=top, right=right, bottom=bottom,
+        )
+        return f"スライド {result['slide_number']} の図形のテキストマージンを設定しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_set_shape_autofit(
+    slide_number: int,
+    shape_index: int,
+    autofit_type: str,
+) -> str:
+    """テキストの自動調整を設定します。autofit_type: "none"=調整なし, "shrink"=テキストを縮小, "resize_shape"=図形をテキストに合わせる。"""
+    try:
+        result = ppt.set_shape_autofit(
+            slide_number, shape_index, autofit_type,
+        )
+        return f"スライド {result['slide_number']} の図形の自動調整を設定しました"
+    except Exception as e:
+        return f"エラー: {e}"

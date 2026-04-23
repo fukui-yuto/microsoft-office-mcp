@@ -522,3 +522,605 @@ def word_reject_all_changes() -> str:
         return "全ての変更を拒否しました"
     except Exception as e:
         return f"エラー: {e}"
+
+
+# ---------------------------------------------------------------------------
+# 1. Style Management
+# ---------------------------------------------------------------------------
+
+@mcp.tool()
+def word_create_style(
+    name: str,
+    style_type: str = "paragraph",
+    base_style: str | None = None,
+    font_name: str | None = None,
+    font_size: float | None = None,
+    font_color: list[int] | None = None,
+    bold: bool | None = None,
+    italic: bool | None = None,
+    space_before: float | None = None,
+    space_after: float | None = None,
+    line_spacing: float | None = None,
+    alignment: str | None = None,
+) -> str:
+    """カスタムスタイルを作成します。style_type: 'paragraph','character','table','list'。font_colorは[R,G,B]形式。alignment: 'left','center','right','justify'。"""
+    try:
+        result = word.create_style(
+            name,
+            style_type=style_type,
+            base_style=base_style,
+            font_name=font_name,
+            font_size=font_size,
+            font_color_rgb=tuple(font_color) if font_color else None,
+            bold=bold,
+            italic=italic,
+            space_before=space_before,
+            space_after=space_after,
+            line_spacing=line_spacing,
+            alignment=alignment,
+        )
+        return f"スタイル '{result['name']}' を作成しました（種類: {result['style_type']}）"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def word_apply_style(paragraph_index: int, style_name: str) -> str:
+    """段落にスタイルを適用します。paragraph_indexは1始まり。style_nameでスタイル名を指定。"""
+    try:
+        result = word.apply_style(paragraph_index, style_name)
+        return f"段落 {result['paragraph_index']} にスタイル '{result['style_name']}' を適用しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def word_get_styles() -> str:
+    """アクティブな文書の全スタイル一覧を取得します。"""
+    try:
+        result = word.get_styles()
+        lines = [f"スタイル数: {result['style_count']}"]
+        for s in result["styles"]:
+            built_in = "組込み" if s["built_in"] else "カスタム"
+            lines.append(f"  - {s['name']} (タイプ: {s['type']}, {built_in})")
+        return "\n".join(lines)
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def word_modify_style(
+    style_name: str,
+    font_name: str | None = None,
+    font_size: float | None = None,
+    font_color: list[int] | None = None,
+    bold: bool | None = None,
+    italic: bool | None = None,
+    space_before: float | None = None,
+    space_after: float | None = None,
+    line_spacing: float | None = None,
+) -> str:
+    """既存のスタイルを変更します。font_colorは[R,G,B]形式。"""
+    try:
+        result = word.modify_style(
+            style_name,
+            font_name=font_name,
+            font_size=font_size,
+            font_color_rgb=tuple(font_color) if font_color else None,
+            bold=bold,
+            italic=italic,
+            space_before=space_before,
+            space_after=space_after,
+            line_spacing=line_spacing,
+        )
+        return f"スタイル '{result['style_name']}' を変更しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+# ---------------------------------------------------------------------------
+# 2. Footnotes & Endnotes
+# ---------------------------------------------------------------------------
+
+@mcp.tool()
+def word_add_footnote(paragraph_index: int, text: str) -> str:
+    """指定した段落の末尾に脚注を追加します。paragraph_indexは1始まり。"""
+    try:
+        result = word.add_footnote(paragraph_index, text)
+        return f"段落 {result['paragraph_index']} に脚注を追加しました（脚注数: {result['footnote_count']}）"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def word_add_endnote(paragraph_index: int, text: str) -> str:
+    """指定した段落の末尾に文末脚注を追加します。paragraph_indexは1始まり。"""
+    try:
+        result = word.add_endnote(paragraph_index, text)
+        return f"段落 {result['paragraph_index']} に文末脚注を追加しました（文末脚注数: {result['endnote_count']}）"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def word_get_footnotes() -> str:
+    """アクティブな文書の全脚注一覧を取得します。"""
+    try:
+        result = word.get_footnotes()
+        if result["footnote_count"] == 0:
+            return "脚注はありません"
+        lines = [f"脚注数: {result['footnote_count']}"]
+        for fn in result["footnotes"]:
+            lines.append(f"  [{fn['index']}] {fn['text']}")
+        return "\n".join(lines)
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def word_get_endnotes() -> str:
+    """アクティブな文書の全文末脚注一覧を取得します。"""
+    try:
+        result = word.get_endnotes()
+        if result["endnote_count"] == 0:
+            return "文末脚注はありません"
+        lines = [f"文末脚注数: {result['endnote_count']}"]
+        for en in result["endnotes"]:
+            lines.append(f"  [{en['index']}] {en['text']}")
+        return "\n".join(lines)
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+# ---------------------------------------------------------------------------
+# 3. Advanced Table Operations
+# ---------------------------------------------------------------------------
+
+@mcp.tool()
+def word_merge_table_cells(
+    table_index: int,
+    start_row: int,
+    start_col: int,
+    end_row: int,
+    end_col: int,
+) -> str:
+    """表のセルを結合します。table_indexは1始まり。行・列も1始まり。"""
+    try:
+        result = word.merge_table_cells(table_index, start_row, start_col, end_row, end_col)
+        return f"表 {result['table_index']} のセル {result['merged']} を結合しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def word_split_table_cell(
+    table_index: int,
+    row: int,
+    col: int,
+    num_rows: int,
+    num_cols: int,
+) -> str:
+    """表のセルを分割します。table_indexは1始まり。行・列も1始まり。"""
+    try:
+        result = word.split_table_cell(table_index, row, col, num_rows, num_cols)
+        return f"表 {result['table_index']} のセル {result['cell']} を {result['split_into']} に分割しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def word_format_table_cell(
+    table_index: int,
+    row: int,
+    col: int,
+    fill_color: list[int] | None = None,
+    font_color: list[int] | None = None,
+    font_size: float | None = None,
+    bold: bool | None = None,
+    alignment: int | None = None,
+    vertical_alignment: str | None = None,
+) -> str:
+    """表の個別セルを書式設定します。fill_color/font_colorは[R,G,B]形式。alignment: 0=左,1=中央,2=右。vertical_alignment: 'top','center','bottom'。"""
+    try:
+        result = word.format_table_cell(
+            table_index, row, col,
+            fill_color_rgb=tuple(fill_color) if fill_color else None,
+            font_color_rgb=tuple(font_color) if font_color else None,
+            font_size=font_size,
+            bold=bold,
+            alignment=alignment,
+            vertical_alignment=vertical_alignment,
+        )
+        return f"表 {result['table_index']} のセル {result['cell']} の書式を設定しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def word_set_table_cell_borders(
+    table_index: int,
+    row: int,
+    col: int,
+    border_type: str,
+    color: list[int] | None = None,
+    weight: float | None = None,
+    style: int | None = None,
+) -> str:
+    """表のセルに罫線を設定します。border_type: 'top','bottom','left','right','all'。colorは[R,G,B]形式。"""
+    try:
+        result = word.set_table_cell_borders(
+            table_index, row, col, border_type,
+            color_rgb=tuple(color) if color else None,
+            weight=weight,
+            style=style,
+        )
+        return f"表 {result['table_index']} のセル {result['cell']} に {result['border_type']} 罫線を設定しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def word_set_table_width(
+    table_index: int,
+    width_type: str,
+    width: float | None = None,
+) -> str:
+    """表の幅を設定します。width_type: 'auto'=自動, 'fixed'=固定(ポイント), 'percent'=パーセント。"""
+    try:
+        result = word.set_table_width(table_index, width_type, width=width)
+        return f"表 {result['table_index']} の幅を {result['width_type']} に設定しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+# ---------------------------------------------------------------------------
+# 4. Shapes & Drawing
+# ---------------------------------------------------------------------------
+
+@mcp.tool()
+def word_add_shape(
+    shape_type: int,
+    left: float,
+    top: float,
+    width: float,
+    height: float,
+    fill_color: list[int] | None = None,
+    line_color: list[int] | None = None,
+) -> str:
+    """図形を追加します。shape_type: 1=四角形, 5=角丸四角形, 9=楕円 等。座標はポイント単位。fill_color/line_colorは[R,G,B]形式。"""
+    try:
+        result = word.add_shape(
+            shape_type, left, top, width, height,
+            fill_color_rgb=tuple(fill_color) if fill_color else None,
+            line_color_rgb=tuple(line_color) if line_color else None,
+        )
+        return f"図形 '{result['shape_name']}' を追加しました（タイプ: {result['shape_type']}）"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def word_add_line(
+    start_x: float,
+    start_y: float,
+    end_x: float,
+    end_y: float,
+    color: list[int] | None = None,
+    weight: float = 1.0,
+    dash_style: int | None = None,
+) -> str:
+    """直線を描画します。座標はポイント単位。colorは[R,G,B]形式。weightは線の太さ。dash_styleで破線スタイルを指定。"""
+    try:
+        result = word.add_line(
+            start_x, start_y, end_x, end_y,
+            color_rgb=tuple(color) if color else None,
+            weight=weight,
+            dash_style=dash_style,
+        )
+        return f"直線 '{result['shape_name']}' を描画しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+# ---------------------------------------------------------------------------
+# 5. Text Enhancements
+# ---------------------------------------------------------------------------
+
+@mcp.tool()
+def word_add_drop_cap(
+    paragraph_index: int,
+    lines_to_drop: int = 3,
+    font_name: str | None = None,
+) -> str:
+    """段落にドロップキャップ（先頭文字の拡大表示）を設定します。lines_to_dropで行数を指定（デフォルト3行）。"""
+    try:
+        result = word.add_drop_cap(paragraph_index, lines_to_drop=lines_to_drop, font_name=font_name)
+        return f"段落 {result['paragraph_index']} にドロップキャップを設定しました（{result['lines_to_drop']}行）"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def word_set_text_highlight(paragraph_index: int, color_index: int) -> str:
+    """段落のテキストに蛍光ペン（ハイライト）を設定します。color_index: 1-16のWdColorIndex値。例: 7=黄色, 6=赤, 4=緑。"""
+    try:
+        result = word.set_text_highlight(paragraph_index, color_index)
+        return f"段落 {result['paragraph_index']} にハイライトを設定しました（色: {result['color_index']}）"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def word_set_character_spacing(
+    paragraph_index: int,
+    spacing: float = 0,
+    kerning: float | None = None,
+    scale: int = 100,
+) -> str:
+    """段落の文字間隔を設定します。spacingはポイント単位（正=広げる、負=詰める）。scaleは文字幅の倍率（100=通常）。kerningはカーニングのしきい値。"""
+    try:
+        result = word.set_character_spacing(paragraph_index, spacing=spacing, kerning=kerning, scale=scale)
+        return f"段落 {result['paragraph_index']} の文字間隔を設定しました（間隔: {result['spacing']}pt, 倍率: {result['scale']}%）"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def word_add_text_effect(paragraph_index: int, effect_type: str) -> str:
+    """段落にテキスト効果を追加します。effect_type: 'shadow'=影, 'outline'=アウトライン, 'emboss'=浮き出し, 'engrave'=彫り込み。"""
+    try:
+        result = word.add_text_effect(paragraph_index, effect_type)
+        return f"段落 {result['paragraph_index']} にテキスト効果 '{result['effect_type']}' を追加しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+# ---------------------------------------------------------------------------
+# 6. Page Layout
+# ---------------------------------------------------------------------------
+
+@mcp.tool()
+def word_insert_page_break(paragraph_index: int | None = None) -> str:
+    """改ページを挿入します。paragraph_indexで挿入位置の段落を指定（省略時は末尾）。"""
+    try:
+        result = word.insert_page_break(paragraph_index=paragraph_index)
+        pos = f"段落 {result['paragraph_index']} の後" if result["paragraph_index"] else "末尾"
+        return f"改ページを{pos}に挿入しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def word_insert_column_break(paragraph_index: int | None = None) -> str:
+    """段区切りを挿入します。paragraph_indexで挿入位置の段落を指定（省略時は末尾）。"""
+    try:
+        result = word.insert_column_break(paragraph_index=paragraph_index)
+        pos = f"段落 {result['paragraph_index']} の後" if result["paragraph_index"] else "末尾"
+        return f"段区切りを{pos}に挿入しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def word_set_paragraph_borders(
+    paragraph_index: int,
+    border_type: str,
+    color: list[int] | None = None,
+    weight: float | None = None,
+    style: int | None = None,
+) -> str:
+    """段落に罫線を設定します。border_type: 'top','bottom','left','right','box'。colorは[R,G,B]形式。"""
+    try:
+        result = word.set_paragraph_borders(
+            paragraph_index, border_type,
+            color_rgb=tuple(color) if color else None,
+            weight=weight,
+            style=style,
+        )
+        return f"段落 {result['paragraph_index']} に {result['border_type']} 罫線を設定しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def word_set_paragraph_shading(paragraph_index: int, color: list[int]) -> str:
+    """段落の背景色を設定します。colorは[R,G,B]形式（例: [255,255,200]）。"""
+    try:
+        result = word.set_paragraph_shading(paragraph_index, color_rgb=tuple(color))
+        return f"段落 {result['paragraph_index']} の背景色を設定しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def word_add_horizontal_line(paragraph_index: int | None = None) -> str:
+    """装飾用の水平線を追加します。paragraph_indexで挿入位置を指定（省略時は末尾）。"""
+    try:
+        result = word.add_horizontal_line(paragraph_index=paragraph_index)
+        return f"水平線を段落 {result['paragraph_index']} に追加しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+# ---------------------------------------------------------------------------
+# 7. Document Properties
+# ---------------------------------------------------------------------------
+
+@mcp.tool()
+def word_set_document_properties(
+    title: str | None = None,
+    author: str | None = None,
+    subject: str | None = None,
+    keywords: str | None = None,
+    category: str | None = None,
+    comments: str | None = None,
+) -> str:
+    """文書のメタデータ（プロパティ）を設定します。タイトル、作成者、件名、キーワード、分類、コメントを指定可能。"""
+    try:
+        word.set_document_properties(
+            title=title,
+            author=author,
+            subject=subject,
+            keywords=keywords,
+            category=category,
+            comments=comments,
+        )
+        return "文書プロパティを更新しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def word_get_document_properties() -> str:
+    """文書のメタデータ（プロパティ）を取得します。"""
+    try:
+        result = word.get_document_properties()
+        lines = ["文書プロパティ:"]
+        for key, value in result.items():
+            lines.append(f"  {key}: {value}")
+        return "\n".join(lines)
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def word_get_document_statistics() -> str:
+    """文書の統計情報（文字数、単語数、ページ数など）を取得します。"""
+    try:
+        result = word.get_document_statistics()
+        return (
+            f"文書統計: ページ数={result['page_count']}, "
+            f"単語数={result['word_count']}, "
+            f"文字数={result['character_count']}, "
+            f"行数={result['line_count']}, "
+            f"段落数={result['paragraph_count']}"
+        )
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+# ---------------------------------------------------------------------------
+# 8. Advanced Features
+# ---------------------------------------------------------------------------
+
+@mcp.tool()
+def word_add_cross_reference(
+    ref_type: str,
+    ref_item: int,
+    ref_format: int | None = None,
+) -> str:
+    """相互参照を追加します。ref_type: 'heading','bookmark','footnote'。ref_itemは1始まりのインデックス。"""
+    try:
+        result = word.add_cross_reference(ref_type, ref_item, ref_format=ref_format)
+        return f"相互参照を追加しました（タイプ: {result['ref_type']}, 項目: {result['ref_item']}）"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def word_insert_field(field_code: str, paragraph_index: int | None = None) -> str:
+    """Wordフィールドを挿入します。field_code例: 'DATE', 'PAGE', 'NUMPAGES', 'AUTHOR', 'TOC'。paragraph_indexで挿入位置を指定。"""
+    try:
+        result = word.insert_field(field_code, paragraph_index=paragraph_index)
+        return f"フィールド '{result['field_code']}' を挿入しました（フィールド数: {result['field_count']}）"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def word_set_tab_stops(
+    paragraph_index: int,
+    positions: list[float],
+    alignments: list[str] | None = None,
+    leaders: list[str] | None = None,
+) -> str:
+    """段落にタブストップを設定します。positionsはポイント単位のリスト。alignments: 'left','center','right','decimal'。leaders: 'none','dots','dashes','line'。"""
+    try:
+        result = word.set_tab_stops(paragraph_index, positions, alignments=alignments, leaders=leaders)
+        return f"段落 {result['paragraph_index']} にタブストップを {result['tab_count']} 個設定しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def word_protect_document(
+    password: str | None = None,
+    protection_type: str = "read_only",
+) -> str:
+    """文書を保護します。protection_type: 'read_only'=読み取り専用, 'comments'=コメントのみ, 'forms'=フォームのみ, 'tracked_changes'=変更履歴。"""
+    try:
+        result = word.protect_document(password=password, protection_type=protection_type)
+        return f"文書を保護しました（種類: {result['protection_type']}）"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def word_unprotect_document(password: str | None = None) -> str:
+    """文書の保護を解除します。パスワードが設定されている場合はpasswordを指定してください。"""
+    try:
+        word.unprotect_document(password=password)
+        return "文書の保護を解除しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+# ---------------------------------------------------------------------------
+# 9. Content Controls & Templates
+# ---------------------------------------------------------------------------
+
+@mcp.tool()
+def word_add_content_control(
+    control_type: str,
+    paragraph_index: int | None = None,
+    title: str | None = None,
+    placeholder_text: str | None = None,
+) -> str:
+    """コンテンツコントロールを追加します。control_type: 'rich_text','plain_text','combo_box','drop_down','date_picker','checkbox'。"""
+    try:
+        result = word.add_content_control(
+            control_type,
+            paragraph_index=paragraph_index,
+            title=title,
+            placeholder_text=placeholder_text,
+        )
+        return f"コンテンツコントロール '{result['title']}' を追加しました（種類: {result['control_type']}）"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def word_insert_building_block(name: str, category: str | None = None) -> str:
+    """文書パーツ（クイックパーツ）を挿入します。nameで名前を指定。categoryでカテゴリを指定（省略可）。"""
+    try:
+        result = word.insert_building_block(name, category=category)
+        if result["inserted"]:
+            return f"文書パーツ '{result['name']}' を挿入しました"
+        else:
+            return f"文書パーツ '{result['name']}' が見つかりませんでした"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+# ---------------------------------------------------------------------------
+# 10. Lists Advanced
+# ---------------------------------------------------------------------------
+
+@mcp.tool()
+def word_set_list_level(paragraph_index: int, level: int) -> str:
+    """リストのインデントレベルを設定します。paragraph_indexは1始まり。level: 0-8。"""
+    try:
+        result = word.set_list_level(paragraph_index, level)
+        return f"段落 {result['paragraph_index']} のリストレベルを {result['level']} に設定しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def word_restart_list_numbering(paragraph_index: int) -> str:
+    """指定した段落でリストの番号を振り直します。paragraph_indexは1始まり。"""
+    try:
+        result = word.restart_list_numbering(paragraph_index)
+        return f"段落 {result['paragraph_index']} でリスト番号を振り直しました"
+    except Exception as e:
+        return f"エラー: {e}"

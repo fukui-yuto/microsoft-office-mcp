@@ -1597,3 +1597,1114 @@ def get_sections() -> dict:
             "slide_count": sp.SlidesCount(i),
         })
     return {"sections": sections}
+
+
+# ============================================================
+# Shape Management
+# ============================================================
+
+def align_shapes(slide_number: int, shape_indices: list[int], alignment: str) -> dict:
+    """Align multiple shapes on a slide.
+
+    Args:
+        slide_number: 1-based slide index.
+        shape_indices: List of 1-based shape indices to align.
+        alignment: Alignment type ("left", "center", "right", "top", "middle", "bottom").
+
+    Returns:
+        Dict with slide_number and alignment.
+    """
+    app = _get_app()
+    prs = app.ActivePresentation
+    slide = prs.Slides(slide_number)
+
+    shapes = [slide.Shapes(i) for i in shape_indices]
+
+    if alignment == "left":
+        min_left = min(s.Left for s in shapes)
+        for s in shapes:
+            s.Left = min_left
+    elif alignment == "center":
+        centers = [(s.Left + s.Width / 2) for s in shapes]
+        avg_center = sum(centers) / len(centers)
+        for s in shapes:
+            s.Left = avg_center - s.Width / 2
+    elif alignment == "right":
+        max_right = max(s.Left + s.Width for s in shapes)
+        for s in shapes:
+            s.Left = max_right - s.Width
+    elif alignment == "top":
+        min_top = min(s.Top for s in shapes)
+        for s in shapes:
+            s.Top = min_top
+    elif alignment == "middle":
+        middles = [(s.Top + s.Height / 2) for s in shapes]
+        avg_middle = sum(middles) / len(middles)
+        for s in shapes:
+            s.Top = avg_middle - s.Height / 2
+    elif alignment == "bottom":
+        max_bottom = max(s.Top + s.Height for s in shapes)
+        for s in shapes:
+            s.Top = max_bottom - s.Height
+
+    return {"slide_number": slide_number, "alignment": alignment}
+
+
+def distribute_shapes(slide_number: int, shape_indices: list[int], direction: str) -> dict:
+    """Distribute shapes evenly on a slide.
+
+    Args:
+        slide_number: 1-based slide index.
+        shape_indices: List of 1-based shape indices to distribute.
+        direction: "horizontal" or "vertical".
+
+    Returns:
+        Dict with slide_number and direction.
+    """
+    app = _get_app()
+    prs = app.ActivePresentation
+    slide = prs.Slides(slide_number)
+
+    shapes = [slide.Shapes(i) for i in shape_indices]
+    if len(shapes) < 3:
+        return {"slide_number": slide_number, "direction": direction}
+
+    if direction == "horizontal":
+        shapes.sort(key=lambda s: s.Left)
+        min_left = shapes[0].Left
+        max_right = shapes[-1].Left + shapes[-1].Width
+        total_shape_width = sum(s.Width for s in shapes)
+        gap = (max_right - min_left - total_shape_width) / (len(shapes) - 1)
+        current_left = min_left
+        for s in shapes:
+            s.Left = current_left
+            current_left += s.Width + gap
+    elif direction == "vertical":
+        shapes.sort(key=lambda s: s.Top)
+        min_top = shapes[0].Top
+        max_bottom = shapes[-1].Top + shapes[-1].Height
+        total_shape_height = sum(s.Height for s in shapes)
+        gap = (max_bottom - min_top - total_shape_height) / (len(shapes) - 1)
+        current_top = min_top
+        for s in shapes:
+            s.Top = current_top
+            current_top += s.Height + gap
+
+    return {"slide_number": slide_number, "direction": direction}
+
+
+def set_shape_z_order(slide_number: int, shape_index: int, order: str) -> dict:
+    """Set the z-order of a shape.
+
+    Args:
+        slide_number: 1-based slide index.
+        shape_index: 1-based shape index.
+        order: "front", "back", "forward", "backward".
+
+    Returns:
+        Dict with slide_number and order.
+    """
+    # msoBringToFront=0, msoSendToBack=1, msoBringForward=2, msoSendBackward=3
+    order_map = {"front": 0, "back": 1, "forward": 2, "backward": 3}
+    app = _get_app()
+    prs = app.ActivePresentation
+    slide = prs.Slides(slide_number)
+    shape = slide.Shapes(shape_index)
+    shape.ZOrder(order_map[order])
+    return {"slide_number": slide_number, "order": order}
+
+
+def duplicate_shape(slide_number: int, shape_index: int) -> dict:
+    """Duplicate a shape on the same slide.
+
+    Args:
+        slide_number: 1-based slide index.
+        shape_index: 1-based shape index.
+
+    Returns:
+        Dict with slide_number and new_shape_name.
+    """
+    app = _get_app()
+    prs = app.ActivePresentation
+    slide = prs.Slides(slide_number)
+    shape = slide.Shapes(shape_index)
+    new_shape = shape.Duplicate()(1)
+    return {"slide_number": slide_number, "new_shape_name": new_shape.Name}
+
+
+def delete_shape(slide_number: int, shape_index: int) -> dict:
+    """Delete a shape from a slide.
+
+    Args:
+        slide_number: 1-based slide index.
+        shape_index: 1-based shape index.
+
+    Returns:
+        Dict with slide_number and deleted shape name.
+    """
+    app = _get_app()
+    prs = app.ActivePresentation
+    slide = prs.Slides(slide_number)
+    shape = slide.Shapes(shape_index)
+    name = shape.Name
+    shape.Delete()
+    return {"slide_number": slide_number, "shape_name": name}
+
+
+def get_shape_properties(slide_number: int, shape_index: int) -> dict:
+    """Get detailed properties of a shape.
+
+    Args:
+        slide_number: 1-based slide index.
+        shape_index: 1-based shape index.
+
+    Returns:
+        Dict with shape properties.
+    """
+    app = _get_app()
+    prs = app.ActivePresentation
+    slide = prs.Slides(slide_number)
+    shape = slide.Shapes(shape_index)
+
+    props = {
+        "slide_number": slide_number,
+        "shape_index": shape_index,
+        "name": shape.Name,
+        "left": shape.Left,
+        "top": shape.Top,
+        "width": shape.Width,
+        "height": shape.Height,
+        "rotation": shape.Rotation,
+        "shape_type": shape.Type,
+        "has_text": bool(shape.HasTextFrame),
+    }
+
+    if shape.HasTextFrame:
+        props["text"] = shape.TextFrame.TextRange.Text
+
+    try:
+        if shape.Fill.Visible:
+            props["fill_type"] = shape.Fill.Type
+    except Exception:
+        pass
+
+    return props
+
+
+def copy_shape_to_slide(source_slide: int, shape_index: int, target_slide: int) -> dict:
+    """Copy a shape from one slide to another.
+
+    Args:
+        source_slide: 1-based source slide index.
+        shape_index: 1-based shape index on the source slide.
+        target_slide: 1-based target slide index.
+
+    Returns:
+        Dict with source_slide, target_slide, and new_shape_name.
+    """
+    app = _get_app()
+    prs = app.ActivePresentation
+    src = prs.Slides(source_slide)
+    dst = prs.Slides(target_slide)
+    shape = src.Shapes(shape_index)
+    shape.Copy()
+    new_shape = dst.Shapes.Paste()(1)
+    return {
+        "source_slide": source_slide,
+        "target_slide": target_slide,
+        "new_shape_name": new_shape.Name,
+    }
+
+
+def set_shape_size(slide_number: int, shape_index: int, width: float, height: float) -> dict:
+    """Resize a shape independently.
+
+    Args:
+        slide_number: 1-based slide index.
+        shape_index: 1-based shape index.
+        width: New width in points.
+        height: New height in points.
+
+    Returns:
+        Dict with slide_number and shape_name.
+    """
+    app = _get_app()
+    prs = app.ActivePresentation
+    slide = prs.Slides(slide_number)
+    shape = slide.Shapes(shape_index)
+    shape.LockAspectRatio = False
+    shape.Width = width
+    shape.Height = height
+    return {"slide_number": slide_number, "shape_name": shape.Name}
+
+
+# ============================================================
+# Advanced Text Effects
+# ============================================================
+
+def set_text_shadow(
+    slide_number: int,
+    shape_index: int,
+    blur_radius: float = 5,
+    distance: float = 3,
+    angle: float = 45,
+    color_rgb: tuple[int, int, int] = (0, 0, 0),
+    transparency: float = 0.6,
+) -> dict:
+    """Add shadow effect to text in a shape.
+
+    Args:
+        slide_number: 1-based slide index.
+        shape_index: 1-based shape index.
+        blur_radius: Shadow blur radius.
+        distance: Shadow distance.
+        angle: Shadow angle in degrees.
+        color_rgb: Shadow color as (R, G, B).
+        transparency: Shadow transparency 0.0-1.0.
+
+    Returns:
+        Dict with slide_number.
+    """
+    app = _get_app()
+    prs = app.ActivePresentation
+    slide = prs.Slides(slide_number)
+    shape = slide.Shapes(shape_index)
+    font = shape.TextFrame.TextRange.Font
+    shadow = font.Shadow
+    shadow.Visible = True
+    shadow.Blur = blur_radius
+    shadow.OffsetX = distance * 0.707  # approximate cos(45)
+    shadow.OffsetY = distance * 0.707  # approximate sin(45)
+    shadow.Transparency = transparency / 100 if transparency > 1 else transparency
+    shadow.ForeColor.RGB = rgb(*color_rgb)
+    return {"slide_number": slide_number}
+
+
+def set_text_glow(
+    slide_number: int,
+    shape_index: int,
+    radius: float = 5,
+    color_rgb: tuple[int, int, int] = (255, 255, 0),
+    transparency: float = 0.4,
+) -> dict:
+    """Add glow effect to text in a shape.
+
+    Args:
+        slide_number: 1-based slide index.
+        shape_index: 1-based shape index.
+        radius: Glow radius.
+        color_rgb: Glow color as (R, G, B).
+        transparency: Glow transparency 0.0-1.0.
+
+    Returns:
+        Dict with slide_number.
+    """
+    app = _get_app()
+    prs = app.ActivePresentation
+    slide = prs.Slides(slide_number)
+    shape = slide.Shapes(shape_index)
+    font = shape.TextFrame.TextRange.Font
+    glow = font.Glow
+    glow.Color.RGB = rgb(*color_rgb)
+    glow.Radius = radius
+    glow.Transparency = transparency / 100 if transparency > 1 else transparency
+    return {"slide_number": slide_number}
+
+
+def set_text_outline(
+    slide_number: int,
+    shape_index: int,
+    color_rgb: tuple[int, int, int] = (0, 0, 0),
+    weight: float = 1.0,
+) -> dict:
+    """Add outline/stroke to text in a shape.
+
+    Args:
+        slide_number: 1-based slide index.
+        shape_index: 1-based shape index.
+        color_rgb: Outline color as (R, G, B).
+        weight: Outline weight in points.
+
+    Returns:
+        Dict with slide_number.
+    """
+    app = _get_app()
+    prs = app.ActivePresentation
+    slide = prs.Slides(slide_number)
+    shape = slide.Shapes(shape_index)
+    font = shape.TextFrame.TextRange.Font
+    line = font.Line
+    line.Visible = True
+    line.ForeColor.RGB = rgb(*color_rgb)
+    line.Weight = weight
+    return {"slide_number": slide_number}
+
+
+def set_text_gradient_fill(
+    slide_number: int,
+    shape_index: int,
+    color1_rgb: tuple[int, int, int] = (0, 0, 255),
+    color2_rgb: tuple[int, int, int] = (255, 0, 255),
+    angle: float = 0,
+) -> dict:
+    """Apply gradient fill to text characters.
+
+    Args:
+        slide_number: 1-based slide index.
+        shape_index: 1-based shape index.
+        color1_rgb: Start gradient color as (R, G, B).
+        color2_rgb: End gradient color as (R, G, B).
+        angle: Gradient angle in degrees.
+
+    Returns:
+        Dict with slide_number.
+    """
+    app = _get_app()
+    prs = app.ActivePresentation
+    slide = prs.Slides(slide_number)
+    shape = slide.Shapes(shape_index)
+    font = shape.TextFrame.TextRange.Font
+    fill = font.Fill
+    fill.TwoColorGradient(MSO_GRADIENT_HORIZONTAL, 1)
+    fill.ForeColor.RGB = rgb(*color1_rgb)
+    fill.BackColor.RGB = rgb(*color2_rgb)
+    return {"slide_number": slide_number}
+
+
+def add_rich_textbox(
+    slide_number: int,
+    left: float, top: float, width: float, height: float,
+    runs: list[dict],
+) -> dict:
+    """Add a textbox with per-run formatting.
+
+    Args:
+        slide_number: 1-based slide index.
+        left: Left position in points.
+        top: Top position in points.
+        width: Width in points.
+        height: Height in points.
+        runs: List of dicts with keys: text, font_size, bold, italic, font_color (R,G,B tuple), font_name.
+
+    Returns:
+        Dict with slide_number and shape_name.
+    """
+    app = _get_app()
+    prs = app.ActivePresentation
+    slide = prs.Slides(slide_number)
+    shape = slide.Shapes.AddTextbox(MSO_TEXT_ORIENTATION_HORIZONTAL, left, top, width, height)
+
+    tf = shape.TextFrame
+    tf.WordWrap = True
+
+    # Build full text
+    full_text = "".join(run["text"] for run in runs)
+    tf.TextRange.Text = full_text
+
+    # Apply per-run formatting
+    pos = 1  # 1-based index in TextRange
+    for run in runs:
+        length = len(run["text"])
+        if length == 0:
+            continue
+        tr = tf.TextRange.Characters(pos, length)
+        if "font_size" in run and run["font_size"] is not None:
+            tr.Font.Size = run["font_size"]
+        if "bold" in run and run["bold"] is not None:
+            tr.Font.Bold = run["bold"]
+        if "italic" in run and run["italic"] is not None:
+            tr.Font.Italic = run["italic"]
+        if "font_name" in run and run["font_name"] is not None:
+            tr.Font.Name = run["font_name"]
+        if "font_color" in run and run["font_color"] is not None:
+            c = run["font_color"]
+            tr.Font.Color.RGB = rgb(*c)
+        pos += length
+
+    shape.Line.Visible = False
+
+    return {"slide_number": slide_number, "shape_name": shape.Name}
+
+
+# ============================================================
+# Advanced Fills
+# ============================================================
+
+def set_shape_pattern_fill(
+    slide_number: int,
+    shape_index: int,
+    pattern_type: int,
+    fore_color_rgb: tuple[int, int, int],
+    back_color_rgb: tuple[int, int, int],
+) -> dict:
+    """Apply a pattern fill to a shape.
+
+    Args:
+        slide_number: 1-based slide index.
+        shape_index: 1-based shape index.
+        pattern_type: msoPattern enum value.
+        fore_color_rgb: Foreground color as (R, G, B).
+        back_color_rgb: Background color as (R, G, B).
+
+    Returns:
+        Dict with slide_number.
+    """
+    app = _get_app()
+    prs = app.ActivePresentation
+    slide = prs.Slides(slide_number)
+    shape = slide.Shapes(shape_index)
+    shape.Fill.Patterned(pattern_type)
+    shape.Fill.ForeColor.RGB = rgb(*fore_color_rgb)
+    shape.Fill.BackColor.RGB = rgb(*back_color_rgb)
+    return {"slide_number": slide_number}
+
+
+def set_shape_texture_fill(
+    slide_number: int,
+    shape_index: int,
+    texture_path: str,
+) -> dict:
+    """Apply a texture fill from an image file to a shape.
+
+    Args:
+        slide_number: 1-based slide index.
+        shape_index: 1-based shape index.
+        texture_path: Path to the texture image file.
+
+    Returns:
+        Dict with slide_number.
+    """
+    app = _get_app()
+    prs = app.ActivePresentation
+    slide = prs.Slides(slide_number)
+    shape = slide.Shapes(shape_index)
+    abs_path = ensure_absolute_path(texture_path)
+    shape.Fill.UserTextured(abs_path)
+    return {"slide_number": slide_number}
+
+
+def set_shape_picture_fill(
+    slide_number: int,
+    shape_index: int,
+    image_path: str,
+    stretch: bool = True,
+) -> dict:
+    """Apply a picture fill to a shape.
+
+    Args:
+        slide_number: 1-based slide index.
+        shape_index: 1-based shape index.
+        image_path: Path to the image file.
+        stretch: Whether to stretch the image to fill.
+
+    Returns:
+        Dict with slide_number.
+    """
+    app = _get_app()
+    prs = app.ActivePresentation
+    slide = prs.Slides(slide_number)
+    shape = slide.Shapes(shape_index)
+    abs_path = ensure_absolute_path(image_path)
+    shape.Fill.UserPicture(abs_path)
+    return {"slide_number": slide_number}
+
+
+# ============================================================
+# Freeform Shapes
+# ============================================================
+
+def add_freeform_shape(
+    slide_number: int,
+    points: list[list[float]],
+    fill_color_rgb: tuple[int, int, int] | None = None,
+    line_color_rgb: tuple[int, int, int] | None = None,
+    line_weight: float = 1.0,
+    closed: bool = True,
+) -> dict:
+    """Add a freeform shape from a list of points.
+
+    Args:
+        slide_number: 1-based slide index.
+        points: List of [x, y] coordinate pairs in points.
+        fill_color_rgb: Fill color as (R, G, B). None for no fill.
+        line_color_rgb: Line color as (R, G, B). None for no line.
+        line_weight: Line weight in points.
+        closed: Whether to close the shape path.
+
+    Returns:
+        Dict with slide_number and shape_name.
+    """
+    app = _get_app()
+    prs = app.ActivePresentation
+    slide = prs.Slides(slide_number)
+
+    if len(points) < 2:
+        raise ValueError("At least 2 points are required")
+
+    # Start building freeform - msoEditingAuto = 0
+    builder = slide.Shapes.BuildFreeform(0, points[0][0], points[0][1])
+    for pt in points[1:]:
+        builder.AddNodes(0, 0, pt[0], pt[1])  # msoSegmentLine=0, msoEditingAuto=0
+
+    if closed and len(points) > 2:
+        builder.AddNodes(0, 0, points[0][0], points[0][1])
+
+    shape = builder.ConvertToShape()
+
+    if fill_color_rgb:
+        shape.Fill.Solid()
+        shape.Fill.ForeColor.RGB = rgb(*fill_color_rgb)
+    else:
+        shape.Fill.Background()
+
+    if line_color_rgb:
+        shape.Line.Visible = True
+        shape.Line.ForeColor.RGB = rgb(*line_color_rgb)
+        shape.Line.Weight = line_weight
+    else:
+        shape.Line.Visible = False
+
+    return {"slide_number": slide_number, "shape_name": shape.Name}
+
+
+# ============================================================
+# Advanced Table
+# ============================================================
+
+def format_table_cell(
+    slide_number: int,
+    shape_index: int,
+    row: int,
+    col: int,
+    fill_color_rgb: tuple[int, int, int] | None = None,
+    font_color_rgb: tuple[int, int, int] | None = None,
+    font_size: float | None = None,
+    bold: bool | None = None,
+    alignment: int | None = None,
+) -> dict:
+    """Format a specific table cell.
+
+    Args:
+        slide_number: 1-based slide index.
+        shape_index: 1-based shape index of the table.
+        row: 1-based row index.
+        col: 1-based column index.
+        fill_color_rgb: Cell fill color as (R, G, B).
+        font_color_rgb: Font color as (R, G, B).
+        font_size: Font size in points.
+        bold: Whether text should be bold.
+        alignment: Paragraph alignment (1=Left, 2=Center, 3=Right).
+
+    Returns:
+        Dict with slide_number.
+    """
+    app = _get_app()
+    prs = app.ActivePresentation
+    slide = prs.Slides(slide_number)
+    shape = slide.Shapes(shape_index)
+    cell = shape.Table.Cell(row, col)
+
+    if fill_color_rgb:
+        cell.Shape.Fill.Solid()
+        cell.Shape.Fill.ForeColor.RGB = rgb(*fill_color_rgb)
+
+    tr = cell.Shape.TextFrame.TextRange
+    if font_color_rgb:
+        tr.Font.Color.RGB = rgb(*font_color_rgb)
+    if font_size is not None:
+        tr.Font.Size = font_size
+    if bold is not None:
+        tr.Font.Bold = bold
+    if alignment is not None:
+        tr.ParagraphFormat.Alignment = alignment
+
+    return {"slide_number": slide_number}
+
+
+def merge_table_cells(
+    slide_number: int,
+    shape_index: int,
+    start_row: int,
+    start_col: int,
+    end_row: int,
+    end_col: int,
+) -> dict:
+    """Merge a range of table cells.
+
+    Args:
+        slide_number: 1-based slide index.
+        shape_index: 1-based shape index of the table.
+        start_row: 1-based starting row.
+        start_col: 1-based starting column.
+        end_row: 1-based ending row.
+        end_col: 1-based ending column.
+
+    Returns:
+        Dict with slide_number.
+    """
+    app = _get_app()
+    prs = app.ActivePresentation
+    slide = prs.Slides(slide_number)
+    shape = slide.Shapes(shape_index)
+    table = shape.Table
+    cell1 = table.Cell(start_row, start_col)
+    cell2 = table.Cell(end_row, end_col)
+    cell1.Merge(cell2)
+    return {"slide_number": slide_number}
+
+
+def set_table_border(
+    slide_number: int,
+    shape_index: int,
+    border_type: str,
+    color_rgb: tuple[int, int, int] | None = None,
+    weight: float | None = None,
+) -> dict:
+    """Set table border style.
+
+    Args:
+        slide_number: 1-based slide index.
+        shape_index: 1-based shape index of the table.
+        border_type: "all", "outside", "inside", "none".
+        color_rgb: Border color as (R, G, B).
+        weight: Border weight in points.
+
+    Returns:
+        Dict with slide_number.
+    """
+    app = _get_app()
+    prs = app.ActivePresentation
+    slide = prs.Slides(slide_number)
+    shape = slide.Shapes(shape_index)
+    table = shape.Table
+    rows = table.Rows.Count
+    cols = table.Columns.Count
+
+    color_val = rgb(*color_rgb) if color_rgb else rgb(0, 0, 0)
+    w = weight if weight else 1.0
+
+    for r in range(1, rows + 1):
+        for c in range(1, cols + 1):
+            cell = table.Cell(r, c)
+            # edges: 1=Left, 2=Right, 3=Top, 4=Bottom
+            for edge in range(1, 5):
+                border = cell.Borders(edge)
+                is_outside = (
+                    (edge == 1 and c == 1) or
+                    (edge == 2 and c == cols) or
+                    (edge == 3 and r == 1) or
+                    (edge == 4 and r == rows)
+                )
+                is_inside = not is_outside
+
+                if border_type == "none":
+                    border.Visible = False
+                elif border_type == "all":
+                    border.Visible = True
+                    border.ForeColor.RGB = color_val
+                    border.Weight = w
+                elif border_type == "outside" and is_outside:
+                    border.Visible = True
+                    border.ForeColor.RGB = color_val
+                    border.Weight = w
+                elif border_type == "outside" and is_inside:
+                    border.Visible = False
+                elif border_type == "inside" and is_inside:
+                    border.Visible = True
+                    border.ForeColor.RGB = color_val
+                    border.Weight = w
+                elif border_type == "inside" and is_outside:
+                    border.Visible = False
+
+    return {"slide_number": slide_number}
+
+
+# ============================================================
+# Slide Master & Layout
+# ============================================================
+
+def get_slide_layouts() -> dict:
+    """Get available slide layouts.
+
+    Returns:
+        Dict with a list of layouts, each having index and name.
+    """
+    app = _get_app()
+    prs = app.ActivePresentation
+    layouts = []
+    try:
+        for i in range(1, prs.SlideMaster.CustomLayouts.Count + 1):
+            layout = prs.SlideMaster.CustomLayouts(i)
+            layouts.append({"index": i, "name": layout.Name})
+    except Exception:
+        # Fallback for presentations without custom layouts
+        pass
+    return {"layouts": layouts}
+
+
+def apply_slide_layout(slide_number: int, layout_index: int) -> dict:
+    """Apply a layout to a slide.
+
+    Args:
+        slide_number: 1-based slide index.
+        layout_index: 1-based layout index from get_slide_layouts.
+
+    Returns:
+        Dict with slide_number and layout_index.
+    """
+    app = _get_app()
+    prs = app.ActivePresentation
+    slide = prs.Slides(slide_number)
+    layout = prs.SlideMaster.CustomLayouts(layout_index)
+    slide.CustomLayout = layout
+    return {"slide_number": slide_number, "layout_index": layout_index}
+
+
+def set_slide_number_visibility(visible: bool = True, start_number: int = 1) -> dict:
+    """Show or hide slide numbers.
+
+    Args:
+        visible: Whether slide numbers should be visible.
+        start_number: Starting slide number.
+
+    Returns:
+        Dict with visible and start_number.
+    """
+    app = _get_app()
+    prs = app.ActivePresentation
+    prs.PageSetup.FirstSlideNumber = start_number
+    # Toggle header/footer slide number visibility
+    for i in range(1, prs.Slides.Count + 1):
+        slide = prs.Slides(i)
+        slide.HeadersFooters.SlideNumber.Visible = visible
+    return {"visible": visible, "start_number": start_number}
+
+
+# ============================================================
+# Media
+# ============================================================
+
+def add_video(
+    slide_number: int,
+    file_path: str,
+    left: float, top: float, width: float, height: float,
+) -> dict:
+    """Embed a video on a slide.
+
+    Args:
+        slide_number: 1-based slide index.
+        file_path: Path to the video file.
+        left: Left position in points.
+        top: Top position in points.
+        width: Width in points.
+        height: Height in points.
+
+    Returns:
+        Dict with slide_number and shape_name.
+    """
+    app = _get_app()
+    prs = app.ActivePresentation
+    slide = prs.Slides(slide_number)
+    abs_path = ensure_absolute_path(file_path)
+    shape = slide.Shapes.AddMediaObject2(abs_path, False, True, left, top, width, height)
+    return {"slide_number": slide_number, "shape_name": shape.Name}
+
+
+def add_audio(
+    slide_number: int,
+    file_path: str,
+    left: float = 0,
+    top: float = 0,
+    play_across_slides: bool = False,
+) -> dict:
+    """Embed an audio file on a slide.
+
+    Args:
+        slide_number: 1-based slide index.
+        file_path: Path to the audio file.
+        left: Left position in points.
+        top: Top position in points.
+        play_across_slides: Whether to play across slides.
+
+    Returns:
+        Dict with slide_number and shape_name.
+    """
+    app = _get_app()
+    prs = app.ActivePresentation
+    slide = prs.Slides(slide_number)
+    abs_path = ensure_absolute_path(file_path)
+    shape = slide.Shapes.AddMediaObject2(abs_path, False, True, left, top)
+
+    if play_across_slides:
+        # Set to play across slides using animation settings
+        anim = slide.TimeLine.MainSequence.AddEffect(
+            shape, 1  # msoAnimEffectMediaPlay
+        )
+        anim.EffectInformation.PlaySettings.PlayAcrossSlides = True
+
+    return {"slide_number": slide_number, "shape_name": shape.Name}
+
+
+# ============================================================
+# Advanced Animation
+# ============================================================
+
+def add_motion_path(
+    slide_number: int,
+    shape_index: int,
+    path_type: str,
+    duration: float = 1.0,
+) -> dict:
+    """Add a motion path animation to a shape.
+
+    Args:
+        slide_number: 1-based slide index.
+        shape_index: 1-based shape index.
+        path_type: "line", "arc", "circle", "diamond", "custom".
+        duration: Animation duration in seconds.
+
+    Returns:
+        Dict with slide_number.
+    """
+    # MsoAnimEffect motion path constants
+    path_map = {
+        "line": 63,      # msoAnimEffectPathRight
+        "arc": 54,       # msoAnimEffectPathArcDown
+        "circle": 56,    # msoAnimEffectPathCircle
+        "diamond": 58,   # msoAnimEffectPathDiamond
+        "custom": 63,    # msoAnimEffectPathRight as fallback
+    }
+    app = _get_app()
+    prs = app.ActivePresentation
+    slide = prs.Slides(slide_number)
+    shape = slide.Shapes(shape_index)
+    effect_type = path_map.get(path_type, 63)
+    effect = slide.TimeLine.MainSequence.AddEffect(shape, effect_type)
+    effect.Timing.Duration = duration
+    return {"slide_number": slide_number}
+
+
+def set_animation_trigger(
+    slide_number: int,
+    shape_index: int,
+    trigger_type: str,
+    trigger_shape_index: int | None = None,
+) -> dict:
+    """Set the trigger type for a shape's animation.
+
+    Args:
+        slide_number: 1-based slide index.
+        shape_index: 1-based shape index.
+        trigger_type: "on_click", "with_previous", "after_previous".
+        trigger_shape_index: Optional shape index for click trigger.
+
+    Returns:
+        Dict with slide_number.
+    """
+    trigger_map = {
+        "on_click": MSO_ANIM_TRIGGER_ON_CLICK,
+        "with_previous": MSO_ANIM_TRIGGER_WITH_PREVIOUS,
+        "after_previous": MSO_ANIM_TRIGGER_AFTER_PREVIOUS,
+    }
+    app = _get_app()
+    prs = app.ActivePresentation
+    slide = prs.Slides(slide_number)
+    shape = slide.Shapes(shape_index)
+
+    # Find the animation effect for this shape
+    timeline = slide.TimeLine
+    for i in range(1, timeline.MainSequence.Count + 1):
+        effect = timeline.MainSequence(i)
+        if effect.Shape.Name == shape.Name:
+            effect.Timing.TriggerType = trigger_map[trigger_type]
+            break
+
+    return {"slide_number": slide_number}
+
+
+def set_animation_order(
+    slide_number: int,
+    effect_index: int,
+    new_position: int,
+) -> dict:
+    """Reorder an animation effect in the sequence.
+
+    Args:
+        slide_number: 1-based slide index.
+        effect_index: 1-based current index of the effect.
+        new_position: 1-based new position in the sequence.
+
+    Returns:
+        Dict with slide_number.
+    """
+    app = _get_app()
+    prs = app.ActivePresentation
+    slide = prs.Slides(slide_number)
+    effect = slide.TimeLine.MainSequence(effect_index)
+    effect.MoveAfter(slide.TimeLine.MainSequence(new_position))
+    return {"slide_number": slide_number}
+
+
+# ============================================================
+# Advanced Shape Effects
+# ============================================================
+
+def set_shape_border(
+    slide_number: int,
+    shape_index: int,
+    color_rgb: tuple[int, int, int] | None = None,
+    weight: float | None = None,
+    dash_style: str | None = None,
+) -> dict:
+    """Set border (line) style on a shape.
+
+    Args:
+        slide_number: 1-based slide index.
+        shape_index: 1-based shape index.
+        color_rgb: Border color as (R, G, B).
+        weight: Border weight in points.
+        dash_style: "solid", "dash", "dot", "dash_dot".
+
+    Returns:
+        Dict with slide_number.
+    """
+    dash_map = {
+        "solid": MSO_LINE_SOLID,
+        "dash": MSO_LINE_DASH,
+        "dot": MSO_LINE_SQUARE_DOT,
+        "dash_dot": MSO_LINE_DASH_DOT,
+    }
+    app = _get_app()
+    prs = app.ActivePresentation
+    slide = prs.Slides(slide_number)
+    shape = slide.Shapes(shape_index)
+    shape.Line.Visible = True
+    if color_rgb:
+        shape.Line.ForeColor.RGB = rgb(*color_rgb)
+    if weight is not None:
+        shape.Line.Weight = weight
+    if dash_style and dash_style in dash_map:
+        shape.Line.DashStyle = dash_map[dash_style]
+    return {"slide_number": slide_number}
+
+
+# ============================================================
+# Export (Single Slide)
+# ============================================================
+
+def export_slide_as_image(
+    slide_number: int,
+    file_path: str,
+    width: int = 1920,
+    height: int = 1080,
+) -> dict:
+    """Export a single slide as an image file.
+
+    Args:
+        slide_number: 1-based slide index.
+        file_path: Output file path (PNG or JPG).
+        width: Image width in pixels.
+        height: Image height in pixels.
+
+    Returns:
+        Dict with slide_number and file_path.
+    """
+    app = _get_app()
+    prs = app.ActivePresentation
+    slide = prs.Slides(slide_number)
+    abs_path = ensure_absolute_path(file_path)
+    slide.Export(abs_path, "PNG", width, height)
+    return {"slide_number": slide_number, "file_path": abs_path}
+
+
+# ============================================================
+# Shape Text Advanced
+# ============================================================
+
+def set_shape_text_vertical(
+    slide_number: int,
+    shape_index: int,
+    orientation: str,
+) -> dict:
+    """Set text orientation in a shape.
+
+    Args:
+        slide_number: 1-based slide index.
+        shape_index: 1-based shape index.
+        orientation: "horizontal", "vertical", "vertical270", "stacked".
+
+    Returns:
+        Dict with slide_number.
+    """
+    # msoTextOrientationHorizontal=1, msoTextOrientationDownward=2 (vertical),
+    # msoTextOrientationUpward=3 (vertical270), msoTextOrientationVerticalFarEast=4 (stacked)
+    orient_map = {
+        "horizontal": 1,
+        "vertical": 2,
+        "vertical270": 3,
+        "stacked": 4,
+    }
+    app = _get_app()
+    prs = app.ActivePresentation
+    slide = prs.Slides(slide_number)
+    shape = slide.Shapes(shape_index)
+    shape.TextFrame.Orientation = orient_map.get(orientation, 1)
+    return {"slide_number": slide_number}
+
+
+def set_shape_text_margin(
+    slide_number: int,
+    shape_index: int,
+    left: float = 7.2,
+    top: float = 3.6,
+    right: float = 7.2,
+    bottom: float = 3.6,
+) -> dict:
+    """Set internal text margins for a shape.
+
+    Args:
+        slide_number: 1-based slide index.
+        shape_index: 1-based shape index.
+        left: Left margin in points.
+        top: Top margin in points.
+        right: Right margin in points.
+        bottom: Bottom margin in points.
+
+    Returns:
+        Dict with slide_number.
+    """
+    app = _get_app()
+    prs = app.ActivePresentation
+    slide = prs.Slides(slide_number)
+    shape = slide.Shapes(shape_index)
+    tf = shape.TextFrame
+    tf.MarginLeft = left
+    tf.MarginTop = top
+    tf.MarginRight = right
+    tf.MarginBottom = bottom
+    return {"slide_number": slide_number}
+
+
+def set_shape_autofit(
+    slide_number: int,
+    shape_index: int,
+    autofit_type: str,
+) -> dict:
+    """Set text auto-fit behavior for a shape.
+
+    Args:
+        slide_number: 1-based slide index.
+        shape_index: 1-based shape index.
+        autofit_type: "none", "shrink", "resize_shape".
+
+    Returns:
+        Dict with slide_number.
+    """
+    # ppAutoSizeNone=0, ppAutoSizeShrinkToFit=1 (shrink), ppAutoSizeShapeToFitText=2
+    autofit_map = {"none": 0, "shrink": 1, "resize_shape": 2}
+    app = _get_app()
+    prs = app.ActivePresentation
+    slide = prs.Slides(slide_number)
+    shape = slide.Shapes(shape_index)
+    shape.TextFrame.AutoSize = autofit_map.get(autofit_type, 0)
+    return {"slide_number": slide_number}
