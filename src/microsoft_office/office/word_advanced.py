@@ -2995,3 +2995,698 @@ def add_signature_block(names: list[str], titles: list[str] | None = None,
         "date_line": date_line,
         "witness": witness,
     }
+
+
+# ---------------------------------------------------------------------------
+# 24. Executive Summary
+# ---------------------------------------------------------------------------
+
+def create_executive_summary(
+    title: str,
+    key_findings: list[str],
+    recommendations: list[str],
+    conclusion: str | None = None,
+    style: str = "professional",
+) -> dict:
+    """Create a professional executive summary document.
+
+    Args:
+        title: Document title.
+        key_findings: List of key finding strings.
+        recommendations: List of recommendation strings.
+        conclusion: Optional concluding paragraph.
+        style: "professional" (corporate blue), "modern" (clean design),
+               "minimal" (simple layout).
+
+    Returns:
+        dict with title, style, finding_count, recommendation_count, paragraphs.
+    """
+    doc = _get_active_doc()
+
+    styles = {
+        "professional": {"primary": (0, 51, 102), "accent": (0, 112, 192),
+                         "font": "Calibri", "title_size": 26, "heading_size": 16},
+        "modern": {"primary": (41, 65, 122), "accent": (68, 114, 196),
+                   "font": "Segoe UI", "title_size": 28, "heading_size": 17},
+        "minimal": {"primary": (50, 50, 50), "accent": (130, 130, 130),
+                    "font": "Calibri Light", "title_size": 24, "heading_size": 15},
+    }
+    s = styles.get(style, styles["professional"])
+    primary = s["primary"]
+    accent = s["accent"]
+    font = s["font"]
+
+    # Title
+    _add_paragraph(doc, title,
+                   font_name=font, font_size=s["title_size"],
+                   font_color=primary, bold=True,
+                   space_before=0, space_after=4, alignment=WD_ALIGN_LEFT)
+
+    # Accent line
+    _add_horizontal_line(doc, color=accent, thickness=2.0)
+
+    # "EXECUTIVE SUMMARY" label
+    _add_paragraph(doc, "EXECUTIVE SUMMARY",
+                   font_name=font, font_size=10,
+                   font_color=accent, bold=True,
+                   space_before=8, space_after=16, alignment=WD_ALIGN_LEFT)
+
+    # Date
+    _add_paragraph(doc, f"Date: {datetime.date.today().strftime('%B %d, %Y')}",
+                   font_name=font, font_size=10,
+                   font_color=(100, 100, 100),
+                   space_before=0, space_after=16, alignment=WD_ALIGN_LEFT)
+
+    # Key Findings section
+    _add_paragraph(doc, "Key Findings",
+                   font_name=font, font_size=s["heading_size"],
+                   font_color=primary, bold=True,
+                   space_before=16, space_after=8, alignment=WD_ALIGN_LEFT)
+
+    _add_horizontal_line(doc, color=accent, thickness=0.5)
+
+    for i, finding in enumerate(key_findings, 1):
+        _add_paragraph(doc, f"{i}. {finding}",
+                       font_name=font, font_size=11,
+                       font_color=(51, 51, 51),
+                       space_before=6, space_after=4, alignment=WD_ALIGN_LEFT)
+
+    # Recommendations section
+    _add_empty_lines(doc, 1)
+    _add_paragraph(doc, "Recommendations",
+                   font_name=font, font_size=s["heading_size"],
+                   font_color=primary, bold=True,
+                   space_before=16, space_after=8, alignment=WD_ALIGN_LEFT)
+
+    _add_horizontal_line(doc, color=accent, thickness=0.5)
+
+    for i, rec in enumerate(recommendations, 1):
+        _add_paragraph(doc, f"{i}. {rec}",
+                       font_name=font, font_size=11,
+                       font_color=(51, 51, 51),
+                       space_before=6, space_after=4, alignment=WD_ALIGN_LEFT)
+
+    # Conclusion
+    if conclusion:
+        _add_empty_lines(doc, 1)
+        _add_paragraph(doc, "Conclusion",
+                       font_name=font, font_size=s["heading_size"],
+                       font_color=primary, bold=True,
+                       space_before=16, space_after=8, alignment=WD_ALIGN_LEFT)
+
+        _add_horizontal_line(doc, color=accent, thickness=0.5)
+
+        _add_paragraph(doc, conclusion,
+                       font_name=font, font_size=11,
+                       font_color=(51, 51, 51),
+                       space_before=6, space_after=8, alignment=WD_ALIGN_JUSTIFY)
+
+    return {
+        "title": title,
+        "style": style,
+        "finding_count": len(key_findings),
+        "recommendation_count": len(recommendations),
+        "paragraphs": doc.Paragraphs.Count,
+    }
+
+
+# ---------------------------------------------------------------------------
+# 25. Status Report
+# ---------------------------------------------------------------------------
+
+def create_status_report(
+    project_name: str,
+    period: str,
+    overall_status: str,
+    accomplishments: list[str],
+    issues: list[str],
+    next_steps: list[str],
+    metrics: list[dict] | None = None,
+) -> dict:
+    """Create a project status report.
+
+    Args:
+        project_name: Name of the project.
+        period: Reporting period (e.g. "Q1 2024").
+        overall_status: "on_track", "at_risk", "delayed".
+        accomplishments: List of accomplishment strings.
+        issues: List of issue/risk strings.
+        next_steps: List of planned next steps.
+        metrics: Optional list of {"name": "...", "value": "...", "target": "..."}.
+
+    Returns:
+        dict with project_name, status, period, paragraphs.
+    """
+    doc = _get_active_doc()
+    font = "Calibri"
+    primary = (0, 51, 102)
+    accent = (0, 112, 192)
+
+    status_colors = {
+        "on_track": (40, 167, 69),
+        "at_risk": (255, 193, 7),
+        "delayed": (220, 53, 69),
+    }
+    status_labels = {
+        "on_track": "ON TRACK",
+        "at_risk": "AT RISK",
+        "delayed": "DELAYED",
+    }
+    status_color = status_colors.get(overall_status, (100, 100, 100))
+    status_label = status_labels.get(overall_status, overall_status.upper())
+
+    # Title
+    _add_paragraph(doc, "PROJECT STATUS REPORT",
+                   font_name=font, font_size=24,
+                   font_color=primary, bold=True,
+                   space_before=0, space_after=4, alignment=WD_ALIGN_LEFT)
+
+    _add_horizontal_line(doc, color=accent, thickness=2.0)
+
+    # Project info table
+    info_data = [
+        ["Project:", project_name, "Period:", period],
+        ["Status:", status_label, "Date:", datetime.date.today().strftime("%Y-%m-%d")],
+    ]
+    table = _create_table(doc, 2, 4, info_data)
+    _format_table_body(table, font_name=font, font_size=11)
+
+    for r in range(1, 3):
+        for c in [1, 3]:
+            _set_cell_text(table, r, c, table.Cell(r, c).Range.Text.strip(),
+                           bold=True, font_name=font, font_size=10,
+                           font_color=primary)
+
+    # Status cell color
+    table.Cell(2, 2).Range.Font.Color = rgb(*status_color)
+    table.Cell(2, 2).Range.Font.Bold = True
+
+    try:
+        table.Columns(1).Width = 72
+        table.Columns(2).Width = 200
+        table.Columns(3).Width = 72
+        table.Columns(4).Width = 150
+    except Exception:
+        pass
+
+    # Accomplishments
+    _add_empty_lines(doc, 1)
+    _add_paragraph(doc, "Accomplishments",
+                   font_name=font, font_size=15,
+                   font_color=primary, bold=True,
+                   space_before=16, space_after=8, alignment=WD_ALIGN_LEFT)
+    _add_horizontal_line(doc, color=(40, 167, 69), thickness=1.0)
+
+    for item in accomplishments:
+        _add_paragraph(doc, f"  {item}",
+                       font_name=font, font_size=11,
+                       font_color=(51, 51, 51),
+                       space_before=4, space_after=3, alignment=WD_ALIGN_LEFT)
+
+    # Issues & Risks
+    _add_empty_lines(doc, 1)
+    _add_paragraph(doc, "Issues & Risks",
+                   font_name=font, font_size=15,
+                   font_color=primary, bold=True,
+                   space_before=16, space_after=8, alignment=WD_ALIGN_LEFT)
+    _add_horizontal_line(doc, color=(220, 53, 69), thickness=1.0)
+
+    for item in issues:
+        _add_paragraph(doc, f"  {item}",
+                       font_name=font, font_size=11,
+                       font_color=(51, 51, 51),
+                       space_before=4, space_after=3, alignment=WD_ALIGN_LEFT)
+
+    # Next Steps
+    _add_empty_lines(doc, 1)
+    _add_paragraph(doc, "Next Steps",
+                   font_name=font, font_size=15,
+                   font_color=primary, bold=True,
+                   space_before=16, space_after=8, alignment=WD_ALIGN_LEFT)
+    _add_horizontal_line(doc, color=accent, thickness=1.0)
+
+    for item in next_steps:
+        _add_paragraph(doc, f"  {item}",
+                       font_name=font, font_size=11,
+                       font_color=(51, 51, 51),
+                       space_before=4, space_after=3, alignment=WD_ALIGN_LEFT)
+
+    # Metrics table (optional)
+    if metrics:
+        _add_empty_lines(doc, 1)
+        _add_paragraph(doc, "Key Metrics",
+                       font_name=font, font_size=15,
+                       font_color=primary, bold=True,
+                       space_before=16, space_after=8, alignment=WD_ALIGN_LEFT)
+        _add_horizontal_line(doc, color=accent, thickness=1.0)
+
+        m_data = [["Metric", "Value", "Target"]]
+        for m in metrics:
+            m_data.append([m.get("name", ""), m.get("value", ""), m.get("target", "")])
+
+        m_table = _create_table(doc, len(m_data), 3, m_data)
+        _format_table_header(m_table, fill_color=primary)
+        _format_table_body(m_table, font_name=font, font_size=10.5,
+                          alt_row_color=(240, 245, 250))
+
+    return {
+        "project_name": project_name,
+        "status": overall_status,
+        "period": period,
+        "paragraphs": doc.Paragraphs.Count,
+    }
+
+
+# ---------------------------------------------------------------------------
+# 26. Change Request
+# ---------------------------------------------------------------------------
+
+def create_change_request(
+    title: str,
+    requester: str,
+    description: str,
+    justification: str,
+    impact: str,
+    priority: str = "medium",
+) -> dict:
+    """Create a change request form document.
+
+    Args:
+        title: Change request title.
+        requester: Name of the requester.
+        description: Detailed description of the change.
+        justification: Business justification.
+        impact: Impact assessment.
+        priority: "low", "medium", "high", "critical".
+
+    Returns:
+        dict with title, requester, priority, paragraphs.
+    """
+    doc = _get_active_doc()
+    font = "Calibri"
+    primary = (0, 51, 102)
+    accent = (0, 112, 192)
+
+    priority_colors = {
+        "low": (40, 167, 69),
+        "medium": (255, 193, 7),
+        "high": (255, 120, 0),
+        "critical": (220, 53, 69),
+    }
+    p_color = priority_colors.get(priority, (100, 100, 100))
+
+    # Header
+    _add_paragraph(doc, "CHANGE REQUEST",
+                   font_name=font, font_size=26,
+                   font_color=primary, bold=True,
+                   space_before=0, space_after=4, alignment=WD_ALIGN_CENTER)
+
+    _add_horizontal_line(doc, color=accent, thickness=2.5)
+
+    # Reference info
+    cr_id = f"CR-{datetime.date.today().strftime('%Y%m%d')}-001"
+    info_data = [
+        ["CR ID:", cr_id, "Date:", datetime.date.today().strftime("%Y-%m-%d")],
+        ["Requester:", requester, "Priority:", priority.upper()],
+    ]
+    table = _create_table(doc, 2, 4, info_data)
+    _format_table_body(table, font_name=font, font_size=11)
+
+    for r in range(1, 3):
+        for c in [1, 3]:
+            _set_cell_text(table, r, c, table.Cell(r, c).Range.Text.strip(),
+                           bold=True, font_name=font, font_size=10,
+                           font_color=primary)
+
+    # Priority color
+    table.Cell(2, 4).Range.Font.Color = rgb(*p_color)
+    table.Cell(2, 4).Range.Font.Bold = True
+
+    # Title
+    _add_empty_lines(doc, 1)
+    _add_paragraph(doc, "Change Title",
+                   font_name=font, font_size=14,
+                   font_color=primary, bold=True,
+                   space_before=14, space_after=6, alignment=WD_ALIGN_LEFT)
+    _add_paragraph(doc, title,
+                   font_name=font, font_size=12,
+                   font_color=(40, 40, 40),
+                   space_before=4, space_after=8, alignment=WD_ALIGN_LEFT)
+
+    # Description
+    _add_paragraph(doc, "Description",
+                   font_name=font, font_size=14,
+                   font_color=primary, bold=True,
+                   space_before=14, space_after=6, alignment=WD_ALIGN_LEFT)
+    _add_horizontal_line(doc, color=(200, 210, 220), thickness=0.5)
+    _add_paragraph(doc, description,
+                   font_name=font, font_size=11,
+                   font_color=(51, 51, 51),
+                   space_before=6, space_after=8, alignment=WD_ALIGN_JUSTIFY)
+
+    # Justification
+    _add_paragraph(doc, "Business Justification",
+                   font_name=font, font_size=14,
+                   font_color=primary, bold=True,
+                   space_before=14, space_after=6, alignment=WD_ALIGN_LEFT)
+    _add_horizontal_line(doc, color=(200, 210, 220), thickness=0.5)
+    _add_paragraph(doc, justification,
+                   font_name=font, font_size=11,
+                   font_color=(51, 51, 51),
+                   space_before=6, space_after=8, alignment=WD_ALIGN_JUSTIFY)
+
+    # Impact Assessment
+    _add_paragraph(doc, "Impact Assessment",
+                   font_name=font, font_size=14,
+                   font_color=primary, bold=True,
+                   space_before=14, space_after=6, alignment=WD_ALIGN_LEFT)
+    _add_horizontal_line(doc, color=(200, 210, 220), thickness=0.5)
+    _add_paragraph(doc, impact,
+                   font_name=font, font_size=11,
+                   font_color=(51, 51, 51),
+                   space_before=6, space_after=8, alignment=WD_ALIGN_JUSTIFY)
+
+    # Approval section
+    _add_empty_lines(doc, 1)
+    _add_paragraph(doc, "Approval",
+                   font_name=font, font_size=14,
+                   font_color=primary, bold=True,
+                   space_before=14, space_after=8, alignment=WD_ALIGN_LEFT)
+    _add_horizontal_line(doc, color=accent, thickness=1.0)
+
+    approval_data = [
+        ["Role", "Name", "Signature", "Date"],
+        ["Requester", requester, "", ""],
+        ["Manager", "", "", ""],
+        ["Approver", "", "", ""],
+    ]
+    a_table = _create_table(doc, 4, 4, approval_data)
+    _format_table_header(a_table, fill_color=primary)
+    _format_table_body(a_table, font_name=font, font_size=10.5,
+                      alt_row_color=(240, 245, 250))
+
+    return {
+        "title": title,
+        "requester": requester,
+        "priority": priority,
+        "cr_id": cr_id,
+        "paragraphs": doc.Paragraphs.Count,
+    }
+
+
+# ---------------------------------------------------------------------------
+# 27. Incident Report
+# ---------------------------------------------------------------------------
+
+def create_incident_report(
+    title: str,
+    date: str,
+    reported_by: str,
+    description: str,
+    root_cause: str | None = None,
+    corrective_actions: list[str] | None = None,
+    severity: str = "medium",
+) -> dict:
+    """Create an incident report document.
+
+    Args:
+        title: Incident title.
+        date: Date of the incident.
+        reported_by: Name of the reporter.
+        description: Detailed description.
+        root_cause: Optional root cause analysis.
+        corrective_actions: Optional list of corrective actions.
+        severity: "low", "medium", "high", "critical".
+
+    Returns:
+        dict with title, severity, reported_by, paragraphs.
+    """
+    doc = _get_active_doc()
+    font = "Calibri"
+    primary = (0, 51, 102)
+
+    severity_colors = {
+        "low": (40, 167, 69),
+        "medium": (255, 193, 7),
+        "high": (255, 120, 0),
+        "critical": (220, 53, 69),
+    }
+    sev_color = severity_colors.get(severity, (100, 100, 100))
+
+    # Header
+    _add_paragraph(doc, "INCIDENT REPORT",
+                   font_name=font, font_size=26,
+                   font_color=(180, 30, 30), bold=True,
+                   space_before=0, space_after=4, alignment=WD_ALIGN_CENTER)
+
+    _add_horizontal_line(doc, color=(180, 30, 30), thickness=2.5)
+
+    # Incident info table
+    inc_id = f"INC-{datetime.date.today().strftime('%Y%m%d')}-001"
+    info_data = [
+        ["Incident ID:", inc_id, "Date:", date],
+        ["Reported By:", reported_by, "Severity:", severity.upper()],
+        ["Status:", "Open", "Report Date:", datetime.date.today().strftime("%Y-%m-%d")],
+    ]
+    table = _create_table(doc, 3, 4, info_data)
+    _format_table_body(table, font_name=font, font_size=11)
+
+    for r in range(1, 4):
+        for c in [1, 3]:
+            _set_cell_text(table, r, c, table.Cell(r, c).Range.Text.strip(),
+                           bold=True, font_name=font, font_size=10,
+                           font_color=primary)
+
+    # Severity coloring
+    table.Cell(2, 4).Range.Font.Color = rgb(*sev_color)
+    table.Cell(2, 4).Range.Font.Bold = True
+
+    # Incident Title
+    _add_empty_lines(doc, 1)
+    _add_paragraph(doc, "Incident Title",
+                   font_name=font, font_size=14,
+                   font_color=primary, bold=True,
+                   space_before=14, space_after=6, alignment=WD_ALIGN_LEFT)
+    _add_paragraph(doc, title,
+                   font_name=font, font_size=12,
+                   font_color=(40, 40, 40), bold=True,
+                   space_before=4, space_after=8, alignment=WD_ALIGN_LEFT)
+
+    # Description
+    _add_paragraph(doc, "Description",
+                   font_name=font, font_size=14,
+                   font_color=primary, bold=True,
+                   space_before=14, space_after=6, alignment=WD_ALIGN_LEFT)
+    _add_horizontal_line(doc, color=(200, 200, 210), thickness=0.5)
+    _add_paragraph(doc, description,
+                   font_name=font, font_size=11,
+                   font_color=(51, 51, 51),
+                   space_before=6, space_after=8, alignment=WD_ALIGN_JUSTIFY)
+
+    # Root Cause
+    if root_cause:
+        _add_paragraph(doc, "Root Cause Analysis",
+                       font_name=font, font_size=14,
+                       font_color=primary, bold=True,
+                       space_before=14, space_after=6, alignment=WD_ALIGN_LEFT)
+        _add_horizontal_line(doc, color=(200, 200, 210), thickness=0.5)
+        _add_paragraph(doc, root_cause,
+                       font_name=font, font_size=11,
+                       font_color=(51, 51, 51),
+                       space_before=6, space_after=8, alignment=WD_ALIGN_JUSTIFY)
+
+    # Corrective Actions
+    if corrective_actions:
+        _add_paragraph(doc, "Corrective Actions",
+                       font_name=font, font_size=14,
+                       font_color=primary, bold=True,
+                       space_before=14, space_after=6, alignment=WD_ALIGN_LEFT)
+        _add_horizontal_line(doc, color=(200, 200, 210), thickness=0.5)
+
+        ca_data = [["#", "Action", "Status", "Due Date"]]
+        for i, action in enumerate(corrective_actions, 1):
+            ca_data.append([str(i), action, "Pending", ""])
+
+        ca_table = _create_table(doc, len(ca_data), 4, ca_data)
+        _format_table_header(ca_table, fill_color=(180, 30, 30))
+        _format_table_body(ca_table, font_name=font, font_size=10.5,
+                          alt_row_color=(255, 245, 245))
+
+        try:
+            ca_table.Columns(1).Width = 30
+            ca_table.Columns(2).Width = 280
+            ca_table.Columns(3).Width = 80
+            ca_table.Columns(4).Width = 90
+        except Exception:
+            pass
+
+    # Sign-off
+    _add_empty_lines(doc, 2)
+    _add_paragraph(doc, "Reviewed by: _________________________     Date: _______________",
+                   font_name=font, font_size=10,
+                   font_color=(80, 80, 80),
+                   space_before=12, space_after=4, alignment=WD_ALIGN_LEFT)
+    _add_paragraph(doc, "Approved by: _________________________     Date: _______________",
+                   font_name=font, font_size=10,
+                   font_color=(80, 80, 80),
+                   space_before=4, space_after=8, alignment=WD_ALIGN_LEFT)
+
+    return {
+        "title": title,
+        "severity": severity,
+        "reported_by": reported_by,
+        "incident_id": inc_id,
+        "paragraphs": doc.Paragraphs.Count,
+    }
+
+
+# ---------------------------------------------------------------------------
+# 28. Training Manual
+# ---------------------------------------------------------------------------
+
+def create_training_manual(
+    title: str,
+    modules: list[dict],
+    style: str = "structured",
+) -> dict:
+    """Create a training manual document.
+
+    Args:
+        title: Manual title.
+        modules: List of dicts with "title", "objectives" (list), "content" (str),
+                 "exercises" (list of str).
+        style: "structured" (formal numbered), "casual" (friendly design),
+               "technical" (code-style).
+
+    Returns:
+        dict with title, style, module_count, paragraphs.
+    """
+    doc = _get_active_doc()
+
+    style_configs = {
+        "structured": {"primary": (0, 51, 102), "accent": (0, 112, 192),
+                        "font": "Calibri", "title_size": 30, "h_size": 18,
+                        "sub_size": 14},
+        "casual": {"primary": (76, 175, 80), "accent": (129, 199, 132),
+                   "font": "Segoe UI", "title_size": 32, "h_size": 20,
+                   "sub_size": 14},
+        "technical": {"primary": (50, 50, 50), "accent": (0, 150, 200),
+                      "font": "Consolas", "title_size": 26, "h_size": 16,
+                      "sub_size": 13},
+    }
+    s = style_configs.get(style, style_configs["structured"])
+    primary = s["primary"]
+    accent = s["accent"]
+    font = s["font"]
+
+    # Cover / Title
+    _add_paragraph(doc, title,
+                   font_name=font, font_size=s["title_size"],
+                   font_color=primary, bold=True,
+                   space_before=0, space_after=4, alignment=WD_ALIGN_CENTER)
+
+    _add_horizontal_line(doc, color=accent, thickness=3.0)
+
+    _add_paragraph(doc, "TRAINING MANUAL",
+                   font_name=font, font_size=14,
+                   font_color=accent, bold=True,
+                   space_before=8, space_after=4, alignment=WD_ALIGN_CENTER)
+
+    _add_paragraph(doc, f"Last Updated: {datetime.date.today().strftime('%B %d, %Y')}",
+                   font_name=font, font_size=10,
+                   font_color=(120, 120, 120),
+                   space_before=4, space_after=16, alignment=WD_ALIGN_CENTER)
+
+    # Table of Contents header
+    _add_paragraph(doc, "Table of Contents",
+                   font_name=font, font_size=s["h_size"],
+                   font_color=primary, bold=True,
+                   space_before=20, space_after=10, alignment=WD_ALIGN_LEFT)
+    _add_horizontal_line(doc, color=accent, thickness=1.0)
+
+    for i, mod in enumerate(modules, 1):
+        _add_paragraph(doc, f"Module {i}: {mod.get('title', '')}",
+                       font_name=font, font_size=11,
+                       font_color=accent,
+                       space_before=4, space_after=2, alignment=WD_ALIGN_LEFT)
+
+    # Modules
+    for i, mod in enumerate(modules, 1):
+        _insert_page_break(doc)
+
+        mod_title = mod.get("title", f"Module {i}")
+
+        # Module header
+        _add_paragraph(doc, f"MODULE {i}",
+                       font_name=font, font_size=10,
+                       font_color=accent, bold=True,
+                       space_before=0, space_after=4, alignment=WD_ALIGN_LEFT)
+
+        _add_paragraph(doc, mod_title,
+                       font_name=font, font_size=s["h_size"],
+                       font_color=primary, bold=True,
+                       space_before=0, space_after=6, alignment=WD_ALIGN_LEFT)
+
+        _add_horizontal_line(doc, color=accent, thickness=1.5)
+
+        # Learning Objectives
+        objectives = mod.get("objectives", [])
+        if objectives:
+            _add_paragraph(doc, "Learning Objectives",
+                           font_name=font, font_size=s["sub_size"],
+                           font_color=primary, bold=True,
+                           space_before=14, space_after=6, alignment=WD_ALIGN_LEFT)
+
+            for obj in objectives:
+                _add_paragraph(doc, f"  {obj}",
+                               font_name=font, font_size=11,
+                               font_color=(51, 51, 51),
+                               space_before=3, space_after=2, alignment=WD_ALIGN_LEFT)
+
+        # Content
+        content = mod.get("content", "")
+        if content:
+            _add_empty_lines(doc, 1)
+            _add_paragraph(doc, "Content",
+                           font_name=font, font_size=s["sub_size"],
+                           font_color=primary, bold=True,
+                           space_before=14, space_after=6, alignment=WD_ALIGN_LEFT)
+            _add_horizontal_line(doc, color=(200, 210, 220), thickness=0.5)
+
+            # Split content into paragraphs
+            for para_text in content.split("\n"):
+                if para_text.strip():
+                    _add_paragraph(doc, para_text.strip(),
+                                   font_name=font, font_size=11,
+                                   font_color=(51, 51, 51),
+                                   space_before=4, space_after=4,
+                                   alignment=WD_ALIGN_JUSTIFY)
+
+        # Exercises
+        exercises = mod.get("exercises", [])
+        if exercises:
+            _add_empty_lines(doc, 1)
+            _add_paragraph(doc, "Exercises",
+                           font_name=font, font_size=s["sub_size"],
+                           font_color=primary, bold=True,
+                           space_before=14, space_after=6, alignment=WD_ALIGN_LEFT)
+            _add_horizontal_line(doc, color=(200, 210, 220), thickness=0.5)
+
+            for j, ex in enumerate(exercises, 1):
+                _add_paragraph(doc, f"Exercise {j}: {ex}",
+                               font_name=font, font_size=11,
+                               font_color=(51, 51, 51),
+                               space_before=6, space_after=3, alignment=WD_ALIGN_LEFT)
+
+                # Space for answers
+                _add_paragraph(doc, "Answer: _______________________________________________",
+                               font_name=font, font_size=10,
+                               font_color=(150, 150, 150),
+                               space_before=3, space_after=8, alignment=WD_ALIGN_LEFT)
+
+    return {
+        "title": title,
+        "style": style,
+        "module_count": len(modules),
+        "paragraphs": doc.Paragraphs.Count,
+    }

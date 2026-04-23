@@ -1869,3 +1869,184 @@ def powerpoint_get_presentation_summary() -> str:
         return "\n".join(lines)
     except Exception as e:
         return f"エラー: {e}"
+
+
+# ============================================================
+# Remaining Pro Features
+# ============================================================
+
+@mcp.tool()
+def powerpoint_set_shape_gradient(
+    slide_number: int,
+    shape_index: int,
+    color1: list[int],
+    color2: list[int],
+    angle: float = 0,
+    gradient_type: str = "linear",
+) -> str:
+    """既存の図形にグラデーションを適用します。gradient_type: "linear", "radial", "rectangular", "path"。"""
+    try:
+        result = ppt.set_shape_gradient(
+            slide_number, shape_index,
+            tuple(color1), tuple(color2),
+            angle=angle, gradient_type=gradient_type,
+        )
+        return f"スライド {result['slide_number']} の図形 '{result['shape_name']}' にグラデーションを適用しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_add_qr_code_shape(
+    slide_number: int,
+    text: str,
+    left: float,
+    top: float,
+    size: float = 100,
+    color: list[int] | None = None,
+) -> str:
+    """テキストからQRコード風のパターンを小さな図形で作成します。"""
+    try:
+        result = ppt.add_qr_code_shape(
+            slide_number, text, left, top,
+            size=size, color=tuple(color) if color else None,
+        )
+        return f"スライド {result['slide_number']} にQRコード風パターンを作成しました（図形数: {result['shapes_added']}）"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_set_slide_notes_format(
+    slide_number: int,
+    font_name: str | None = None,
+    font_size: float | None = None,
+) -> str:
+    """スピーカーノートのフォントを設定します。"""
+    try:
+        result = ppt.set_slide_notes_format(slide_number, font_name=font_name, font_size=font_size)
+        return f"スライド {result['slide_number']} のノートのフォントを設定しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_replace_text(
+    slide_number: int,
+    old_text: str,
+    new_text: str,
+    match_case: bool = False,
+) -> str:
+    """スライド内のすべての図形でテキストを検索・置換します。"""
+    try:
+        result = ppt.replace_text(slide_number, old_text, new_text, match_case=match_case)
+        return f"スライド {result['slide_number']} で {result['replacements']} 箇所を置換しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_replace_text_all_slides(
+    old_text: str,
+    new_text: str,
+    match_case: bool = False,
+) -> str:
+    """すべてのスライドでテキストを検索・置換します。"""
+    try:
+        result = ppt.replace_text_all_slides(old_text, new_text, match_case=match_case)
+        return (
+            f"{result['slides_modified']} 枚のスライドで "
+            f"{result['total_replacements']} 箇所を置換しました"
+        )
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_get_all_text(slide_number: int | None = None) -> str:
+    """スライドからすべてのテキストを抽出します。slide_numberを省略するとすべてのスライドが対象。"""
+    try:
+        result = ppt.get_all_text(slide_number=slide_number)
+        if not result["texts"]:
+            return "テキストが見つかりませんでした"
+        lines = [f"テキスト数: {result['count']}"]
+        for item in result["texts"]:
+            lines.append(f"  スライド {item['slide']}, {item['shape']}: {item['text'][:100]}")
+        return "\n".join(lines)
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_set_shape_hyperlink(
+    slide_number: int,
+    shape_index: int,
+    url: str | None = None,
+    slide_target: int | None = None,
+    tooltip: str | None = None,
+) -> str:
+    """図形にハイパーリンクを追加します。urlでWeb、slide_targetでスライド内リンクを指定。"""
+    try:
+        result = ppt.set_shape_hyperlink(
+            slide_number, shape_index,
+            url=url, slide_target=slide_target, tooltip=tooltip,
+        )
+        return f"スライド {result['slide_number']} の図形 '{result['shape_name']}' にハイパーリンクを設定しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_add_header_footer(
+    show_date: bool = True,
+    show_slide_number: bool = True,
+    show_footer: bool = True,
+    footer_text: str = "",
+    date_format: str = "auto",
+) -> str:
+    """プレゼンテーションのヘッダー・フッター設定を構成します。"""
+    try:
+        result = ppt.add_header_footer(
+            show_date=show_date, show_slide_number=show_slide_number,
+            show_footer=show_footer, footer_text=footer_text,
+            date_format=date_format,
+        )
+        parts = []
+        if result["show_date"]:
+            parts.append("日付")
+        if result["show_slide_number"]:
+            parts.append("スライド番号")
+        if result["show_footer"]:
+            parts.append(f"フッター('{result['footer_text']}')")
+        return f"ヘッダー・フッターを設定しました: {', '.join(parts)}"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_duplicate_presentation(file_path: str) -> str:
+    """現在のプレゼンテーションのコピーを新しいパスに保存します。"""
+    try:
+        result = ppt.duplicate_presentation(file_path)
+        return f"プレゼンテーションのコピーを保存しました: {result['file_path']}"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_insert_slides_from(
+    file_path: str,
+    slide_numbers: list[int] | None = None,
+    insert_at: int | None = None,
+) -> str:
+    """別のプレゼンテーションからスライドを挿入します。slide_numbersで特定スライドを指定可能。"""
+    try:
+        result = ppt.insert_slides_from(
+            file_path, slide_numbers=slide_numbers, insert_at=insert_at,
+        )
+        return (
+            f"{result['slides_inserted']} 枚のスライドを "
+            f"位置 {result['insert_position']} に挿入しました"
+        )
+    except Exception as e:
+        return f"エラー: {e}"

@@ -466,3 +466,121 @@ def word_add_signature_block(
         )
     except Exception as e:
         return f"エラー: {e}"
+
+
+@mcp.tool()
+def word_create_executive_summary(
+    title: str,
+    key_findings: list[str],
+    recommendations: list[str],
+    conclusion: str | None = None,
+    style: str = "professional",
+) -> str:
+    """エグゼクティブサマリーを作成します。key_findings: 主要な発見事項リスト。recommendations: 推奨事項リスト。style: professional, modern, minimal。"""
+    try:
+        result = word_advanced.create_executive_summary(
+            title, key_findings, recommendations,
+            conclusion=conclusion, style=style,
+        )
+        return (
+            f"エグゼクティブサマリーを作成しました（タイトル: {result['title']}、"
+            f"発見事項: {result['finding_count']}件、"
+            f"推奨事項: {result['recommendation_count']}件、"
+            f"スタイル: {result['style']}）"
+        )
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def word_create_status_report(
+    project_name: str,
+    period: str,
+    overall_status: str,
+    accomplishments: list[str],
+    issues: list[str],
+    next_steps: list[str],
+    metrics: list[dict] | None = None,
+) -> str:
+    """プロジェクトステータスレポートを作成します。overall_status: on_track（順調）, at_risk（リスクあり）, delayed（遅延）。metrics: [{"name": "指標名", "value": "値", "target": "目標"}]。"""
+    try:
+        result = word_advanced.create_status_report(
+            project_name, period, overall_status,
+            accomplishments, issues, next_steps,
+            metrics=metrics,
+        )
+        return (
+            f"ステータスレポートを作成しました（プロジェクト: {result['project_name']}、"
+            f"ステータス: {result['status']}、期間: {result['period']}）"
+        )
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def word_create_change_request(
+    title: str,
+    requester: str,
+    description: str,
+    justification: str,
+    impact: str,
+    priority: str = "medium",
+) -> str:
+    """変更依頼書を作成します。承認欄付きのプロフェッショナルなフォーム。priority: low, medium, high, critical。"""
+    try:
+        result = word_advanced.create_change_request(
+            title, requester, description,
+            justification, impact, priority=priority,
+        )
+        return (
+            f"変更依頼書を作成しました（タイトル: {result['title']}、"
+            f"依頼者: {result['requester']}、"
+            f"優先度: {result['priority']}、ID: {result['cr_id']}）"
+        )
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def word_create_incident_report(
+    title: str,
+    date: str,
+    reported_by: str,
+    description: str,
+    root_cause: str | None = None,
+    corrective_actions: list[str] | None = None,
+    severity: str = "medium",
+) -> str:
+    """インシデントレポートを作成します。根本原因分析・是正措置・承認欄付き。severity: low, medium, high, critical。"""
+    try:
+        result = word_advanced.create_incident_report(
+            title, date, reported_by, description,
+            root_cause=root_cause, corrective_actions=corrective_actions,
+            severity=severity,
+        )
+        return (
+            f"インシデントレポートを作成しました（タイトル: {result['title']}、"
+            f"重大度: {result['severity']}、報告者: {result['reported_by']}、"
+            f"ID: {result['incident_id']}）"
+        )
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def word_create_training_manual(
+    title: str,
+    modules: list[dict],
+    style: str = "structured",
+) -> str:
+    """トレーニングマニュアルを作成します。modules: [{"title": "モジュール名", "objectives": ["目標1"], "content": "内容", "exercises": ["演習1"]}]。style: structured（構造化）, casual（カジュアル）, technical（技術的）。"""
+    try:
+        result = word_advanced.create_training_manual(
+            title, modules, style=style,
+        )
+        return (
+            f"トレーニングマニュアルを作成しました（タイトル: {result['title']}、"
+            f"モジュール数: {result['module_count']}、スタイル: {result['style']}）"
+        )
+    except Exception as e:
+        return f"エラー: {e}"

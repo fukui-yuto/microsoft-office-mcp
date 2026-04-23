@@ -2103,3 +2103,200 @@ def excel_get_cell_formula(cell: str, sheet: str | None = None) -> str:
         return f"[{result['sheet']}] {result['cell']} には数式がありません（値: {result['formula']}）"
     except Exception as e:
         return f"エラー: {e}"
+
+
+# ---------------------------------------------------------------------------
+# Remaining Pro Features
+# ---------------------------------------------------------------------------
+
+@mcp.tool()
+def excel_insert_subtotals(
+    group_column: int,
+    sum_columns: list[int],
+    subtotal_function: str = "sum",
+    sheet: str | None = None,
+) -> str:
+    """グループ列で自動小計を挿入します。subtotal_function: "sum", "count", "average", "max", "min"。"""
+    try:
+        result = excel.insert_subtotals(
+            sheet=sheet, group_column=group_column,
+            sum_columns=sum_columns, subtotal_function=subtotal_function,
+        )
+        return f"[{result['sheet']}] 小計を挿入しました（関数: {result['subtotal_function']}）"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_create_dropdown_list(
+    cell_range: str,
+    source_range: str,
+    sheet: str | None = None,
+) -> str:
+    """セル範囲参照からドロップダウンリストを作成します。"""
+    try:
+        result = excel.create_dropdown_list(sheet=sheet, cell_range=cell_range, source_range=source_range)
+        return f"[{result['sheet']}] {result['range']} にドロップダウンリストを作成しました（ソース: {result['source']}）"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_set_conditional_icon(
+    range_str: str,
+    icon_type: str,
+    thresholds: list[float] | None = None,
+    sheet: str | None = None,
+) -> str:
+    """アイコンセット条件付き書式を適用します。icon_type: "arrows", "circles", "flags", "stars"。"""
+    try:
+        result = excel.set_conditional_icon(
+            sheet=sheet, range_str=range_str,
+            icon_type=icon_type, thresholds=thresholds,
+        )
+        return f"[{result['sheet']}] {result['range']} にアイコンセット '{result['icon_type']}' を適用しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_add_error_bars(
+    chart_index: int,
+    series_index: int = 1,
+    error_type: str = "percentage",
+    amount: float = 5,
+    sheet: str | None = None,
+) -> str:
+    """グラフ系列にエラーバーを追加します。error_type: "percentage", "fixed", "standard_deviation", "standard_error"。"""
+    try:
+        result = excel.add_error_bars(
+            sheet=sheet, chart_index=chart_index,
+            series_index=series_index, error_type=error_type, amount=amount,
+        )
+        return (
+            f"[{result['sheet']}] グラフ {result['chart_index']} の系列 {result['series_index']} "
+            f"にエラーバーを追加しました（{result['error_type']}）"
+        )
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_set_chart_gradient(
+    chart_index: int,
+    series_index: int,
+    color1: list[int],
+    color2: list[int],
+    sheet: str | None = None,
+) -> str:
+    """グラフ系列にグラデーション塗りつぶしを適用します。"""
+    try:
+        result = excel.set_chart_gradient(
+            sheet=sheet, chart_index=chart_index, series_index=series_index,
+            color1=tuple(color1), color2=tuple(color2),
+        )
+        return (
+            f"[{result['sheet']}] グラフ {result['chart_index']} の系列 {result['series_index']} "
+            f"にグラデーションを適用しました"
+        )
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_create_named_style(
+    style_name: str,
+    font_name: str | None = None,
+    font_size: float | None = None,
+    font_color: list[int] | None = None,
+    fill_color: list[int] | None = None,
+    bold: bool = False,
+    borders: bool = False,
+    sheet: str | None = None,
+) -> str:
+    """再利用可能なセルスタイルを作成します。"""
+    try:
+        result = excel.create_named_style(
+            sheet=sheet, style_name=style_name,
+            font_name=font_name, font_size=font_size,
+            font_color=tuple(font_color) if font_color else None,
+            fill_color=tuple(fill_color) if fill_color else None,
+            bold=bold, borders=borders,
+        )
+        return f"スタイル '{result['style_name']}' を作成しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_apply_alternating_colors(
+    range_str: str,
+    color1: list[int],
+    color2: list[int],
+    sheet: str | None = None,
+) -> str:
+    """行の交互色（ゼブラストライプ）を適用します。"""
+    try:
+        result = excel.apply_alternating_colors(
+            sheet=sheet, range_str=range_str,
+            color1=tuple(color1), color2=tuple(color2),
+        )
+        return f"[{result['sheet']}] {result['range']} に交互色を適用しました（{result['rows_formatted']}行）"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_get_distinct_values(range_str: str, sheet: str | None = None) -> str:
+    """範囲からユニークな値を取得します。"""
+    try:
+        result = excel.get_distinct_values(sheet=sheet, range_str=range_str)
+        if result['values']:
+            lines = [f"[{result['sheet']}] {result['count']}個のユニーク値:"]
+            for v in result['values'][:50]:
+                lines.append(f"  {v}")
+            return "\n".join(lines)
+        return f"[{result['sheet']}] 値が見つかりませんでした"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_vlookup(
+    lookup_value: str,
+    table_range: str,
+    col_index: int,
+    exact_match: bool = True,
+    sheet: str | None = None,
+) -> str:
+    """VLOOKUPを実行して結果を返します。"""
+    try:
+        result = excel.vlookup(
+            sheet=sheet, lookup_value=lookup_value,
+            table_range=table_range, col_index=col_index,
+            exact_match=exact_match,
+        )
+        if result['found']:
+            return f"[{result['sheet']}] VLOOKUP結果: '{result['lookup_value']}' → {result['result']}"
+        return f"[{result['sheet']}] '{result['lookup_value']}' は見つかりませんでした"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_create_summary_sheet(
+    source_sheets: list[str],
+    summary_sheet_name: str = "Summary",
+) -> str:
+    """複数シートからデータを集約するサマリーシートを作成します。"""
+    try:
+        result = excel.create_summary_sheet(
+            source_sheets=source_sheets,
+            summary_sheet_name=summary_sheet_name,
+        )
+        return (
+            f"サマリーシート '{result['summary_sheet']}' を作成しました"
+            f"（{len(result['source_sheets'])}シートから{result['total_rows']}行）"
+        )
+    except Exception as e:
+        return f"エラー: {e}"

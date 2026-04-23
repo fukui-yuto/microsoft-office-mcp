@@ -4745,3 +4745,690 @@ def apply_consistent_branding(
         "font_title": font_title,
         "font_body": font_body,
     }
+
+
+# ============================================================
+# 22. create_before_after_slide
+# ============================================================
+
+def create_before_after_slide(
+    slide_number: int,
+    title: str,
+    before_items: list[str],
+    after_items: list[str],
+    style: str = "split",
+) -> dict:
+    """Create a Before/After comparison slide.
+
+    Args:
+        slide_number: Target slide number.
+        title: Slide title.
+        before_items: List of "before" bullet strings.
+        after_items: List of "after" bullet strings.
+        style: "split" (left/right), "overlay" (overlapping cards),
+               "arrow" (arrow connecting before->after).
+
+    Returns:
+        Dict with slide_number and style.
+    """
+    prs, slide = _get_slide(slide_number)
+    sw, sh = prs.PageSetup.SlideWidth, prs.PageSetup.SlideHeight
+
+    if style == "split":
+        # Dark background
+        _set_solid_bg(slide, (30, 30, 40))
+
+        # Title
+        _add_textbox(slide, 40, 15, sw - 80, 50, title,
+                     font_name="Segoe UI", font_size=28, font_color=(255, 255, 255),
+                     bold=True, alignment=PP_ALIGN_CENTER)
+
+        # Left panel - Before (red tint)
+        left_w = (sw - 100) / 2
+        _add_shape(slide, MSO_SHAPE_ROUNDED_RECTANGLE, 30, 80, left_w, sh - 110,
+                   fill_rgb=(60, 30, 30))
+
+        # Before header
+        _add_textbox(slide, 40, 88, left_w - 20, 40, "BEFORE",
+                     font_name="Segoe UI", font_size=20, font_color=(255, 100, 100),
+                     bold=True, alignment=PP_ALIGN_CENTER)
+
+        # Before items
+        before_text = "\n".join(f"  {item}" for item in before_items)
+        _add_textbox(slide, 50, 135, left_w - 40, sh - 210, before_text,
+                     font_name="Segoe UI", font_size=14, font_color=(220, 180, 180),
+                     alignment=PP_ALIGN_LEFT)
+
+        # Right panel - After (green tint)
+        right_x = sw / 2 + 20
+        _add_shape(slide, MSO_SHAPE_ROUNDED_RECTANGLE, right_x, 80, left_w, sh - 110,
+                   fill_rgb=(30, 60, 30))
+
+        # After header
+        _add_textbox(slide, right_x + 10, 88, left_w - 20, 40, "AFTER",
+                     font_name="Segoe UI", font_size=20, font_color=(100, 255, 100),
+                     bold=True, alignment=PP_ALIGN_CENTER)
+
+        # After items
+        after_text = "\n".join(f"  {item}" for item in after_items)
+        _add_textbox(slide, right_x + 20, 135, left_w - 40, sh - 210, after_text,
+                     font_name="Segoe UI", font_size=14, font_color=(180, 220, 180),
+                     alignment=PP_ALIGN_LEFT)
+
+    elif style == "overlay":
+        _set_gradient_bg(slide, (40, 40, 60), (20, 20, 35), MSO_GRADIENT_DIAGONAL_DOWN)
+
+        _add_textbox(slide, 40, 15, sw - 80, 50, title,
+                     font_name="Segoe UI", font_size=28, font_color=(255, 255, 255),
+                     bold=True, alignment=PP_ALIGN_CENTER)
+
+        card_w = sw * 0.42
+        card_h = sh - 130
+
+        # Before card (slightly behind and left)
+        before_card = _add_shape(slide, MSO_SHAPE_ROUNDED_RECTANGLE,
+                                  40, 90, card_w, card_h, fill_rgb=(180, 60, 60))
+        _add_shadow(before_card, blur=12, offset_x=4, offset_y=4)
+
+        _add_textbox(slide, 50, 98, card_w - 20, 36, "BEFORE",
+                     font_name="Segoe UI", font_size=18, font_color=(255, 255, 255),
+                     bold=True, alignment=PP_ALIGN_CENTER)
+
+        before_text = "\n".join(f"  {item}" for item in before_items)
+        _add_textbox(slide, 60, 140, card_w - 40, card_h - 70, before_text,
+                     font_name="Segoe UI", font_size=13, font_color=(255, 230, 230),
+                     alignment=PP_ALIGN_LEFT)
+
+        # After card (overlapping, slightly right and down)
+        after_x = sw - card_w - 40
+        after_card = _add_shape(slide, MSO_SHAPE_ROUNDED_RECTANGLE,
+                                 after_x, 100, card_w, card_h, fill_rgb=(40, 140, 70))
+        _add_shadow(after_card, blur=12, offset_x=4, offset_y=4)
+
+        _add_textbox(slide, after_x + 10, 108, card_w - 20, 36, "AFTER",
+                     font_name="Segoe UI", font_size=18, font_color=(255, 255, 255),
+                     bold=True, alignment=PP_ALIGN_CENTER)
+
+        after_text = "\n".join(f"  {item}" for item in after_items)
+        _add_textbox(slide, after_x + 20, 150, card_w - 40, card_h - 70, after_text,
+                     font_name="Segoe UI", font_size=13, font_color=(230, 255, 230),
+                     alignment=PP_ALIGN_LEFT)
+
+    else:  # arrow
+        _set_solid_bg(slide, (245, 245, 250))
+
+        _add_textbox(slide, 40, 15, sw - 80, 50, title,
+                     font_name="Segoe UI", font_size=28, font_color=(40, 40, 60),
+                     bold=True, alignment=PP_ALIGN_CENTER)
+
+        panel_w = sw * 0.35
+        panel_h = sh - 140
+
+        # Before panel
+        _add_shape(slide, MSO_SHAPE_ROUNDED_RECTANGLE, 40, 85, panel_w, panel_h,
+                   fill_rgb=(255, 235, 235))
+        _add_shape(slide, MSO_SHAPE_RECTANGLE, 40, 85, panel_w, 40,
+                   fill_rgb=(200, 60, 60))
+        _add_textbox(slide, 40, 88, panel_w, 36, "BEFORE",
+                     font_name="Segoe UI", font_size=16, font_color=(255, 255, 255),
+                     bold=True, alignment=PP_ALIGN_CENTER)
+
+        before_text = "\n".join(f"  {item}" for item in before_items)
+        _add_textbox(slide, 55, 135, panel_w - 30, panel_h - 65, before_text,
+                     font_name="Segoe UI", font_size=13, font_color=(100, 40, 40),
+                     alignment=PP_ALIGN_LEFT)
+
+        # Arrow in center
+        arrow_x = 40 + panel_w + 15
+        arrow_w = sw - 2 * (40 + panel_w) - 30
+        _add_shape(slide, MSO_SHAPE_RIGHT_ARROW, arrow_x, sh / 2 - 30, arrow_w, 60,
+                   fill_rgb=(60, 60, 180))
+
+        # After panel
+        after_x = sw - panel_w - 40
+        _add_shape(slide, MSO_SHAPE_ROUNDED_RECTANGLE, after_x, 85, panel_w, panel_h,
+                   fill_rgb=(235, 255, 235))
+        _add_shape(slide, MSO_SHAPE_RECTANGLE, after_x, 85, panel_w, 40,
+                   fill_rgb=(40, 160, 60))
+        _add_textbox(slide, after_x, 88, panel_w, 36, "AFTER",
+                     font_name="Segoe UI", font_size=16, font_color=(255, 255, 255),
+                     bold=True, alignment=PP_ALIGN_CENTER)
+
+        after_text = "\n".join(f"  {item}" for item in after_items)
+        _add_textbox(slide, after_x + 15, 135, panel_w - 30, panel_h - 65, after_text,
+                     font_name="Segoe UI", font_size=13, font_color=(30, 90, 40),
+                     alignment=PP_ALIGN_LEFT)
+
+    return {"slide_number": slide_number, "style": style}
+
+
+# ============================================================
+# 23. create_feature_showcase
+# ============================================================
+
+def create_feature_showcase(
+    slide_number: int,
+    title: str,
+    features: list[dict],
+    style: str = "grid",
+) -> dict:
+    """Create a feature showcase slide.
+
+    Args:
+        slide_number: Target slide number.
+        title: Slide title.
+        features: List of dicts with "title", "description", "icon_text".
+        style: "grid" (2x3), "list" (vertical), "cards" (horizontal cards).
+
+    Returns:
+        Dict with slide_number, style, feature_count.
+    """
+    prs, slide = _get_slide(slide_number)
+    sw, sh = prs.PageSetup.SlideWidth, prs.PageSetup.SlideHeight
+
+    accent_colors = [
+        (0, 122, 204), (40, 167, 69), (220, 53, 69),
+        (255, 193, 7), (111, 66, 193), (23, 162, 184),
+    ]
+
+    if style == "grid":
+        _set_solid_bg(slide, (250, 250, 255))
+
+        _add_textbox(slide, 40, 15, sw - 80, 50, title,
+                     font_name="Segoe UI", font_size=28, font_color=(30, 30, 60),
+                     bold=True, alignment=PP_ALIGN_CENTER)
+
+        cols = 3
+        rows_count = (len(features) + cols - 1) // cols
+        card_w = (sw - 100) / cols
+        card_h = (sh - 120) / rows_count - 10
+
+        for i, feat in enumerate(features):
+            row = i // cols
+            col = i % cols
+            x = 30 + col * (card_w + 10)
+            y = 80 + row * (card_h + 10)
+            color = accent_colors[i % len(accent_colors)]
+
+            _add_shape(slide, MSO_SHAPE_ROUNDED_RECTANGLE, x, y, card_w, card_h,
+                       fill_rgb=(255, 255, 255))
+
+            # Icon circle
+            icon_size = 44
+            _add_shape(slide, MSO_SHAPE_OVAL, x + card_w / 2 - icon_size / 2,
+                       y + 12, icon_size, icon_size, fill_rgb=color)
+            _add_textbox(slide, x + card_w / 2 - icon_size / 2, y + 16,
+                         icon_size, icon_size - 4,
+                         feat.get("icon_text", ""),
+                         font_name="Segoe UI", font_size=16,
+                         font_color=(255, 255, 255), bold=True,
+                         alignment=PP_ALIGN_CENTER)
+
+            # Feature title
+            _add_textbox(slide, x + 8, y + icon_size + 16, card_w - 16, 28,
+                         feat.get("title", ""),
+                         font_name="Segoe UI", font_size=13, font_color=(30, 30, 60),
+                         bold=True, alignment=PP_ALIGN_CENTER)
+
+            # Description
+            _add_textbox(slide, x + 10, y + icon_size + 44, card_w - 20,
+                         card_h - icon_size - 60,
+                         feat.get("description", ""),
+                         font_name="Segoe UI", font_size=10, font_color=(100, 100, 110),
+                         alignment=PP_ALIGN_CENTER)
+
+    elif style == "list":
+        _set_solid_bg(slide, (240, 242, 248))
+
+        _add_textbox(slide, 40, 15, sw - 80, 50, title,
+                     font_name="Segoe UI", font_size=28, font_color=(30, 30, 60),
+                     bold=True, alignment=PP_ALIGN_LEFT)
+
+        item_h = min(70, (sh - 100) / len(features))
+        for i, feat in enumerate(features):
+            y = 80 + i * item_h
+            color = accent_colors[i % len(accent_colors)]
+
+            # Accent bar on left
+            _add_shape(slide, MSO_SHAPE_RECTANGLE, 40, y, 5, item_h - 8,
+                       fill_rgb=color)
+
+            # Icon circle
+            _add_shape(slide, MSO_SHAPE_OVAL, 55, y + (item_h - 8) / 2 - 18, 36, 36,
+                       fill_rgb=color)
+            _add_textbox(slide, 55, y + (item_h - 8) / 2 - 14, 36, 28,
+                         feat.get("icon_text", ""),
+                         font_name="Segoe UI", font_size=13,
+                         font_color=(255, 255, 255), bold=True,
+                         alignment=PP_ALIGN_CENTER)
+
+            # Title and description
+            _add_textbox(slide, 102, y + 4, sw - 160, 22,
+                         feat.get("title", ""),
+                         font_name="Segoe UI", font_size=14, font_color=(30, 30, 60),
+                         bold=True, alignment=PP_ALIGN_LEFT)
+
+            _add_textbox(slide, 102, y + 26, sw - 160, item_h - 38,
+                         feat.get("description", ""),
+                         font_name="Segoe UI", font_size=10, font_color=(100, 100, 120),
+                         alignment=PP_ALIGN_LEFT)
+
+    else:  # cards
+        _set_gradient_bg(slide, (25, 25, 50), (45, 45, 80), MSO_GRADIENT_HORIZONTAL)
+
+        _add_textbox(slide, 40, 15, sw - 80, 50, title,
+                     font_name="Segoe UI", font_size=28, font_color=(255, 255, 255),
+                     bold=True, alignment=PP_ALIGN_CENTER)
+
+        n = len(features)
+        card_w = min(200, (sw - 60) / n - 10)
+        card_h = sh - 130
+        total_w = n * card_w + (n - 1) * 12
+        start_x = (sw - total_w) / 2
+
+        for i, feat in enumerate(features):
+            x = start_x + i * (card_w + 12)
+            color = accent_colors[i % len(accent_colors)]
+
+            card = _add_shape(slide, MSO_SHAPE_ROUNDED_RECTANGLE, x, 80,
+                              card_w, card_h, fill_rgb=(40, 40, 70))
+            _add_shadow(card, blur=10, offset_x=3, offset_y=3)
+
+            # Top accent
+            _add_shape(slide, MSO_SHAPE_RECTANGLE, x, 80, card_w, 5,
+                       fill_rgb=color)
+
+            # Icon
+            icon_s = 40
+            _add_shape(slide, MSO_SHAPE_OVAL, x + card_w / 2 - icon_s / 2,
+                       100, icon_s, icon_s, fill_rgb=color)
+            _add_textbox(slide, x + card_w / 2 - icon_s / 2, 104,
+                         icon_s, icon_s - 4,
+                         feat.get("icon_text", ""),
+                         font_name="Segoe UI", font_size=14,
+                         font_color=(255, 255, 255), bold=True,
+                         alignment=PP_ALIGN_CENTER)
+
+            _add_textbox(slide, x + 6, 150, card_w - 12, 26,
+                         feat.get("title", ""),
+                         font_name="Segoe UI", font_size=12, font_color=(255, 255, 255),
+                         bold=True, alignment=PP_ALIGN_CENTER)
+
+            _add_textbox(slide, x + 8, 178, card_w - 16, card_h - 110,
+                         feat.get("description", ""),
+                         font_name="Segoe UI", font_size=9, font_color=(180, 180, 200),
+                         alignment=PP_ALIGN_CENTER)
+
+    return {"slide_number": slide_number, "style": style, "feature_count": len(features)}
+
+
+# ============================================================
+# 24. create_data_table_slide
+# ============================================================
+
+def create_data_table_slide(
+    slide_number: int,
+    title: str,
+    headers: list[str],
+    rows: list[list],
+    style: str = "professional",
+) -> dict:
+    """Create a slide with a formatted data table.
+
+    Args:
+        slide_number: Target slide number.
+        title: Slide title.
+        headers: Column header strings.
+        rows: 2D list of cell values.
+        style: "professional" (dark header, striped), "minimal" (thin borders),
+               "colorful" (colored cells).
+
+    Returns:
+        Dict with slide_number, style, row_count, col_count.
+    """
+    prs, slide = _get_slide(slide_number)
+    sw, sh = prs.PageSetup.SlideWidth, prs.PageSetup.SlideHeight
+
+    # Title
+    if style == "professional":
+        _set_solid_bg(slide, (248, 249, 252))
+        title_color = (30, 40, 70)
+    elif style == "minimal":
+        _set_solid_bg(slide, (255, 255, 255))
+        title_color = (50, 50, 50)
+    else:  # colorful
+        _set_solid_bg(slide, (245, 248, 255))
+        title_color = (25, 50, 120)
+
+    _add_textbox(slide, 40, 12, sw - 80, 45, title,
+                 font_name="Segoe UI", font_size=24, font_color=title_color,
+                 bold=True, alignment=PP_ALIGN_LEFT)
+
+    num_cols = len(headers)
+    num_rows = len(rows) + 1  # +1 for header
+    table_w = sw - 80
+    table_h = min(sh - 90, num_rows * 32 + 10)
+    tbl_shape = slide.Shapes.AddTable(num_rows, num_cols, 40, 70, table_w, table_h)
+    table = tbl_shape.Table
+
+    # Set headers
+    for c in range(num_cols):
+        cell = table.Cell(1, c + 1)
+        cell.Shape.TextFrame.TextRange.Text = str(headers[c])
+        cell.Shape.TextFrame.TextRange.Font.Name = "Segoe UI"
+        cell.Shape.TextFrame.TextRange.Font.Size = 11
+        cell.Shape.TextFrame.TextRange.Font.Bold = True
+        cell.Shape.TextFrame.TextRange.ParagraphFormat.Alignment = PP_ALIGN_CENTER
+
+    # Set data
+    for r_idx, row_data in enumerate(rows):
+        for c_idx, val in enumerate(row_data):
+            if c_idx < num_cols:
+                cell = table.Cell(r_idx + 2, c_idx + 1)
+                cell.Shape.TextFrame.TextRange.Text = str(val)
+                cell.Shape.TextFrame.TextRange.Font.Name = "Segoe UI"
+                cell.Shape.TextFrame.TextRange.Font.Size = 10
+                cell.Shape.TextFrame.TextRange.ParagraphFormat.Alignment = PP_ALIGN_CENTER
+
+    # Apply style-specific formatting
+    if style == "professional":
+        for c in range(num_cols):
+            cell = table.Cell(1, c + 1)
+            cell.Shape.Fill.Solid()
+            cell.Shape.Fill.ForeColor.RGB = rgb(30, 40, 70)
+            cell.Shape.TextFrame.TextRange.Font.Color.RGB = rgb(255, 255, 255)
+
+        for r_idx in range(len(rows)):
+            bg = (240, 243, 250) if r_idx % 2 == 0 else (255, 255, 255)
+            for c_idx in range(num_cols):
+                cell = table.Cell(r_idx + 2, c_idx + 1)
+                cell.Shape.Fill.Solid()
+                cell.Shape.Fill.ForeColor.RGB = rgb(*bg)
+
+    elif style == "minimal":
+        for c in range(num_cols):
+            cell = table.Cell(1, c + 1)
+            cell.Shape.Fill.Solid()
+            cell.Shape.Fill.ForeColor.RGB = rgb(245, 245, 245)
+            cell.Shape.TextFrame.TextRange.Font.Color.RGB = rgb(40, 40, 40)
+
+    else:  # colorful
+        header_colors = [
+            (41, 98, 255), (0, 150, 136), (233, 30, 99),
+            (255, 152, 0), (103, 58, 183), (0, 188, 212),
+        ]
+        for c in range(num_cols):
+            cell = table.Cell(1, c + 1)
+            hc = header_colors[c % len(header_colors)]
+            cell.Shape.Fill.Solid()
+            cell.Shape.Fill.ForeColor.RGB = rgb(*hc)
+            cell.Shape.TextFrame.TextRange.Font.Color.RGB = rgb(255, 255, 255)
+
+        for r_idx in range(len(rows)):
+            for c_idx in range(num_cols):
+                cell = table.Cell(r_idx + 2, c_idx + 1)
+                hc = header_colors[c_idx % len(header_colors)]
+                light = (hc[0] + (255 - hc[0]) * 85 // 100,
+                         hc[1] + (255 - hc[1]) * 85 // 100,
+                         hc[2] + (255 - hc[2]) * 85 // 100)
+                cell.Shape.Fill.Solid()
+                cell.Shape.Fill.ForeColor.RGB = rgb(*light)
+
+    return {"slide_number": slide_number, "style": style,
+            "row_count": len(rows), "col_count": num_cols}
+
+
+# ============================================================
+# 25. create_thank_you_slide
+# ============================================================
+
+def create_thank_you_slide(
+    slide_number: int,
+    message: str = "Thank You",
+    contact_email: str | None = None,
+    contact_phone: str | None = None,
+    website: str | None = None,
+    social_media: str | None = None,
+    style: str = "elegant",
+) -> dict:
+    """Create a thank-you / contact slide.
+
+    Args:
+        slide_number: Target slide number.
+        message: Main message text (default "Thank You").
+        contact_email: Email address to display.
+        contact_phone: Phone number to display.
+        website: Website URL to display.
+        social_media: Social media handle(s) to display.
+        style: "elegant" (dark bg, gold accents), "minimal" (white bg),
+               "corporate" (branded).
+
+    Returns:
+        Dict with slide_number and style.
+    """
+    prs, slide = _get_slide(slide_number)
+    sw, sh = prs.PageSetup.SlideWidth, prs.PageSetup.SlideHeight
+
+    contact_lines = []
+    if contact_email:
+        contact_lines.append(f"Email: {contact_email}")
+    if contact_phone:
+        contact_lines.append(f"Phone: {contact_phone}")
+    if website:
+        contact_lines.append(f"Web: {website}")
+    if social_media:
+        contact_lines.append(f"Social: {social_media}")
+
+    if style == "elegant":
+        _set_gradient_bg(slide, (15, 15, 30), (35, 35, 60), MSO_GRADIENT_DIAGONAL_DOWN)
+
+        # Gold accent line
+        _add_shape(slide, MSO_SHAPE_RECTANGLE, sw * 0.3, sh * 0.38, sw * 0.4, 2,
+                   fill_rgb=(212, 175, 55))
+
+        # Main message
+        _add_textbox(slide, 40, sh * 0.15, sw - 80, 90, message,
+                     font_name="Georgia", font_size=48, font_color=(212, 175, 55),
+                     bold=False, alignment=PP_ALIGN_CENTER)
+
+        # Decorative dots
+        for dx in range(-2, 3):
+            _add_shape(slide, MSO_SHAPE_OVAL, sw / 2 + dx * 20 - 4,
+                       sh * 0.42, 8, 8, fill_rgb=(212, 175, 55),
+                       fill_transparency=0.4)
+
+        # Contact info
+        if contact_lines:
+            contact_text = "\n".join(contact_lines)
+            _add_textbox(slide, sw * 0.2, sh * 0.52, sw * 0.6, len(contact_lines) * 28,
+                         contact_text,
+                         font_name="Segoe UI", font_size=14,
+                         font_color=(180, 180, 200),
+                         alignment=PP_ALIGN_CENTER)
+
+        # Bottom accent bar
+        _add_shape(slide, MSO_SHAPE_RECTANGLE, 0, sh - 4, sw, 4,
+                   fill_rgb=(212, 175, 55))
+
+    elif style == "minimal":
+        _set_solid_bg(slide, (255, 255, 255))
+
+        _add_textbox(slide, 40, sh * 0.2, sw - 80, 80, message,
+                     font_name="Segoe UI Light", font_size=48,
+                     font_color=(40, 40, 60), bold=False,
+                     alignment=PP_ALIGN_CENTER)
+
+        # Thin line under message
+        _add_shape(slide, MSO_SHAPE_RECTANGLE, sw * 0.35, sh * 0.42, sw * 0.3, 1.5,
+                   fill_rgb=(200, 200, 210))
+
+        if contact_lines:
+            contact_text = "\n".join(contact_lines)
+            _add_textbox(slide, sw * 0.2, sh * 0.5, sw * 0.6, len(contact_lines) * 26,
+                         contact_text,
+                         font_name="Segoe UI", font_size=13,
+                         font_color=(120, 120, 140),
+                         alignment=PP_ALIGN_CENTER)
+
+    else:  # corporate
+        _set_gradient_bg(slide, (0, 60, 120), (0, 90, 160), MSO_GRADIENT_VERTICAL)
+
+        # Top accent shape
+        _add_shape(slide, MSO_SHAPE_RECTANGLE, 0, 0, sw, 6,
+                   fill_rgb=(0, 200, 255))
+
+        _add_textbox(slide, 40, sh * 0.18, sw - 80, 80, message,
+                     font_name="Segoe UI", font_size=44,
+                     font_color=(255, 255, 255), bold=True,
+                     alignment=PP_ALIGN_CENTER)
+
+        _add_shape(slide, MSO_SHAPE_RECTANGLE, sw * 0.3, sh * 0.4, sw * 0.4, 3,
+                   fill_rgb=(0, 200, 255))
+
+        if contact_lines:
+            contact_text = "\n".join(contact_lines)
+            _add_textbox(slide, sw * 0.15, sh * 0.48, sw * 0.7, len(contact_lines) * 28,
+                         contact_text,
+                         font_name="Segoe UI", font_size=14,
+                         font_color=(200, 230, 255),
+                         alignment=PP_ALIGN_CENTER)
+
+        # Bottom bar
+        _add_shape(slide, MSO_SHAPE_RECTANGLE, 0, sh - 30, sw, 30,
+                   fill_rgb=(0, 40, 80))
+
+    return {"slide_number": slide_number, "style": style}
+
+
+# ============================================================
+# 26. create_problem_solution_slide
+# ============================================================
+
+def create_problem_solution_slide(
+    slide_number: int,
+    problem_title: str,
+    problem_items: list[str],
+    solution_title: str,
+    solution_items: list[str],
+    style: str = "contrast",
+) -> dict:
+    """Create a Problem -> Solution slide.
+
+    Args:
+        slide_number: Target slide number.
+        problem_title: Title for the problem section.
+        problem_items: List of problem bullet strings.
+        solution_title: Title for the solution section.
+        solution_items: List of solution bullet strings.
+        style: "contrast" (red/green), "split" (left/right), "flow" (top->bottom).
+
+    Returns:
+        Dict with slide_number and style.
+    """
+    prs, slide = _get_slide(slide_number)
+    sw, sh = prs.PageSetup.SlideWidth, prs.PageSetup.SlideHeight
+
+    if style == "contrast":
+        _set_solid_bg(slide, (248, 248, 252))
+
+        half_w = (sw - 90) / 2
+
+        # Problem section - Red
+        _add_shape(slide, MSO_SHAPE_ROUNDED_RECTANGLE, 30, 25, half_w, sh - 50,
+                   fill_rgb=(255, 240, 240))
+        _add_shape(slide, MSO_SHAPE_RECTANGLE, 30, 25, half_w, 50,
+                   fill_rgb=(200, 50, 50))
+        _add_textbox(slide, 30, 28, half_w, 44, problem_title,
+                     font_name="Segoe UI", font_size=20,
+                     font_color=(255, 255, 255), bold=True,
+                     alignment=PP_ALIGN_CENTER)
+
+        prob_text = "\n".join(f"  {item}" for item in problem_items)
+        _add_textbox(slide, 45, 88, half_w - 30, sh - 140, prob_text,
+                     font_name="Segoe UI", font_size=13, font_color=(120, 40, 40),
+                     alignment=PP_ALIGN_LEFT)
+
+        # Arrow in center
+        _add_shape(slide, MSO_SHAPE_RIGHT_ARROW, sw / 2 - 20, sh / 2 - 18, 40, 36,
+                   fill_rgb=(80, 80, 180))
+
+        # Solution section - Green
+        right_x = sw / 2 + 15
+        _add_shape(slide, MSO_SHAPE_ROUNDED_RECTANGLE, right_x, 25, half_w, sh - 50,
+                   fill_rgb=(235, 255, 240))
+        _add_shape(slide, MSO_SHAPE_RECTANGLE, right_x, 25, half_w, 50,
+                   fill_rgb=(40, 160, 70))
+        _add_textbox(slide, right_x, 28, half_w, 44, solution_title,
+                     font_name="Segoe UI", font_size=20,
+                     font_color=(255, 255, 255), bold=True,
+                     alignment=PP_ALIGN_CENTER)
+
+        sol_text = "\n".join(f"  {item}" for item in solution_items)
+        _add_textbox(slide, right_x + 15, 88, half_w - 30, sh - 140, sol_text,
+                     font_name="Segoe UI", font_size=13, font_color=(30, 100, 50),
+                     alignment=PP_ALIGN_LEFT)
+
+    elif style == "split":
+        # Left half dark, right half light
+        _set_solid_bg(slide, (255, 255, 255))
+        _add_shape(slide, MSO_SHAPE_RECTANGLE, 0, 0, sw / 2, sh,
+                   fill_rgb=(45, 45, 65))
+
+        # Problem on dark side
+        _add_textbox(slide, 30, 30, sw / 2 - 60, 40, problem_title,
+                     font_name="Segoe UI", font_size=22,
+                     font_color=(255, 120, 120), bold=True,
+                     alignment=PP_ALIGN_LEFT)
+
+        prob_text = "\n".join(f"  {item}" for item in problem_items)
+        _add_textbox(slide, 30, 80, sw / 2 - 60, sh - 130, prob_text,
+                     font_name="Segoe UI", font_size=13, font_color=(210, 210, 220),
+                     alignment=PP_ALIGN_LEFT)
+
+        # Solution on light side
+        _add_textbox(slide, sw / 2 + 30, 30, sw / 2 - 60, 40, solution_title,
+                     font_name="Segoe UI", font_size=22,
+                     font_color=(40, 140, 70), bold=True,
+                     alignment=PP_ALIGN_LEFT)
+
+        sol_text = "\n".join(f"  {item}" for item in solution_items)
+        _add_textbox(slide, sw / 2 + 30, 80, sw / 2 - 60, sh - 130, sol_text,
+                     font_name="Segoe UI", font_size=13, font_color=(60, 60, 70),
+                     alignment=PP_ALIGN_LEFT)
+
+    else:  # flow
+        _set_solid_bg(slide, (242, 244, 250))
+
+        panel_h = (sh - 90) / 2 - 25
+
+        # Problem - top
+        _add_shape(slide, MSO_SHAPE_ROUNDED_RECTANGLE, 40, 20, sw - 80, panel_h,
+                   fill_rgb=(255, 235, 235))
+        _add_textbox(slide, 55, 28, 200, 32, problem_title,
+                     font_name="Segoe UI", font_size=18,
+                     font_color=(180, 40, 40), bold=True,
+                     alignment=PP_ALIGN_LEFT)
+        prob_text = "   ".join(problem_items)
+        _add_textbox(slide, 55, 64, sw - 120, panel_h - 55, prob_text,
+                     font_name="Segoe UI", font_size=12, font_color=(100, 50, 50),
+                     alignment=PP_ALIGN_LEFT)
+
+        # Down arrow
+        arrow_y = 20 + panel_h + 5
+        _add_shape(slide, MSO_SHAPE_ISOSCELES_TRIANGLE, sw / 2 - 20, arrow_y, 40, 30,
+                   fill_rgb=(60, 60, 160))
+
+        # Solution - bottom
+        sol_y = arrow_y + 38
+        _add_shape(slide, MSO_SHAPE_ROUNDED_RECTANGLE, 40, sol_y, sw - 80, panel_h,
+                   fill_rgb=(230, 250, 235))
+        _add_textbox(slide, 55, sol_y + 8, 200, 32, solution_title,
+                     font_name="Segoe UI", font_size=18,
+                     font_color=(30, 130, 60), bold=True,
+                     alignment=PP_ALIGN_LEFT)
+        sol_text = "   ".join(solution_items)
+        _add_textbox(slide, 55, sol_y + 44, sw - 120, panel_h - 55, sol_text,
+                     font_name="Segoe UI", font_size=12, font_color=(40, 90, 50),
+                     alignment=PP_ALIGN_LEFT)
+
+    return {"slide_number": slide_number, "style": style}

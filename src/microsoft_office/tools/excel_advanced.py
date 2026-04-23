@@ -491,3 +491,112 @@ def excel_create_attendance_tracker(
         )
     except Exception as e:
         return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_create_kpi_dashboard(
+    title: str,
+    kpis: str,
+    chart_config: str | None = None,
+    style: str = "executive",
+    sheet: str | None = None,
+) -> str:
+    """KPIダッシュボードを作成します。ヘッダー・KPIカード・ステータス表示付き。kpisはJSON文字列: [{"name":"Revenue","value":"1.2M","target":"1.5M","unit":"$","status":"green"}]。status: green/yellow/red。style: executive, modern, compact。"""
+    try:
+        kpis_data = json.loads(kpis)
+        chart_data = json.loads(chart_config) if chart_config else None
+        result = excel_advanced.create_kpi_dashboard(sheet, title, kpis_data,
+                                                       chart_config=chart_data, style=style)
+        return (
+            f"[{result['sheet']}] KPIダッシュボードを作成しました（タイトル: {result['title']}、"
+            f"KPI数: {result['kpi_count']}、スタイル: {result['style']}）"
+        )
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_create_vendor_comparison(
+    title: str,
+    vendors: list[str],
+    criteria: list[str],
+    scores: str,
+    style: str = "weighted",
+    sheet: str | None = None,
+) -> str:
+    """ベンダー比較マトリクスを作成します。scoresはJSON文字列: [[基準1のスコア1, スコア2, ...], ...]。style: weighted（重み付き）, simple（単純合計）, visual（条件付き書式付き）。"""
+    try:
+        scores_data = json.loads(scores) if isinstance(scores, str) else scores
+        result = excel_advanced.create_vendor_comparison(sheet, title, vendors, criteria,
+                                                           scores_data, style=style)
+        return (
+            f"[{result['sheet']}] ベンダー比較マトリクスを作成しました（タイトル: {result['title']}、"
+            f"ベンダー数: {result['vendor_count']}、基準数: {result['criteria_count']}、"
+            f"スタイル: {result['style']}）"
+        )
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_create_cash_flow_statement(
+    title: str,
+    operating: str,
+    investing: str,
+    financing: str,
+    periods: list[str],
+    sheet: str | None = None,
+) -> str:
+    """キャッシュフロー計算書を作成します。operating/investing/financingはJSON文字列: [{"item":"項目名","values":[値1,値2,...]}]。periods: 期間ラベルのリスト。"""
+    try:
+        op_data = json.loads(operating) if isinstance(operating, str) else operating
+        inv_data = json.loads(investing) if isinstance(investing, str) else investing
+        fin_data = json.loads(financing) if isinstance(financing, str) else financing
+        result = excel_advanced.create_cash_flow_statement(sheet, title, op_data, inv_data,
+                                                             fin_data, periods)
+        return (
+            f"[{result['sheet']}] キャッシュフロー計算書を作成しました（タイトル: {result['title']}、"
+            f"期間数: {result['period_count']}）"
+        )
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_create_workout_tracker(
+    title: str,
+    exercises: str,
+    style: str = "weekly",
+    sheet: str | None = None,
+) -> str:
+    """ワークアウトトラッカーを作成します。exercisesはJSON文字列: [{"name":"Bench Press","sets":3,"reps":10,"weight":"60kg"}]。style: weekly（週間）, daily（1日詳細）, simple（シンプル）。"""
+    try:
+        exercises_data = json.loads(exercises)
+        result = excel_advanced.create_workout_tracker(sheet, title, exercises_data, style=style)
+        return (
+            f"[{result['sheet']}] ワークアウトトラッカーを作成しました（タイトル: {result['title']}、"
+            f"エクササイズ数: {result['exercise_count']}、スタイル: {result['style']}）"
+        )
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_create_meal_planner(
+    title: str,
+    days: int = 7,
+    meals_per_day: int = 3,
+    style: str = "weekly",
+    sheet: str | None = None,
+) -> str:
+    """食事プランナーを作成します。日数と1日の食事回数を指定可能。style: weekly（週間グリッド）, detailed（カロリー欄付き）, simple（シンプル）。"""
+    try:
+        result = excel_advanced.create_meal_planner(sheet, title, days=days,
+                                                       meals_per_day=meals_per_day, style=style)
+        return (
+            f"[{result['sheet']}] 食事プランナーを作成しました（タイトル: {result['title']}、"
+            f"日数: {result['days']}、食事数/日: {result['meals_per_day']}、"
+            f"スタイル: {result['style']}）"
+        )
+    except Exception as e:
+        return f"エラー: {e}"

@@ -3766,3 +3766,399 @@ def get_presentation_summary() -> dict:
         "total_text_chars": total_chars,
         "fonts_used": sorted(fonts_used),
     }
+
+
+# ============================================================
+# Remaining Pro Features
+# ============================================================
+
+def set_shape_gradient(
+    slide_number: int,
+    shape_index: int,
+    color1: tuple[int, int, int],
+    color2: tuple[int, int, int],
+    angle: float = 0,
+    gradient_type: str = "linear",
+) -> dict:
+    """Apply gradient fill to an existing shape.
+
+    Args:
+        slide_number: 1-based slide index.
+        shape_index: 1-based shape index on the slide.
+        color1: Start color as (R, G, B).
+        color2: End color as (R, G, B).
+        angle: Gradient angle in degrees (for linear).
+        gradient_type: "linear", "radial", "rectangular", or "path".
+
+    Returns:
+        Dict with slide_number and shape_name.
+    """
+    app = _get_app()
+    prs = app.ActivePresentation
+    slide = prs.Slides(slide_number)
+    shape = slide.Shapes(shape_index)
+
+    gradient_map = {
+        "linear": MSO_GRADIENT_HORIZONTAL,
+        "radial": MSO_GRADIENT_FROM_CENTER,
+        "rectangular": MSO_GRADIENT_FROM_CORNER,
+        "path": MSO_GRADIENT_FROM_CENTER,
+    }
+    direction = gradient_map.get(gradient_type, MSO_GRADIENT_HORIZONTAL)
+
+    fill = shape.Fill
+    fill.TwoColorGradient(direction, 1)
+    fill.ForeColor.RGB = rgb(*color1)
+    fill.BackColor.RGB = rgb(*color2)
+
+    # For linear gradient, set angle via GradientAngle if supported
+    if gradient_type == "linear" and angle != 0:
+        try:
+            fill.GradientAngle = angle
+        except Exception:
+            pass
+
+    return {"slide_number": slide_number, "shape_name": shape.Name}
+
+
+def add_qr_code_shape(
+    slide_number: int,
+    text: str,
+    left: float,
+    top: float,
+    size: float = 100,
+    color: tuple[int, int, int] | None = None,
+) -> dict:
+    """Create a QR code-like pattern from text using small shapes (grid pattern).
+
+    Uses a simple hash-based pattern to generate a visual grid.
+
+    Args:
+        slide_number: 1-based slide index.
+        text: Text to encode into the pattern.
+        left: Left position in points.
+        top: Top position in points.
+        size: Overall size in points.
+        color: Fill color as (R, G, B). Defaults to black.
+
+    Returns:
+        Dict with slide_number and shapes_added count.
+    """
+    app = _get_app()
+    prs = app.ActivePresentation
+    slide = prs.Slides(slide_number)
+    fill_color = color or (0, 0, 0)
+    grid_size = 10
+    cell_size = size / grid_size
+
+    # Generate a deterministic pattern from text hash
+    import hashlib
+    hash_bytes = hashlib.md5(text.encode("utf-8")).digest()
+    shapes_added = 0
+
+    for row in range(grid_size):
+        for col in range(grid_size):
+            # Use hash bytes to decide if cell is filled
+            idx = (row * grid_size + col) % len(hash_bytes)
+            if hash_bytes[idx] & (1 << ((row * grid_size + col) % 8)):
+                cell_left = left + col * cell_size
+                cell_top = top + row * cell_size
+                shape = slide.Shapes.AddShape(
+                    MSO_SHAPE_RECTANGLE,
+                    cell_left, cell_top, cell_size, cell_size,
+                )
+                shape.Fill.Solid()
+                shape.Fill.ForeColor.RGB = rgb(*fill_color)
+                shape.Line.Visible = False
+                shapes_added += 1
+
+    # Always add corner markers (3 corners)
+    marker_size = cell_size * 3
+    for (mx, my) in [(left, top), (left + size - marker_size, top), (left, top + size - marker_size)]:
+        border = slide.Shapes.AddShape(MSO_SHAPE_RECTANGLE, mx, my, marker_size, marker_size)
+        border.Fill.Solid()
+        border.Fill.ForeColor.RGB = rgb(*fill_color)
+        border.Line.Visible = False
+        shapes_added += 1
+        inner = slide.Shapes.AddShape(
+            MSO_SHAPE_RECTANGLE,
+            mx + cell_size * 0.5, my + cell_size * 0.5,
+            marker_size - cell_size, marker_size - cell_size,
+        )
+        inner.Fill.Solid()
+        inner.Fill.ForeColor.RGB = rgb(255, 255, 255)
+        inner.Line.Visible = False
+        shapes_added += 1
+        center = slide.Shapes.AddShape(
+            MSO_SHAPE_RECTANGLE,
+            mx + cell_size, my + cell_size,
+            cell_size, cell_size,
+        )
+        center.Fill.Solid()
+        center.Fill.ForeColor.RGB = rgb(*fill_color)
+        center.Line.Visible = False
+        shapes_added += 1
+
+    return {"slide_number": slide_number, "shapes_added": shapes_added}
+
+
+def set_slide_notes_format(
+    slide_number: int,
+    font_name: str | None = None,
+    font_size: float | None = None,
+) -> dict:
+    """Format speaker notes font.
+
+    Args:
+        slide_number: 1-based slide index.
+        font_name: Font family name.
+        font_size: Font size in points.
+
+    Returns:
+        Dict with slide_number.
+    """
+    app = _get_app()
+    prs = app.ActivePresentation
+    slide = prs.Slides(slide_number)
+    notes_text_range = slide.NotesPage.Shapes(2).TextFrame.TextRange
+    if font_name:
+        notes_text_range.Font.Name = font_name
+    if font_size is not None:
+        notes_text_range.Font.Size = font_size
+    return {"slide_number": slide_number}
+
+
+def replace_text(
+    slide_number: int,
+    old_text: str,
+    new_text: str,
+    match_case: bool = False,
+) -> dict:
+    """Find and replace text across all shapes in a slide.
+
+    Args:
+        slide_number: 1-based slide index.
+        old_text: Text to find.
+        new_text: Replacement text.
+        match_case: Whether to match case.
+
+    Returns:
+        Dict with slide_number and replacements count.
+    """
+    app = _get_app()
+    prs = app.ActivePresentation
+    slide = prs.Slides(slide_number)
+    count = 0
+    for i in range(1, slide.Shapes.Count + 1):
+        shape = slide.Shapes(i)
+        if not shape.HasTextFrame:
+            continue
+        tf = shape.TextFrame.TextRange
+        text = tf.Text
+        if not match_case:
+            if old_text.lower() not in text.lower():
+                continue
+            # Case-insensitive replace
+            import re
+            new_val = re.sub(re.escape(old_text), new_text, text, flags=re.IGNORECASE)
+            occurrences = len(re.findall(re.escape(old_text), text, flags=re.IGNORECASE))
+        else:
+            if old_text not in text:
+                continue
+            new_val = text.replace(old_text, new_text)
+            occurrences = text.count(old_text)
+        tf.Text = new_val
+        count += occurrences
+    return {"slide_number": slide_number, "replacements": count}
+
+
+def replace_text_all_slides(
+    old_text: str,
+    new_text: str,
+    match_case: bool = False,
+) -> dict:
+    """Find and replace text across ALL slides.
+
+    Args:
+        old_text: Text to find.
+        new_text: Replacement text.
+        match_case: Whether to match case.
+
+    Returns:
+        Dict with total_replacements and slides_modified count.
+    """
+    app = _get_app()
+    prs = app.ActivePresentation
+    total = 0
+    slides_modified = 0
+    for s in range(1, prs.Slides.Count + 1):
+        result = replace_text(s, old_text, new_text, match_case)
+        if result["replacements"] > 0:
+            total += result["replacements"]
+            slides_modified += 1
+    return {"total_replacements": total, "slides_modified": slides_modified}
+
+
+def get_all_text(slide_number: int | None = None) -> dict:
+    """Extract all text from one slide or all slides.
+
+    Args:
+        slide_number: 1-based slide index. None for all slides.
+
+    Returns:
+        Dict with list of {slide, shape, text} items.
+    """
+    app = _get_app()
+    prs = app.ActivePresentation
+    results = []
+    if slide_number:
+        slides = [prs.Slides(slide_number)]
+    else:
+        slides = [prs.Slides(i) for i in range(1, prs.Slides.Count + 1)]
+    for slide in slides:
+        s_num = slide.SlideNumber
+        for i in range(1, slide.Shapes.Count + 1):
+            shape = slide.Shapes(i)
+            if shape.HasTextFrame:
+                text = shape.TextFrame.TextRange.Text
+                if text.strip():
+                    results.append({
+                        "slide": s_num,
+                        "shape": shape.Name,
+                        "text": text,
+                    })
+    return {"texts": results, "count": len(results)}
+
+
+def set_shape_hyperlink(
+    slide_number: int,
+    shape_index: int,
+    url: str | None = None,
+    slide_target: int | None = None,
+    tooltip: str | None = None,
+) -> dict:
+    """Add hyperlink to shape.
+
+    Args:
+        slide_number: 1-based slide index.
+        shape_index: 1-based shape index.
+        url: Web URL for external link.
+        slide_target: Slide number for internal link.
+        tooltip: Tooltip text on hover.
+
+    Returns:
+        Dict with slide_number and shape_name.
+    """
+    app = _get_app()
+    prs = app.ActivePresentation
+    slide = prs.Slides(slide_number)
+    shape = slide.Shapes(shape_index)
+
+    if url:
+        hl = shape.ActionSettings(1).Hyperlink  # ppMouseClick = 1
+        hl.Address = url
+        if tooltip:
+            hl.ScreenTip = tooltip
+    elif slide_target:
+        action = shape.ActionSettings(1)
+        action.Action = 101  # ppActionHyperlink
+        action.Hyperlink.SubAddress = str(prs.Slides(slide_target).SlideID) + "," + str(slide_target) + ","
+        if tooltip:
+            action.Hyperlink.ScreenTip = tooltip
+
+    return {"slide_number": slide_number, "shape_name": shape.Name}
+
+
+def add_header_footer(
+    show_date: bool = True,
+    show_slide_number: bool = True,
+    show_footer: bool = True,
+    footer_text: str = "",
+    date_format: str = "auto",
+) -> dict:
+    """Configure header/footer settings for the presentation.
+
+    Args:
+        show_date: Whether to show date.
+        show_slide_number: Whether to show slide numbers.
+        show_footer: Whether to show footer text.
+        footer_text: Footer text content.
+        date_format: "auto" for automatic date, "fixed" for fixed text.
+
+    Returns:
+        Dict with settings applied.
+    """
+    app = _get_app()
+    prs = app.ActivePresentation
+    hf = prs.Slides.Range().HeadersFooters
+
+    hf.DateAndTime.Visible = show_date
+    if show_date:
+        if date_format == "auto":
+            hf.DateAndTime.UseFormat = True
+        else:
+            hf.DateAndTime.UseFormat = False
+
+    hf.SlideNumber.Visible = show_slide_number
+    hf.Footer.Visible = show_footer
+    if show_footer and footer_text:
+        hf.Footer.Text = footer_text
+
+    return {
+        "show_date": show_date,
+        "show_slide_number": show_slide_number,
+        "show_footer": show_footer,
+        "footer_text": footer_text,
+    }
+
+
+def duplicate_presentation(file_path: str) -> dict:
+    """Save a copy of the current presentation to a new path.
+
+    Args:
+        file_path: Destination file path.
+
+    Returns:
+        Dict with file_path.
+    """
+    app = _get_app()
+    prs = app.ActivePresentation
+    abs_path = ensure_absolute_path(file_path)
+    prs.SaveCopyAs(abs_path)
+    return {"file_path": abs_path}
+
+
+def insert_slides_from(
+    file_path: str,
+    slide_numbers: list[int] | None = None,
+    insert_at: int | None = None,
+) -> dict:
+    """Insert slides from another presentation.
+
+    Args:
+        file_path: Path to the source presentation.
+        slide_numbers: List of 1-based slide numbers to insert. None for all.
+        insert_at: Position to insert at (1-based). None for end.
+
+    Returns:
+        Dict with slides_inserted count and insert_position.
+    """
+    app = _get_app()
+    prs = app.ActivePresentation
+    abs_path = ensure_absolute_path(file_path)
+    pos = insert_at if insert_at else prs.Slides.Count
+
+    if slide_numbers:
+        inserted = 0
+        for idx, sn in enumerate(slide_numbers):
+            prs.Slides.InsertFromFile(abs_path, pos + idx, sn, sn)
+            inserted += 1
+    else:
+        # Open source to count slides
+        source = app.Presentations.Open(abs_path, WithWindow=False)
+        total = source.Slides.Count
+        source.Close()
+        prs.Slides.InsertFromFile(abs_path, pos, 1, total)
+        inserted = total
+
+    return {"slides_inserted": inserted, "insert_position": pos}

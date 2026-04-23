@@ -102,9 +102,9 @@ Claude Code で普通に会話するだけです：
 「PDFで出力して」
 ```
 
-## ツール一覧（424ツール）
+## ツール一覧（469ツール）
 
-### PowerPoint 基本（105ツール）
+### PowerPoint 基本（115ツール）
 
 | カテゴリ | ツール |
 |----------|--------|
@@ -136,8 +136,13 @@ Claude Code で普通に会話するだけです：
 | グラフ書式 | `format_chart_title` `format_chart_axis` `format_chart_legend` `set_chart_style` `format_chart_data_labels` `add_chart_data_table` |
 | ダイアグラム | `create_org_chart` `create_pyramid_diagram` `create_circular_diagram` `create_matrix_diagram` |
 | プレゼン全体 | `set_all_slides_background` `apply_font_to_all` `get_presentation_summary` |
+| グラデーション | `set_shape_gradient` |
+| テキスト操作 | `replace_text` `replace_text_all_slides` `get_all_text` |
+| リンク・メディア | `set_shape_hyperlink` `add_qr_code_shape` |
+| ヘッダー・フッター | `add_header_footer` `set_slide_notes_format` |
+| ファイル操作 | `duplicate_presentation` `insert_slides_from` |
 
-### PowerPoint デザインプリセット（29ツール）
+### PowerPoint デザインプリセット（34ツール）
 
 | カテゴリ | ツール |
 |----------|--------|
@@ -151,8 +156,10 @@ Claude Code で普通に会話するだけです：
 | レイアウト | `create_two_column_slide` `create_image_text_slide` `create_three_column_slide` `create_icon_list_slide` |
 | インフォグラフィック | `create_timeline_slide` `create_funnel_diagram` |
 | ビジネステンプレート | `create_swot_slide` `create_roadmap_slide` `create_pricing_table` `create_testimonial_slide` |
+| 比較・分析 | `create_before_after_slide` `create_problem_solution_slide` |
+| ショーケース | `create_feature_showcase` `create_data_table_slide` `create_thank_you_slide` |
 
-### Word 基本（109ツール）
+### Word 基本（119ツール）
 
 | カテゴリ | ツール |
 |----------|--------|
@@ -184,8 +191,14 @@ Claude Code で普通に会話するだけです：
 | ナビゲーション | `go_to_page` `get_page_count` `insert_text_at_bookmark` `get_paragraph_text` `get_paragraph_range` |
 | 検索詳細 | `find_text` `find_all` `highlight_found_text` |
 | 差し込み印刷 | `start_mail_merge` `insert_merge_field` `execute_mail_merge` |
+| 文書情報 | `get_word_count` `insert_date` `set_line_numbers` |
+| 文書操作 | `compare_documents` `duplicate_document` `clear_all_formatting_word` |
+| インデント | `set_paragraph_indentation` |
+| 特殊文字 | `insert_special_character` |
+| デフォルト設定 | `set_default_font` |
+| 法務 | `add_table_of_authorities` |
 
-### Word テンプレート（23ツール）
+### Word テンプレート（28ツール）
 
 | カテゴリ | ツール |
 |----------|--------|
@@ -198,8 +211,11 @@ Claude Code で普通に会話するだけです：
 | ビジネス文書 | `create_proposal` `create_sop` `create_project_charter` `create_meeting_agenda` |
 | HR・管理 | `create_employee_handbook_section` `create_faq_document` `create_checklist_document` |
 | 署名 | `add_signature_block` |
+| レポート | `create_executive_summary` `create_status_report` |
+| 申請・報告 | `create_change_request` `create_incident_report` |
+| 教育 | `create_training_manual` |
 
-### Excel 基本（130ツール）
+### Excel 基本（140ツール）
 
 | カテゴリ | ツール |
 |----------|--------|
@@ -238,8 +254,12 @@ Claude Code で普通に会話するだけです：
 | 表示設定 | `set_gridlines_visible` `set_headings_visible` `set_zoom_level` `set_sheet_direction` |
 | バリデーション拡張 | `add_number_validation` `add_date_validation` `add_text_length_validation` |
 | 監査 | `trace_precedents` `trace_dependents` `check_errors` `get_cell_formula` |
+| 小計・集計 | `insert_subtotals` `create_dropdown_list` `set_conditional_icon` |
+| チャート装飾 | `add_error_bars` `set_chart_gradient` |
+| スタイル | `create_named_style` `apply_alternating_colors` |
+| データ取得 | `get_distinct_values` `vlookup` `create_summary_sheet` |
 
-### Excel テンプレート（28ツール）
+### Excel テンプレート（33ツール）
 
 | カテゴリ | ツール |
 |----------|--------|
@@ -251,6 +271,9 @@ Claude Code で普通に会話するだけです：
 | 数値書式 | `format_as_currency` `format_as_percentage` |
 | ビジネステンプレート | `create_budget_template` `create_project_tracker` `create_expense_report` `create_sales_report` |
 | 管理テンプレート | `create_inventory_tracker` `create_employee_roster` `create_risk_matrix` `create_attendance_tracker` |
+| ダッシュボード高度 | `create_kpi_dashboard` `create_vendor_comparison` |
+| 財務 | `create_cash_flow_statement` |
+| ライフスタイル | `create_workout_tracker` `create_meal_planner` |
 
 ## 技術構成
 
@@ -274,8 +297,8 @@ src/microsoft_office/
     └── excel_advanced.py    # 332行 - 20ツール
 ```
 
-- **総コード行数**: 28,112行+
-- **総ツール数**: 424ツール
+- **総コード行数**: 32,170行+
+- **総ツール数**: 469ツール
 - **MCP SDK**: `mcp[cli]` (FastMCP)
 - **Office 制御**: `pywin32` (win32com.client) による COM オートメーション
 - **パッケージ管理**: `uv`

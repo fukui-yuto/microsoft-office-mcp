@@ -528,3 +528,100 @@ def powerpoint_apply_consistent_branding(
         return f"{result['slides_affected']} 枚のスライドにブランディングを適用しました"
     except Exception as e:
         return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_create_before_after_slide(
+    slide_number: int,
+    title: str,
+    before_items: list[str],
+    after_items: list[str],
+    style: str = "split",
+) -> str:
+    """Before/After比較スライドを作成します。style: split（左右分割）, overlay（重なるカード）, arrow（矢印で接続）"""
+    try:
+        result = ppt_adv.create_before_after_slide(
+            slide_number, title, before_items, after_items, style=style,
+        )
+        return f"スライド {result['slide_number']} にBefore/After比較（{result['style']}）を作成しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_create_feature_showcase(
+    slide_number: int,
+    title: str,
+    features: str,
+    style: str = "grid",
+) -> str:
+    """機能紹介スライドを作成します。features: JSON文字列 [{"title": "...", "description": "...", "icon_text": "..."}]。style: grid（2x3グリッド）, list（縦リスト）, cards（横並びカード）"""
+    try:
+        features_list = json.loads(features) if isinstance(features, str) else features
+        result = ppt_adv.create_feature_showcase(
+            slide_number, title, features_list, style=style,
+        )
+        return f"スライド {result['slide_number']} に機能紹介（{result['style']}、{result['feature_count']}件）を作成しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_create_data_table_slide(
+    slide_number: int,
+    title: str,
+    headers: list[str],
+    rows: str,
+    style: str = "professional",
+) -> str:
+    """データテーブル付きスライドを作成します。rows: JSON文字列 [[値1, 値2, ...], ...]。style: professional（ダークヘッダー、ストライプ行）, minimal（細いボーダー）, colorful（カラフルセル）"""
+    try:
+        rows_list = json.loads(rows) if isinstance(rows, str) else rows
+        result = ppt_adv.create_data_table_slide(
+            slide_number, title, headers, rows_list, style=style,
+        )
+        return f"スライド {result['slide_number']} にデータテーブル（{result['style']}、{result['row_count']}行×{result['col_count']}列）を作成しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_create_thank_you_slide(
+    slide_number: int,
+    message: str = "Thank You",
+    contact_email: str | None = None,
+    contact_phone: str | None = None,
+    website: str | None = None,
+    social_media: str | None = None,
+    style: str = "elegant",
+) -> str:
+    """Thank You / お問い合わせスライドを作成します。style: elegant（ダーク背景、ゴールドアクセント）, minimal（白背景）, corporate（ブランドカラー）"""
+    try:
+        result = ppt_adv.create_thank_you_slide(
+            slide_number, message=message, contact_email=contact_email,
+            contact_phone=contact_phone, website=website,
+            social_media=social_media, style=style,
+        )
+        return f"スライド {result['slide_number']} にThank Youスライド（{result['style']}）を作成しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_create_problem_solution_slide(
+    slide_number: int,
+    problem_title: str,
+    problem_items: list[str],
+    solution_title: str,
+    solution_items: list[str],
+    style: str = "contrast",
+) -> str:
+    """課題→解決スライドを作成します。style: contrast（赤/緑の対比）, split（左右分割）, flow（上→下フロー）"""
+    try:
+        result = ppt_adv.create_problem_solution_slide(
+            slide_number, problem_title, problem_items,
+            solution_title, solution_items, style=style,
+        )
+        return f"スライド {result['slide_number']} に課題→解決スライド（{result['style']}）を作成しました"
+    except Exception as e:
+        return f"エラー: {e}"

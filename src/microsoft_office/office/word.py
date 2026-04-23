@@ -2310,3 +2310,267 @@ def execute_mail_merge(output_path: str | None = None) -> dict:
         "output_name": result_doc.Name,
         "output_path": output_path,
     }
+
+
+# ---------------------------------------------------------------------------
+# 18. Remaining Pro Features
+# ---------------------------------------------------------------------------
+
+def get_word_count() -> dict:
+    """Quick word count of the active document.
+
+    Returns:
+        dict with word_count, character_count, paragraph_count, page_count.
+    """
+    app = _get_app()
+    doc = app.ActiveDocument
+    stats = doc.ComputeStatistics
+    # wdStatisticWords=0, wdStatisticCharacters=3, wdStatisticParagraphs=4, wdStatisticPages=2
+    return {
+        "word_count": stats(0),
+        "character_count": stats(3),
+        "paragraph_count": stats(4),
+        "page_count": stats(2),
+    }
+
+
+def insert_date(
+    paragraph_index: int | None = None,
+    format_str: str | None = None,
+) -> dict:
+    """Insert the current date at a paragraph or at the end.
+
+    Args:
+        paragraph_index: 1-based paragraph index to insert before. None for end.
+        format_str: Date format string (e.g. "yyyy/MM/dd"). Defaults to locale default.
+
+    Returns:
+        dict with inserted date text.
+    """
+    import datetime
+    app = _get_app()
+    doc = app.ActiveDocument
+    fmt = format_str or "%Y/%m/%d"
+    date_text = datetime.datetime.now().strftime(fmt)
+    if paragraph_index:
+        rng = doc.Paragraphs(paragraph_index).Range
+        rng.InsertBefore(date_text)
+    else:
+        rng = doc.Content
+        rng.Collapse(WD_COLLAPSE_END)
+        rng.InsertAfter(date_text)
+    return {"date_text": date_text}
+
+
+def set_line_numbers(
+    start_value: int = 1,
+    count_by: int = 1,
+    restart_each_page: bool = True,
+) -> dict:
+    """Enable line numbering on the active document.
+
+    Args:
+        start_value: Starting line number.
+        count_by: Increment (e.g. 1=every line, 5=every 5th line).
+        restart_each_page: Whether to restart numbering on each page.
+
+    Returns:
+        dict with settings applied.
+    """
+    app = _get_app()
+    doc = app.ActiveDocument
+    for i in range(1, doc.Sections.Count + 1):
+        ln = doc.Sections(i).PageSetup.LineNumbering
+        ln.Active = True
+        ln.StartingNumber = start_value
+        ln.CountBy = count_by
+        # wdRestartPage=1, wdRestartSection=2, wdRestartContinuous=0
+        ln.RestartMode = 1 if restart_each_page else 0
+    return {
+        "start_value": start_value,
+        "count_by": count_by,
+        "restart_each_page": restart_each_page,
+    }
+
+
+def compare_documents(
+    original_path: str,
+    revised_path: str,
+    output_path: str | None = None,
+) -> dict:
+    """Compare two documents and optionally save the comparison result.
+
+    Args:
+        original_path: Path to the original document.
+        revised_path: Path to the revised document.
+        output_path: Optional path to save the comparison result.
+
+    Returns:
+        dict with result document name.
+    """
+    app = _get_app()
+    orig_abs = ensure_absolute_path(original_path)
+    rev_abs = ensure_absolute_path(revised_path)
+    orig_doc = app.Documents.Open(orig_abs)
+    result_doc = app.CompareDocuments(
+        OriginalDocument=orig_doc,
+        RevisedDocument=app.Documents.Open(rev_abs),
+    )
+    result_name = result_doc.Name
+    if output_path:
+        result_doc.SaveAs2(ensure_absolute_path(output_path))
+    return {"result_name": result_name, "output_path": output_path}
+
+
+def set_paragraph_indentation(
+    paragraph_index: int,
+    left: float | None = None,
+    right: float | None = None,
+    first_line: float | None = None,
+    hanging: float | None = None,
+) -> dict:
+    """Set precise indentation for a paragraph in points.
+
+    Args:
+        paragraph_index: 1-based paragraph index.
+        left: Left indent in points.
+        right: Right indent in points.
+        first_line: First line indent in points.
+        hanging: Hanging indent in points.
+
+    Returns:
+        dict with paragraph_index.
+    """
+    app = _get_app()
+    doc = app.ActiveDocument
+    para = doc.Paragraphs(paragraph_index)
+    fmt = para.Format
+    if left is not None:
+        fmt.LeftIndent = left
+    if right is not None:
+        fmt.RightIndent = right
+    if first_line is not None:
+        fmt.FirstLineIndent = first_line
+    if hanging is not None:
+        fmt.FirstLineIndent = -abs(hanging)
+    return {"paragraph_index": paragraph_index}
+
+
+def duplicate_document(file_path: str) -> dict:
+    """Save a copy of the active document to a new path.
+
+    Args:
+        file_path: Destination file path.
+
+    Returns:
+        dict with file_path.
+    """
+    app = _get_app()
+    doc = app.ActiveDocument
+    abs_path = ensure_absolute_path(file_path)
+    doc.SaveAs2(abs_path)
+    # Reopen the original if it had a different path
+    return {"file_path": abs_path, "name": doc.Name}
+
+
+def insert_special_character(paragraph_index: int, char_type: str) -> dict:
+    """Insert a special character at the beginning of a paragraph.
+
+    Args:
+        paragraph_index: 1-based paragraph index.
+        char_type: One of "em_dash", "en_dash", "nonbreaking_space",
+                   "copyright", "registered", "trademark", "bullet",
+                   "section", "paragraph".
+
+    Returns:
+        dict with paragraph_index and char_type.
+    """
+    char_map = {
+        "em_dash": "\u2014",
+        "en_dash": "\u2013",
+        "nonbreaking_space": "\u00A0",
+        "copyright": "\u00A9",
+        "registered": "\u00AE",
+        "trademark": "\u2122",
+        "bullet": "\u2022",
+        "section": "\u00A7",
+        "paragraph": "\u00B6",
+    }
+    char = char_map.get(char_type)
+    if not char:
+        raise ValueError(f"Unknown char_type: {char_type}. Valid: {list(char_map.keys())}")
+    app = _get_app()
+    doc = app.ActiveDocument
+    rng = doc.Paragraphs(paragraph_index).Range
+    rng.Collapse(WD_COLLAPSE_START)
+    rng.InsertBefore(char)
+    return {"paragraph_index": paragraph_index, "char_type": char_type}
+
+
+def set_default_font(font_name: str, font_size: float | None = None) -> dict:
+    """Set the document default font.
+
+    Args:
+        font_name: Font family name.
+        font_size: Font size in points.
+
+    Returns:
+        dict with font_name and font_size.
+    """
+    app = _get_app()
+    doc = app.ActiveDocument
+    # Set Normal style font
+    style = doc.Styles(-1)  # wdStyleNormal
+    style.Font.Name = font_name
+    if font_size is not None:
+        style.Font.Size = font_size
+    return {"font_name": font_name, "font_size": font_size}
+
+
+def add_table_of_authorities(category: int | None = None) -> dict:
+    """Insert a Table of Authorities (legal citations index).
+
+    Args:
+        category: Category filter (1-16). None for all categories.
+
+    Returns:
+        dict with inserted status.
+    """
+    app = _get_app()
+    doc = app.ActiveDocument
+    rng = doc.Content
+    rng.Collapse(WD_COLLAPSE_END)
+    rng.InsertParagraphAfter()
+    rng.Collapse(WD_COLLAPSE_END)
+    if category:
+        doc.TablesOfAuthorities.Add(
+            Range=rng,
+            Category=category,
+        )
+    else:
+        doc.TablesOfAuthorities.Add(Range=rng)
+    return {"inserted": True, "category": category}
+
+
+def clear_all_formatting_word(paragraph_index: int | None = None) -> dict:
+    """Clear formatting from a specific paragraph or the entire document.
+
+    Args:
+        paragraph_index: 1-based paragraph index. None for entire document.
+
+    Returns:
+        dict with scope.
+    """
+    app = _get_app()
+    doc = app.ActiveDocument
+    if paragraph_index:
+        rng = doc.Paragraphs(paragraph_index).Range
+        rng.Font.Reset()
+        rng.ParagraphFormat.Reset()
+        scope = f"paragraph {paragraph_index}"
+    else:
+        rng = doc.Content
+        rng.Font.Reset()
+        rng.ParagraphFormat.Reset()
+        scope = "entire document"
+    return {"scope": scope}

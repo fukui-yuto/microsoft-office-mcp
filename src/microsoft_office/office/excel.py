@@ -4004,3 +4004,410 @@ def get_cell_formula(sheet: str | None, cell: str) -> dict:
         "has_formula": has_formula,
         "sheet": ws.Name,
     }
+
+
+# ---------------------------------------------------------------------------
+# Remaining Pro Features
+# ---------------------------------------------------------------------------
+
+def insert_subtotals(
+    sheet: str | None,
+    group_column: int,
+    sum_columns: list[int],
+    subtotal_function: str = "sum",
+) -> dict:
+    """Insert automatic subtotals grouped by a column.
+
+    Args:
+        sheet: Optional sheet name.
+        group_column: 1-based column number to group by.
+        sum_columns: List of 1-based column numbers to subtotal.
+        subtotal_function: "sum", "count", "average", "max", "min".
+
+    Returns:
+        dict with sheet name and status.
+    """
+    func_map = {
+        "sum": 9,       # xlSum
+        "count": 2,     # xlCount
+        "average": 1,   # xlAverage
+        "max": 4,       # xlMax
+        "min": 5,       # xlMin
+    }
+    func_num = func_map.get(subtotal_function, 9)
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    used = ws.UsedRange
+    # Sort by group column first
+    used.Sort(Key1=ws.Cells(1, group_column), Order1=1, Header=1)
+    # Apply subtotals
+    used.Subtotal(
+        GroupBy=group_column,
+        Function=func_num,
+        TotalList=sum_columns,
+        Replace=True,
+        PageBreaks=False,
+        SummaryBelowData=True,
+    )
+    return {"sheet": ws.Name, "subtotal_function": subtotal_function}
+
+
+def create_dropdown_list(
+    sheet: str | None,
+    cell_range: str,
+    source_range: str,
+) -> dict:
+    """Create a dropdown list from a cell range reference.
+
+    Args:
+        sheet: Optional sheet name.
+        cell_range: Target cell(s) for the dropdown (e.g. "A1:A10").
+        source_range: Source range with values (e.g. "Sheet2!A1:A5").
+
+    Returns:
+        dict with range and source info.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    rng = ws.Range(cell_range)
+    # Clear existing validation
+    try:
+        rng.Validation.Delete()
+    except Exception:
+        pass
+    # xlValidateList=3, xlValidAlertStop=1
+    rng.Validation.Add(
+        Type=3,
+        AlertStyle=1,
+        Formula1="=" + source_range,
+    )
+    return {"range": cell_range, "source": source_range, "sheet": ws.Name}
+
+
+def set_conditional_icon(
+    sheet: str | None,
+    range_str: str,
+    icon_type: str,
+    thresholds: list[float] | None = None,
+) -> dict:
+    """Apply icon set conditional formatting.
+
+    Args:
+        sheet: Optional sheet name.
+        range_str: Target range address.
+        icon_type: "arrows", "circles", "flags", "stars".
+        thresholds: Optional list of 2 threshold percentages [low, high].
+                    Defaults to [33, 67].
+
+    Returns:
+        dict with range and icon_type.
+    """
+    icon_map = {
+        "arrows": 1,      # xl3Arrows
+        "circles": 10,    # xl3TrafficLights1
+        "flags": 13,      # xl3Flags
+        "stars": 18,      # xl3Stars
+    }
+    icon_id = icon_map.get(icon_type, 1)
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    rng = ws.Range(range_str)
+    # Clear existing conditional formatting
+    rng.FormatConditions.Delete()
+    fc = rng.FormatConditions.AddIconSetCondition()
+    fc.IconSet = app.ActiveWorkbook.IconSets(icon_id)
+    return {"range": range_str, "icon_type": icon_type, "sheet": ws.Name}
+
+
+def add_error_bars(
+    sheet: str | None,
+    chart_index: int,
+    series_index: int = 1,
+    error_type: str = "percentage",
+    amount: float = 5,
+) -> dict:
+    """Add error bars to a chart series.
+
+    Args:
+        sheet: Optional sheet name.
+        chart_index: 1-based chart index.
+        series_index: 1-based series index.
+        error_type: "percentage", "fixed", "standard_deviation", "standard_error".
+        amount: Error bar amount.
+
+    Returns:
+        dict with chart and series info.
+    """
+    error_map = {
+        "percentage": -4117,    # xlPercent (actually xlErrorBarTypePercent)
+        "fixed": 1,             # xlFixedValue
+        "standard_deviation": -4155,  # xlStDev
+        "standard_error": 4,    # xlStError
+    }
+    err_type = error_map.get(error_type, -4117)
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    chart = ws.ChartObjects(chart_index).Chart
+    series = chart.SeriesCollection(series_index)
+    # xlBoth = -4142 (actually xlY for error bar direction)
+    series.ErrorBar(
+        Direction=1,  # xlY
+        Include=2,    # xlBoth
+        Type=err_type,
+        Amount=amount,
+    )
+    return {"chart_index": chart_index, "series_index": series_index, "error_type": error_type, "sheet": ws.Name}
+
+
+def set_chart_gradient(
+    sheet: str | None,
+    chart_index: int,
+    series_index: int,
+    color1: tuple[int, int, int],
+    color2: tuple[int, int, int],
+) -> dict:
+    """Apply gradient fill to a chart series.
+
+    Args:
+        sheet: Optional sheet name.
+        chart_index: 1-based chart index.
+        series_index: 1-based series index.
+        color1: Start color as (R, G, B).
+        color2: End color as (R, G, B).
+
+    Returns:
+        dict with chart and series info.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    chart = ws.ChartObjects(chart_index).Chart
+    series = chart.SeriesCollection(series_index)
+    fill = series.Format.Fill
+    fill.TwoColorGradient(1, 1)  # msoGradientHorizontal, variant 1
+    fill.ForeColor.RGB = rgb(*color1)
+    fill.BackColor.RGB = rgb(*color2)
+    return {"chart_index": chart_index, "series_index": series_index, "sheet": ws.Name}
+
+
+def create_named_style(
+    sheet: str | None,
+    style_name: str,
+    font_name: str | None = None,
+    font_size: float | None = None,
+    font_color: tuple[int, int, int] | None = None,
+    fill_color: tuple[int, int, int] | None = None,
+    bold: bool = False,
+    borders: bool = False,
+) -> dict:
+    """Create a reusable named cell style.
+
+    Args:
+        sheet: Optional sheet name (not used but for consistency).
+        style_name: Name for the new style.
+        font_name: Optional font family.
+        font_size: Optional font size.
+        font_color: Optional font color as (R, G, B).
+        fill_color: Optional fill color as (R, G, B).
+        bold: Whether to make text bold.
+        borders: Whether to add thin borders.
+
+    Returns:
+        dict with style_name.
+    """
+    app = _get_app()
+    wb = app.ActiveWorkbook
+    # Delete existing style with same name if it exists
+    try:
+        wb.Styles(style_name).Delete()
+    except Exception:
+        pass
+    style = wb.Styles.Add(style_name)
+    if font_name:
+        style.Font.Name = font_name
+    if font_size:
+        style.Font.Size = font_size
+    if font_color:
+        style.Font.Color = rgb(*font_color)
+    if bold:
+        style.Font.Bold = True
+    if fill_color:
+        style.Interior.Color = rgb(*fill_color)
+    if borders:
+        for edge in XL_BORDER_ALL_EDGES:
+            style.Borders(edge).LineStyle = XL_LINE_STYLE_CONTINUOUS
+            style.Borders(edge).Weight = XL_BORDER_WEIGHT_THIN
+    return {"style_name": style_name}
+
+
+def apply_alternating_colors(
+    sheet: str | None,
+    range_str: str,
+    color1: tuple[int, int, int],
+    color2: tuple[int, int, int],
+) -> dict:
+    """Apply alternating row colors (zebra stripes) to a range.
+
+    Args:
+        sheet: Optional sheet name.
+        range_str: Target range address.
+        color1: Color for odd rows as (R, G, B).
+        color2: Color for even rows as (R, G, B).
+
+    Returns:
+        dict with range, rows_formatted, and sheet.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    rng = ws.Range(range_str)
+    rows_formatted = 0
+    for r in range(1, rng.Rows.Count + 1):
+        row_range = rng.Rows(r)
+        if r % 2 == 1:
+            row_range.Interior.Color = rgb(*color1)
+        else:
+            row_range.Interior.Color = rgb(*color2)
+        rows_formatted += 1
+    return {"range": range_str, "rows_formatted": rows_formatted, "sheet": ws.Name}
+
+
+def get_distinct_values(sheet: str | None, range_str: str) -> dict:
+    """Get unique/distinct values from a range.
+
+    Args:
+        sheet: Optional sheet name.
+        range_str: Source range address.
+
+    Returns:
+        dict with distinct values list and count.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    rng = ws.Range(range_str)
+    seen = set()
+    values = []
+    for r in range(1, rng.Rows.Count + 1):
+        for c in range(1, rng.Columns.Count + 1):
+            val = rng.Cells(r, c).Value
+            if val is not None:
+                val_str = str(val)
+                if val_str not in seen:
+                    seen.add(val_str)
+                    values.append(val_str)
+    return {"values": values, "count": len(values), "sheet": ws.Name}
+
+
+def vlookup(
+    sheet: str | None,
+    lookup_value: str,
+    table_range: str,
+    col_index: int,
+    exact_match: bool = True,
+) -> dict:
+    """Perform a VLOOKUP operation and return the result.
+
+    Args:
+        sheet: Optional sheet name.
+        lookup_value: Value to look up.
+        table_range: Range address of the lookup table.
+        col_index: 1-based column index for the return value.
+        exact_match: Whether to require exact match.
+
+    Returns:
+        dict with lookup_value, result, and found status.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    rng = ws.Range(table_range)
+    match_type = 0 if exact_match else 1  # FALSE=exact, TRUE=approximate
+
+    try:
+        result = app.WorksheetFunction.VLookup(lookup_value, rng, col_index, match_type)
+        return {
+            "lookup_value": lookup_value,
+            "result": str(result),
+            "found": True,
+            "sheet": ws.Name,
+        }
+    except Exception:
+        # Try numeric conversion
+        try:
+            numeric_val = float(lookup_value)
+            result = app.WorksheetFunction.VLookup(numeric_val, rng, col_index, match_type)
+            return {
+                "lookup_value": lookup_value,
+                "result": str(result),
+                "found": True,
+                "sheet": ws.Name,
+            }
+        except Exception:
+            return {
+                "lookup_value": lookup_value,
+                "result": None,
+                "found": False,
+                "sheet": ws.Name,
+            }
+
+
+def create_summary_sheet(
+    source_sheets: list[str],
+    summary_sheet_name: str = "Summary",
+) -> dict:
+    """Create a summary sheet pulling key data from multiple sheets.
+
+    Copies the first row (headers) from the first source sheet and then
+    appends all data rows from each source sheet.
+
+    Args:
+        source_sheets: List of sheet names to summarize.
+        summary_sheet_name: Name for the summary sheet.
+
+    Returns:
+        dict with summary sheet name and total rows.
+    """
+    app = _get_app()
+    wb = app.ActiveWorkbook
+    # Create or clear summary sheet
+    try:
+        summary = wb.Worksheets(summary_sheet_name)
+        summary.Cells.Clear()
+    except Exception:
+        summary = wb.Worksheets.Add()
+        summary.Name = summary_sheet_name
+
+    current_row = 1
+    header_copied = False
+    for sheet_name in source_sheets:
+        try:
+            ws = wb.Worksheets(sheet_name)
+        except Exception:
+            continue
+        used = ws.UsedRange
+        if not header_copied:
+            # Copy header row
+            first_row = ws.Range(
+                ws.Cells(used.Row, used.Column),
+                ws.Cells(used.Row, used.Column + used.Columns.Count - 1),
+            )
+            first_row.Copy(summary.Cells(current_row, 1))
+            current_row += 1
+            header_copied = True
+            start_row = 2
+        else:
+            start_row = 1
+
+        # Copy data rows (skip header if already copied)
+        data_start = used.Row + (start_row - 1)
+        data_end = used.Row + used.Rows.Count - 1
+        if data_start <= data_end:
+            data_range = ws.Range(
+                ws.Cells(data_start, used.Column),
+                ws.Cells(data_end, used.Column + used.Columns.Count - 1),
+            )
+            data_range.Copy(summary.Cells(current_row, 1))
+            current_row += (data_end - data_start + 1)
+
+    return {
+        "summary_sheet": summary_sheet_name,
+        "total_rows": current_row - 1,
+        "source_sheets": source_sheets,
+    }

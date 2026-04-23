@@ -1605,3 +1605,146 @@ def word_execute_mail_merge(output_path: str | None = None) -> str:
         return msg
     except Exception as e:
         return f"エラー: {e}"
+
+
+# ---------------------------------------------------------------------------
+# 18. Remaining Pro Features
+# ---------------------------------------------------------------------------
+
+@mcp.tool()
+def word_get_word_count() -> str:
+    """文書の文字数・単語数を取得します。"""
+    try:
+        result = word.get_word_count()
+        lines = [
+            f"単語数: {result['word_count']}",
+            f"文字数: {result['character_count']}",
+            f"段落数: {result['paragraph_count']}",
+            f"ページ数: {result['page_count']}",
+        ]
+        return "\n".join(lines)
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def word_insert_date(
+    paragraph_index: int | None = None,
+    format_str: str | None = None,
+) -> str:
+    """現在の日付を挿入します。paragraph_indexで挿入位置を指定（省略時は末尾）。"""
+    try:
+        result = word.insert_date(paragraph_index=paragraph_index, format_str=format_str)
+        return f"日付 '{result['date_text']}' を挿入しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def word_set_line_numbers(
+    start_value: int = 1,
+    count_by: int = 1,
+    restart_each_page: bool = True,
+) -> str:
+    """行番号を設定します。count_byで表示間隔を指定（1=毎行、5=5行ごと）。"""
+    try:
+        result = word.set_line_numbers(
+            start_value=start_value, count_by=count_by,
+            restart_each_page=restart_each_page,
+        )
+        restart = "ページごとにリセット" if result["restart_each_page"] else "連続"
+        return f"行番号を設定しました（開始: {result['start_value']}, 間隔: {result['count_by']}, {restart}）"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def word_compare_documents(
+    original_path: str,
+    revised_path: str,
+    output_path: str | None = None,
+) -> str:
+    """2つの文書を比較します。output_pathを指定すると比較結果を保存します。"""
+    try:
+        result = word.compare_documents(original_path, revised_path, output_path=output_path)
+        msg = f"文書を比較しました（結果: {result['result_name']}）"
+        if result["output_path"]:
+            msg += f" 保存先: {result['output_path']}"
+        return msg
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def word_set_paragraph_indentation(
+    paragraph_index: int,
+    left: float | None = None,
+    right: float | None = None,
+    first_line: float | None = None,
+    hanging: float | None = None,
+) -> str:
+    """段落のインデントをポイント単位で設定します。"""
+    try:
+        result = word.set_paragraph_indentation(
+            paragraph_index, left=left, right=right,
+            first_line=first_line, hanging=hanging,
+        )
+        return f"段落 {result['paragraph_index']} のインデントを設定しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def word_duplicate_document(file_path: str) -> str:
+    """現在の文書のコピーを新しいパスに保存します。"""
+    try:
+        result = word.duplicate_document(file_path)
+        return f"文書のコピーを保存しました: {result['file_path']}"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def word_insert_special_character(paragraph_index: int, char_type: str) -> str:
+    """特殊文字を段落の先頭に挿入します。char_type: "em_dash", "en_dash", "nonbreaking_space", "copyright", "registered", "trademark", "bullet", "section", "paragraph"。"""
+    try:
+        result = word.insert_special_character(paragraph_index, char_type)
+        return f"段落 {result['paragraph_index']} に特殊文字 '{result['char_type']}' を挿入しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def word_set_default_font(font_name: str, font_size: float | None = None) -> str:
+    """文書のデフォルトフォントを設定します。"""
+    try:
+        result = word.set_default_font(font_name, font_size=font_size)
+        msg = f"デフォルトフォントを '{result['font_name']}' に設定しました"
+        if result["font_size"]:
+            msg += f"（サイズ: {result['font_size']}pt）"
+        return msg
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def word_add_table_of_authorities(category: int | None = None) -> str:
+    """判例目録（Table of Authorities）を挿入します。categoryでカテゴリを絞り込み可能。"""
+    try:
+        result = word.add_table_of_authorities(category=category)
+        msg = "判例目録を挿入しました"
+        if result["category"]:
+            msg += f"（カテゴリ: {result['category']}）"
+        return msg
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def word_clear_all_formatting(paragraph_index: int | None = None) -> str:
+    """段落または文書全体の書式をクリアします。paragraph_indexを省略すると文書全体が対象。"""
+    try:
+        result = word.clear_all_formatting_word(paragraph_index=paragraph_index)
+        return f"書式をクリアしました（対象: {result['scope']}）"
+    except Exception as e:
+        return f"エラー: {e}"
