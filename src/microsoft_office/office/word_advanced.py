@@ -3690,3 +3690,642 @@ def create_training_manual(
         "module_count": len(modules),
         "paragraphs": doc.Paragraphs.Count,
     }
+
+
+# ---------------------------------------------------------------------------
+# Policy Document
+# ---------------------------------------------------------------------------
+
+def create_policy_document(title, version, effective_date, sections,
+                           approval_chain=None, style="formal"):
+    """Create a policy document with revision history and approval signatures.
+
+    Args:
+        title: Policy title.
+        version: Version string (e.g. "1.0").
+        effective_date: Effective date string.
+        sections: list of {"title": "...", "content": "..."}.
+        approval_chain: optional list of {"name": "...", "title": "...", "date": "..."}.
+        style: "formal" | "modern".
+
+    Returns:
+        dict with status info.
+    """
+    doc = _get_active_doc()
+
+    if style == "modern":
+        primary = (41, 65, 122)
+        font = "Segoe UI"
+        title_size = 28
+    else:
+        primary = (0, 51, 102)
+        font = "Calibri"
+        title_size = 26
+
+    # Header bar
+    _add_paragraph(doc, "", font_size=6, space_before=0, space_after=0)
+    _add_horizontal_line(doc, color=primary, thickness=2.0)
+
+    # Document classification
+    _add_paragraph(doc, "OFFICIAL POLICY DOCUMENT",
+                   font_name=font, font_size=10, font_color=primary,
+                   bold=True, space_before=6, space_after=2,
+                   alignment=WD_ALIGN_CENTER)
+
+    # Title
+    _add_paragraph(doc, title,
+                   font_name=font, font_size=title_size, font_color=primary,
+                   bold=True, space_before=12, space_after=6,
+                   alignment=WD_ALIGN_CENTER)
+
+    _add_horizontal_line(doc, color=primary, thickness=1.0)
+
+    # Metadata table
+    meta_data = [
+        ["Document Version", version],
+        ["Effective Date", effective_date],
+        ["Classification", "Internal"],
+    ]
+    table = _create_table(doc, len(meta_data), 2, meta_data)
+    _format_table_header(table, fill_color=(255, 255, 255), text_color=primary,
+                         font_name=font, font_size=10, bold=True)
+    for r in range(1, len(meta_data) + 1):
+        table.Cell(r, 1).Range.Font.Bold = True
+        table.Cell(r, 1).Range.Font.Color = rgb(*primary)
+        table.Cell(r, 1).Range.Font.Name = font
+        table.Cell(r, 2).Range.Font.Name = font
+
+    _add_empty_lines(doc, 1)
+
+    # Revision history
+    _add_paragraph(doc, "Revision History",
+                   font_name=font, font_size=14, font_color=primary,
+                   bold=True, space_before=12, space_after=6,
+                   alignment=WD_ALIGN_LEFT)
+    rev_data = [
+        ["Version", "Date", "Description"],
+        [version, effective_date, "Initial release"],
+    ]
+    rev_table = _create_table(doc, 2, 3, rev_data)
+    _format_table_header(rev_table, fill_color=primary, text_color=(255, 255, 255),
+                         font_name=font, font_size=10)
+
+    _add_empty_lines(doc, 1)
+
+    # Table of Contents placeholder
+    _add_paragraph(doc, "Table of Contents",
+                   font_name=font, font_size=14, font_color=primary,
+                   bold=True, space_before=12, space_after=6,
+                   alignment=WD_ALIGN_LEFT)
+    for idx, section in enumerate(sections, 1):
+        _add_paragraph(doc, f"{idx}. {section.get('title', '')}",
+                       font_name=font, font_size=11, font_color=(80, 80, 80),
+                       space_before=2, space_after=2, alignment=WD_ALIGN_LEFT)
+
+    _insert_page_break(doc)
+
+    # Sections
+    for idx, section in enumerate(sections, 1):
+        sec_title = section.get("title", f"Section {idx}")
+        content = section.get("content", "")
+
+        _add_paragraph(doc, f"{idx}. {sec_title}",
+                       font_name=font, font_size=16, font_color=primary,
+                       bold=True, space_before=18, space_after=8,
+                       alignment=WD_ALIGN_LEFT)
+        _add_horizontal_line(doc, color=primary, thickness=0.5)
+
+        for para_text in content.split("\n"):
+            if para_text.strip():
+                _add_paragraph(doc, para_text.strip(),
+                               font_name=font, font_size=11,
+                               font_color=(51, 51, 51),
+                               space_before=4, space_after=4,
+                               alignment=WD_ALIGN_JUSTIFY, line_spacing=1.3)
+
+    # Approval section
+    if approval_chain:
+        _insert_page_break(doc)
+        _add_paragraph(doc, "Approval Signatures",
+                       font_name=font, font_size=16, font_color=primary,
+                       bold=True, space_before=18, space_after=12,
+                       alignment=WD_ALIGN_LEFT)
+        _add_horizontal_line(doc, color=primary, thickness=1.0)
+
+        approval_data = [["Name", "Title", "Date", "Signature"]]
+        for approver in approval_chain:
+            approval_data.append([
+                approver.get("name", ""),
+                approver.get("title", ""),
+                approver.get("date", ""),
+                "____________________",
+            ])
+        approval_table = _create_table(doc, len(approval_data), 4, approval_data)
+        _format_table_header(approval_table, fill_color=primary,
+                             text_color=(255, 255, 255), font_name=font, font_size=10)
+        for r in range(2, len(approval_data) + 1):
+            for c in range(1, 5):
+                approval_table.Cell(r, c).Range.Font.Name = font
+                approval_table.Cell(r, c).Range.Font.Size = 10
+            approval_table.Cell(r, c).Height = 50
+
+    _add_empty_lines(doc, 2)
+    _add_horizontal_line(doc, color=primary, thickness=2.0)
+    _add_paragraph(doc, "END OF DOCUMENT",
+                   font_name=font, font_size=9, font_color=(150, 150, 150),
+                   space_before=6, space_after=0, alignment=WD_ALIGN_CENTER)
+
+    return {
+        "title": title,
+        "version": version,
+        "style": style,
+        "section_count": len(sections),
+        "paragraphs": doc.Paragraphs.Count,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Technical Specification
+# ---------------------------------------------------------------------------
+
+def create_technical_specification(title, version, sections,
+                                   revision_history=None, style="detailed"):
+    """Create a technical specification document.
+
+    Args:
+        title: Specification title.
+        version: Version string.
+        sections: list of {"title": "...", "content": "...", "subsections": [...]}.
+        revision_history: optional list of {"version": "...", "date": "...", "changes": "..."}.
+        style: "detailed" | "concise".
+
+    Returns:
+        dict with status info.
+    """
+    doc = _get_active_doc()
+
+    if style == "concise":
+        primary = (33, 37, 41)
+        font = "Calibri"
+        title_size = 24
+    else:
+        primary = (41, 65, 122)
+        font = "Segoe UI"
+        title_size = 28
+
+    # Cover
+    _add_empty_lines(doc, 3)
+    _add_paragraph(doc, "TECHNICAL SPECIFICATION",
+                   font_name=font, font_size=12, font_color=(120, 120, 120),
+                   bold=True, space_before=0, space_after=4,
+                   alignment=WD_ALIGN_CENTER)
+    _add_paragraph(doc, title,
+                   font_name=font, font_size=title_size, font_color=primary,
+                   bold=True, space_before=4, space_after=6,
+                   alignment=WD_ALIGN_CENTER)
+    _add_horizontal_line(doc, color=primary, thickness=2.0)
+    _add_paragraph(doc, f"Version {version}",
+                   font_name=font, font_size=14, font_color=(100, 100, 100),
+                   space_before=8, space_after=4, alignment=WD_ALIGN_CENTER)
+    _add_paragraph(doc, f"Date: {datetime.date.today().strftime('%Y-%m-%d')}",
+                   font_name=font, font_size=11, font_color=(120, 120, 120),
+                   space_before=2, space_after=2, alignment=WD_ALIGN_CENTER)
+
+    # Revision history
+    if revision_history:
+        _add_empty_lines(doc, 2)
+        _add_paragraph(doc, "Revision History",
+                       font_name=font, font_size=14, font_color=primary,
+                       bold=True, space_before=12, space_after=6,
+                       alignment=WD_ALIGN_LEFT)
+        rev_data = [["Version", "Date", "Changes"]]
+        for rev in revision_history:
+            rev_data.append([
+                rev.get("version", ""),
+                rev.get("date", ""),
+                rev.get("changes", ""),
+            ])
+        rev_table = _create_table(doc, len(rev_data), 3, rev_data)
+        _format_table_header(rev_table, fill_color=primary,
+                             text_color=(255, 255, 255), font_name=font, font_size=10)
+
+    _insert_page_break(doc)
+
+    # Table of contents
+    _add_paragraph(doc, "Table of Contents",
+                   font_name=font, font_size=16, font_color=primary,
+                   bold=True, space_before=12, space_after=8,
+                   alignment=WD_ALIGN_LEFT)
+    for idx, sec in enumerate(sections, 1):
+        _add_paragraph(doc, f"{idx}. {sec.get('title', '')}",
+                       font_name=font, font_size=11, font_color=(60, 60, 60),
+                       space_before=2, space_after=2, alignment=WD_ALIGN_LEFT)
+        for j, sub in enumerate(sec.get("subsections", []), 1):
+            sub_title = sub.get("title", sub) if isinstance(sub, dict) else sub
+            _add_paragraph(doc, f"   {idx}.{j}. {sub_title}",
+                           font_name=font, font_size=10, font_color=(100, 100, 100),
+                           space_before=1, space_after=1, alignment=WD_ALIGN_LEFT)
+
+    _insert_page_break(doc)
+
+    # Sections
+    for idx, sec in enumerate(sections, 1):
+        sec_title = sec.get("title", f"Section {idx}")
+        content = sec.get("content", "")
+
+        _add_paragraph(doc, f"{idx}. {sec_title}",
+                       font_name=font, font_size=18, font_color=primary,
+                       bold=True, space_before=20, space_after=8,
+                       alignment=WD_ALIGN_LEFT)
+        _add_horizontal_line(doc, color=primary, thickness=0.75)
+
+        if content:
+            for para_text in content.split("\n"):
+                if para_text.strip():
+                    _add_paragraph(doc, para_text.strip(),
+                                   font_name=font, font_size=11,
+                                   font_color=(51, 51, 51),
+                                   space_before=4, space_after=4,
+                                   alignment=WD_ALIGN_JUSTIFY, line_spacing=1.25)
+
+        for j, sub in enumerate(sec.get("subsections", []), 1):
+            if isinstance(sub, dict):
+                sub_title = sub.get("title", "")
+                sub_content = sub.get("content", "")
+            else:
+                sub_title = str(sub)
+                sub_content = ""
+
+            _add_paragraph(doc, f"{idx}.{j}. {sub_title}",
+                           font_name=font, font_size=14, font_color=primary,
+                           bold=True, space_before=14, space_after=6,
+                           alignment=WD_ALIGN_LEFT)
+
+            if sub_content:
+                for para_text in sub_content.split("\n"):
+                    if para_text.strip():
+                        _add_paragraph(doc, para_text.strip(),
+                                       font_name=font, font_size=11,
+                                       font_color=(51, 51, 51),
+                                       space_before=3, space_after=3,
+                                       alignment=WD_ALIGN_JUSTIFY, line_spacing=1.25)
+
+    return {
+        "title": title,
+        "version": version,
+        "style": style,
+        "section_count": len(sections),
+        "paragraphs": doc.Paragraphs.Count,
+    }
+
+
+# ---------------------------------------------------------------------------
+# User Guide
+# ---------------------------------------------------------------------------
+
+def create_user_guide(title, chapters, style="friendly"):
+    """Create a user guide / documentation document.
+
+    Args:
+        title: Guide title.
+        chapters: list of {"title": "...", "introduction": "...",
+                           "steps": [{"instruction": "...", "note": "..."}]}.
+        style: "friendly" | "technical" | "minimal".
+
+    Returns:
+        dict with status info.
+    """
+    doc = _get_active_doc()
+
+    styles = {
+        "friendly": {"primary": (0, 120, 215), "font": "Segoe UI", "title_size": 30,
+                      "note_bg": (232, 245, 253), "note_border": (0, 120, 215)},
+        "technical": {"primary": (41, 65, 122), "font": "Consolas", "title_size": 26,
+                       "note_bg": (245, 245, 245), "note_border": (100, 100, 100)},
+        "minimal": {"primary": (51, 51, 51), "font": "Calibri", "title_size": 28,
+                     "note_bg": (248, 248, 248), "note_border": (200, 200, 200)},
+    }
+    s = styles.get(style, styles["friendly"])
+    primary = s["primary"]
+    font = s["font"]
+
+    # Cover page
+    _add_empty_lines(doc, 4)
+    _add_paragraph(doc, title,
+                   font_name=font, font_size=s["title_size"], font_color=primary,
+                   bold=True, space_before=0, space_after=8,
+                   alignment=WD_ALIGN_CENTER)
+    _add_horizontal_line(doc, color=primary, thickness=2.0)
+    _add_paragraph(doc, "User Guide",
+                   font_name=font, font_size=16, font_color=(120, 120, 120),
+                   space_before=8, space_after=4, alignment=WD_ALIGN_CENTER)
+    _add_paragraph(doc, f"Last Updated: {datetime.date.today().strftime('%Y-%m-%d')}",
+                   font_name=font, font_size=10, font_color=(150, 150, 150),
+                   space_before=4, space_after=0, alignment=WD_ALIGN_CENTER)
+
+    _insert_page_break(doc)
+
+    # Table of contents
+    _add_paragraph(doc, "Table of Contents",
+                   font_name=font, font_size=18, font_color=primary,
+                   bold=True, space_before=12, space_after=8,
+                   alignment=WD_ALIGN_LEFT)
+    for idx, ch in enumerate(chapters, 1):
+        _add_paragraph(doc, f"Chapter {idx}: {ch.get('title', '')}",
+                       font_name=font, font_size=11, font_color=(60, 60, 60),
+                       space_before=3, space_after=3, alignment=WD_ALIGN_LEFT)
+
+    _insert_page_break(doc)
+
+    # Chapters
+    for idx, ch in enumerate(chapters, 1):
+        ch_title = ch.get("title", f"Chapter {idx}")
+        intro = ch.get("introduction", "")
+        steps = ch.get("steps", [])
+
+        _add_paragraph(doc, f"Chapter {idx}",
+                       font_name=font, font_size=11, font_color=(150, 150, 150),
+                       bold=True, space_before=12, space_after=2,
+                       alignment=WD_ALIGN_LEFT)
+        _add_paragraph(doc, ch_title,
+                       font_name=font, font_size=20, font_color=primary,
+                       bold=True, space_before=2, space_after=8,
+                       alignment=WD_ALIGN_LEFT)
+        _add_horizontal_line(doc, color=primary, thickness=1.0)
+
+        if intro:
+            _add_paragraph(doc, intro,
+                           font_name=font, font_size=11, font_color=(70, 70, 70),
+                           space_before=8, space_after=8,
+                           alignment=WD_ALIGN_JUSTIFY, line_spacing=1.3)
+
+        for step_idx, step in enumerate(steps, 1):
+            instruction = step.get("instruction", "")
+            note = step.get("note", "")
+
+            _add_paragraph(doc, f"Step {step_idx}: {instruction}",
+                           font_name=font, font_size=12, font_color=(33, 33, 33),
+                           bold=True, space_before=10, space_after=4,
+                           alignment=WD_ALIGN_LEFT)
+
+            if note:
+                note_para = _add_paragraph(doc, f"   Note: {note}",
+                                           font_name=font, font_size=10,
+                                           font_color=(80, 80, 80), italic=True,
+                                           space_before=2, space_after=6,
+                                           alignment=WD_ALIGN_LEFT)
+                border = note_para.Format.Borders(WD_BORDER_LEFT)
+                border.LineStyle = 1
+                border.LineWidth = 12
+                border.Color = rgb(*s["note_border"])
+
+        if idx < len(chapters):
+            _insert_page_break(doc)
+
+    return {
+        "title": title,
+        "style": style,
+        "chapter_count": len(chapters),
+        "paragraphs": doc.Paragraphs.Count,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Press Release
+# ---------------------------------------------------------------------------
+
+def create_press_release(headline, dateline, body_paragraphs,
+                         company_info=None, contact_info=None):
+    """Create a press release with standard format.
+
+    Args:
+        headline: Press release headline.
+        dateline: Dateline (e.g. "NEW YORK, April 24, 2026").
+        body_paragraphs: list of paragraph strings.
+        company_info: Optional company boilerplate text.
+        contact_info: Optional dict {"name": "...", "email": "...", "phone": "..."}.
+
+    Returns:
+        dict with status info.
+    """
+    doc = _get_active_doc()
+    font = "Calibri"
+    primary = (0, 51, 102)
+
+    # FOR IMMEDIATE RELEASE header
+    _add_paragraph(doc, "FOR IMMEDIATE RELEASE",
+                   font_name=font, font_size=12, font_color=primary,
+                   bold=True, space_before=12, space_after=18,
+                   alignment=WD_ALIGN_LEFT)
+
+    # Headline
+    _add_paragraph(doc, headline,
+                   font_name=font, font_size=22, font_color=(33, 33, 33),
+                   bold=True, space_before=0, space_after=12,
+                   alignment=WD_ALIGN_CENTER)
+
+    _add_horizontal_line(doc, color=(180, 180, 180), thickness=0.5)
+
+    # Dateline + first paragraph
+    if body_paragraphs:
+        first_para = f"{dateline} -- {body_paragraphs[0]}"
+        _add_paragraph(doc, first_para,
+                       font_name=font, font_size=11, font_color=(51, 51, 51),
+                       space_before=12, space_after=8,
+                       alignment=WD_ALIGN_JUSTIFY, line_spacing=1.3)
+        remaining = body_paragraphs[1:]
+    else:
+        _add_paragraph(doc, dateline,
+                       font_name=font, font_size=11, font_color=(51, 51, 51),
+                       space_before=12, space_after=8, alignment=WD_ALIGN_LEFT)
+        remaining = []
+
+    # Body paragraphs
+    for para_text in remaining:
+        _add_paragraph(doc, para_text,
+                       font_name=font, font_size=11, font_color=(51, 51, 51),
+                       space_before=4, space_after=8,
+                       alignment=WD_ALIGN_JUSTIFY, line_spacing=1.3)
+
+    # About section
+    if company_info:
+        _add_empty_lines(doc, 1)
+        _add_paragraph(doc, "About",
+                       font_name=font, font_size=12, font_color=primary,
+                       bold=True, space_before=12, space_after=4,
+                       alignment=WD_ALIGN_LEFT)
+        _add_paragraph(doc, company_info,
+                       font_name=font, font_size=10, font_color=(80, 80, 80),
+                       space_before=2, space_after=8,
+                       alignment=WD_ALIGN_JUSTIFY, line_spacing=1.2)
+
+    # Contact info
+    if contact_info:
+        _add_empty_lines(doc, 1)
+        _add_paragraph(doc, "Media Contact:",
+                       font_name=font, font_size=10, font_color=primary,
+                       bold=True, space_before=8, space_after=4,
+                       alignment=WD_ALIGN_LEFT)
+        contact_text = contact_info.get("name", "")
+        if contact_info.get("email"):
+            contact_text += f"\nEmail: {contact_info['email']}"
+        if contact_info.get("phone"):
+            contact_text += f"\nPhone: {contact_info['phone']}"
+        _add_paragraph(doc, contact_text,
+                       font_name=font, font_size=10, font_color=(80, 80, 80),
+                       space_before=2, space_after=8, alignment=WD_ALIGN_LEFT)
+
+    # End marker
+    _add_empty_lines(doc, 2)
+    _add_paragraph(doc, "###",
+                   font_name=font, font_size=14, font_color=(100, 100, 100),
+                   bold=True, space_before=0, space_after=0,
+                   alignment=WD_ALIGN_CENTER)
+
+    return {
+        "headline": headline,
+        "paragraph_count": len(body_paragraphs),
+        "paragraphs": doc.Paragraphs.Count,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Case Study
+# ---------------------------------------------------------------------------
+
+def create_case_study(title, client, challenge, solution, results,
+                      testimonial=None, style="professional"):
+    """Create a case study document.
+
+    Args:
+        title: Case study title.
+        client: Client/company name.
+        challenge: Challenge description text.
+        solution: Solution description text.
+        results: Results description text or list of result strings.
+        testimonial: Optional dict {"quote": "...", "author": "...", "title": "..."}.
+        style: "professional" | "creative" | "minimal".
+
+    Returns:
+        dict with status info.
+    """
+    doc = _get_active_doc()
+
+    styles_map = {
+        "professional": {"primary": (0, 70, 127), "accent": (0, 150, 199),
+                          "font": "Calibri", "title_size": 26},
+        "creative": {"primary": (183, 28, 28), "accent": (255, 143, 0),
+                      "font": "Segoe UI", "title_size": 28},
+        "minimal": {"primary": (51, 51, 51), "accent": (150, 150, 150),
+                     "font": "Calibri Light", "title_size": 28},
+    }
+    s = styles_map.get(style, styles_map["professional"])
+    primary = s["primary"]
+    accent = s["accent"]
+    font = s["font"]
+
+    # Header
+    _add_paragraph(doc, "CASE STUDY",
+                   font_name=font, font_size=11, font_color=accent,
+                   bold=True, space_before=12, space_after=4,
+                   alignment=WD_ALIGN_LEFT)
+
+    _add_paragraph(doc, title,
+                   font_name=font, font_size=s["title_size"], font_color=primary,
+                   bold=True, space_before=4, space_after=6,
+                   alignment=WD_ALIGN_LEFT)
+
+    _add_horizontal_line(doc, color=primary, thickness=2.0)
+
+    # Client info
+    _add_paragraph(doc, f"Client: {client}",
+                   font_name=font, font_size=13, font_color=(80, 80, 80),
+                   bold=True, space_before=12, space_after=12,
+                   alignment=WD_ALIGN_LEFT)
+
+    # Overview table
+    overview_data = [
+        ["Client", client],
+        ["Industry", ""],
+        ["Date", datetime.date.today().strftime("%Y-%m-%d")],
+    ]
+    overview_table = _create_table(doc, 3, 2, overview_data)
+    _format_table_header(overview_table, fill_color=(255, 255, 255),
+                         text_color=primary, font_name=font, font_size=10, bold=True)
+    for r in range(1, 4):
+        overview_table.Cell(r, 1).Range.Font.Bold = True
+        overview_table.Cell(r, 1).Range.Font.Color = rgb(*primary)
+
+    _add_empty_lines(doc, 1)
+
+    # The Challenge
+    _add_paragraph(doc, "The Challenge",
+                   font_name=font, font_size=16, font_color=primary,
+                   bold=True, space_before=18, space_after=8,
+                   alignment=WD_ALIGN_LEFT)
+    _add_horizontal_line(doc, color=accent, thickness=0.5)
+    _add_paragraph(doc, challenge,
+                   font_name=font, font_size=11, font_color=(51, 51, 51),
+                   space_before=6, space_after=8,
+                   alignment=WD_ALIGN_JUSTIFY, line_spacing=1.3)
+
+    # The Solution
+    _add_paragraph(doc, "The Solution",
+                   font_name=font, font_size=16, font_color=primary,
+                   bold=True, space_before=18, space_after=8,
+                   alignment=WD_ALIGN_LEFT)
+    _add_horizontal_line(doc, color=accent, thickness=0.5)
+    _add_paragraph(doc, solution,
+                   font_name=font, font_size=11, font_color=(51, 51, 51),
+                   space_before=6, space_after=8,
+                   alignment=WD_ALIGN_JUSTIFY, line_spacing=1.3)
+
+    # Results
+    _add_paragraph(doc, "Results",
+                   font_name=font, font_size=16, font_color=primary,
+                   bold=True, space_before=18, space_after=8,
+                   alignment=WD_ALIGN_LEFT)
+    _add_horizontal_line(doc, color=accent, thickness=0.5)
+
+    if isinstance(results, list):
+        for result_item in results:
+            _add_paragraph(doc, f"\u2713  {result_item}",
+                           font_name=font, font_size=11,
+                           font_color=(34, 139, 34),
+                           space_before=4, space_after=4,
+                           alignment=WD_ALIGN_LEFT, line_spacing=1.2)
+    else:
+        _add_paragraph(doc, results,
+                       font_name=font, font_size=11, font_color=(51, 51, 51),
+                       space_before=6, space_after=8,
+                       alignment=WD_ALIGN_JUSTIFY, line_spacing=1.3)
+
+    # Testimonial
+    if testimonial:
+        _add_empty_lines(doc, 1)
+        _add_horizontal_line(doc, color=accent, thickness=1.0)
+        quote = testimonial.get("quote", "")
+        _add_paragraph(doc, f'\u201c{quote}\u201d',
+                       font_name=font, font_size=14, font_color=primary,
+                       italic=True, space_before=12, space_after=6,
+                       alignment=WD_ALIGN_CENTER, line_spacing=1.4)
+        author = testimonial.get("author", "")
+        auth_title = testimonial.get("title", "")
+        attribution = f"\u2014 {author}"
+        if auth_title:
+            attribution += f", {auth_title}"
+        _add_paragraph(doc, attribution,
+                       font_name=font, font_size=11, font_color=(100, 100, 100),
+                       space_before=2, space_after=12,
+                       alignment=WD_ALIGN_CENTER)
+        _add_horizontal_line(doc, color=accent, thickness=1.0)
+
+    _add_empty_lines(doc, 2)
+    _add_horizontal_line(doc, color=primary, thickness=2.0)
+
+    return {
+        "title": title,
+        "client": client,
+        "style": style,
+        "paragraphs": doc.Paragraphs.Count,
+    }

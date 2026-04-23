@@ -600,3 +600,117 @@ def excel_create_meal_planner(
         )
     except Exception as e:
         return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_create_loan_calculator(
+    loan_amount: float,
+    annual_rate: float,
+    term_months: int,
+    start_date: str | None = None,
+    style: str = "detailed",
+    sheet: str | None = None,
+) -> str:
+    """ローン返済計算表を作成します。月次返済スケジュール・利息計算・残高推移を含む。annual_rateはパーセント（例: 5.0で5%）。style: detailed（月次明細）, summary（要約のみ）。"""
+    try:
+        result = excel_advanced.create_loan_calculator(
+            sheet, loan_amount, annual_rate, term_months,
+            start_date=start_date, style=style,
+        )
+        return (
+            f"[{result['sheet']}] ローン計算表を作成しました（金額: {result['loan_amount']}、"
+            f"金利: {result['annual_rate']}%、期間: {result['term_months']}ヶ月、"
+            f"スタイル: {result['style']}）"
+        )
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_create_grade_book(
+    students: list[str],
+    assignments: str,
+    style: str = "standard",
+    sheet: str | None = None,
+) -> str:
+    """成績管理表を作成します。加重平均・評価レター自動計算付き。assignments: JSON文字列 [{"name": "課題名", "weight": 0.2, "max_score": 100}]。style: standard, colorful, minimal。"""
+    try:
+        assignments_list = json.loads(assignments) if isinstance(assignments, str) else assignments
+        result = excel_advanced.create_grade_book(
+            sheet, students, assignments_list, style=style,
+        )
+        return (
+            f"[{result['sheet']}] 成績管理表を作成しました（生徒数: {result['students']}、"
+            f"課題数: {result['assignments']}、スタイル: {result['style']}）"
+        )
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_create_survey_results(
+    title: str,
+    questions: str,
+    responses: str,
+    style: str = "visual",
+    sheet: str | None = None,
+) -> str:
+    """アンケート結果分析シートを作成します。questions: JSON文字列 [{"question": "質問文", "type": "multiple_choice/scale/text", "options": ["選択肢1"]}]。responses: JSON文字列 [{質問インデックス: "回答"}]。style: visual, tabular, summary。"""
+    try:
+        questions_list = json.loads(questions) if isinstance(questions, str) else questions
+        responses_list = json.loads(responses) if isinstance(responses, str) else responses
+        result = excel_advanced.create_survey_results(
+            sheet, title, questions_list, responses_list, style=style,
+        )
+        return (
+            f"[{result['sheet']}] アンケート結果を作成しました（タイトル: {result['title']}、"
+            f"質問数: {result['question_count']}、回答数: {result['response_count']}、"
+            f"スタイル: {result['style']}）"
+        )
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_create_price_list(
+    title: str,
+    categories: str,
+    style: str = "professional",
+    sheet: str | None = None,
+) -> str:
+    """商品価格表を作成します。categories: JSON文字列 [{"name": "カテゴリ名", "items": [{"name": "商品名", "description": "説明", "price": 100, "unit": "個"}]}]。style: professional, modern, minimal。"""
+    try:
+        categories_list = json.loads(categories) if isinstance(categories, str) else categories
+        result = excel_advanced.create_price_list(
+            sheet, title, categories_list, style=style,
+        )
+        return (
+            f"[{result['sheet']}] 価格表を作成しました（タイトル: {result['title']}、"
+            f"カテゴリ数: {result['category_count']}、商品数: {result['total_items']}、"
+            f"スタイル: {result['style']}）"
+        )
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_create_conversion_table(
+    title: str,
+    from_unit: str,
+    to_unit: str,
+    values: list[float],
+    formula: str,
+    sheet: str | None = None,
+) -> str:
+    """単位変換表を作成します。valuesに入力値リスト、formulaに変換式（'x'が入力値を表す、例: 'x*2.54'）を指定。"""
+    try:
+        result = excel_advanced.create_conversion_table(
+            sheet, title, from_unit, to_unit, values, formula,
+        )
+        return (
+            f"[{result['sheet']}] 変換表を作成しました（タイトル: {result['title']}、"
+            f"{result['from_unit']}→{result['to_unit']}、"
+            f"値数: {result['value_count']}）"
+        )
+    except Exception as e:
+        return f"エラー: {e}"

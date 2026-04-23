@@ -3970,3 +3970,621 @@ def create_meal_planner(
 
     return {"sheet": ws.Name, "title": title, "days": days,
             "meals_per_day": meals_per_day, "style": style}
+
+
+# ---------------------------------------------------------------------------
+# Loan Calculator / Amortization Schedule
+# ---------------------------------------------------------------------------
+
+def create_loan_calculator(sheet, loan_amount, annual_rate, term_months,
+                            start_date=None, style="detailed"):
+    """Create a loan amortization schedule with formulas.
+
+    Args:
+        sheet: Sheet name or None for active sheet.
+        loan_amount: Loan principal amount.
+        annual_rate: Annual interest rate as percentage (e.g. 5.0 for 5%).
+        term_months: Loan term in months.
+        start_date: Optional start date string (YYYY-MM-DD).
+        style: "detailed" (monthly breakdown) | "summary" (key stats only).
+
+    Returns:
+        dict with status info.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+
+    primary = (41, 65, 122)
+    accent = (47, 117, 181)
+    light = (217, 226, 243)
+
+    # Title
+    ws.Cells(1, 1).Value = "Loan Amortization Schedule"
+    ws.Range("A1:G1").MergeCells = True
+    _apply_font(ws.Cells(1, 1), bold=True, size=16, name="Segoe UI", color=primary)
+    _set_alignment(ws.Cells(1, 1), h_align=XL_HALIGN_CENTER)
+
+    # Loan parameters
+    params = [
+        ("Loan Amount", loan_amount, "$#,##0.00"),
+        ("Annual Interest Rate", annual_rate / 100, "0.00%"),
+        ("Term (Months)", term_months, "0"),
+        ("Monthly Payment", None, "$#,##0.00"),
+        ("Total Interest", None, "$#,##0.00"),
+        ("Total Cost", None, "$#,##0.00"),
+    ]
+
+    ws.Cells(3, 1).Value = "Loan Parameters"
+    ws.Range("A3:C3").MergeCells = True
+    _apply_font(ws.Cells(3, 1), bold=True, size=12, name="Segoe UI", color=(255, 255, 255))
+    _apply_fill(ws.Range("A3:C3"), primary)
+
+    for i, (label, value, fmt) in enumerate(params):
+        r = 4 + i
+        ws.Cells(r, 1).Value = label
+        _apply_font(ws.Cells(r, 1), bold=True, size=10, name="Segoe UI", color=primary)
+        if value is not None:
+            ws.Cells(r, 2).Value = value
+        ws.Cells(r, 2).NumberFormat = fmt
+        _apply_font(ws.Cells(r, 2), size=11, name="Segoe UI")
+        if i % 2 == 0:
+            _apply_fill(ws.Range(f"A{r}:C{r}"), light)
+
+    # Monthly payment formula: =PMT(rate/12, nper, -pv)
+    ws.Cells(7, 2).Formula = "=-PMT(B5/12,B6,B4)"
+    # Total interest
+    ws.Cells(8, 2).Formula = "=B7*B6-B4"
+    # Total cost
+    ws.Cells(9, 2).Formula = "=B7*B6"
+
+    ws.Columns(1).ColumnWidth = 22
+    ws.Columns(2).ColumnWidth = 18
+    ws.Columns(3).ColumnWidth = 14
+
+    _apply_borders(ws.Range("A3:C9"), weight=XL_BORDER_WEIGHT_THIN, color=(180, 195, 220))
+
+    if style == "detailed":
+        # Amortization table
+        header_row = 11
+        headers = ["Month", "Payment", "Principal", "Interest", "Balance"]
+        if start_date:
+            headers.insert(1, "Date")
+
+        for j, h in enumerate(headers):
+            ws.Cells(header_row, j + 1).Value = h
+
+        _apply_fill(ws.Range(f"A{header_row}:{_col_letter(len(headers))}{header_row}"), primary)
+        for j in range(len(headers)):
+            _apply_font(ws.Cells(header_row, j + 1), bold=True, size=10,
+                        name="Segoe UI", color=(255, 255, 255))
+            _set_alignment(ws.Cells(header_row, j + 1), h_align=XL_HALIGN_CENTER)
+
+        for m in range(1, term_months + 1):
+            r = header_row + m
+            col_offset = 0
+
+            # Month number
+            ws.Cells(r, 1).Value = m
+
+            # Date column
+            if start_date:
+                col_offset = 1
+                if m == 1:
+                    ws.Cells(r, 2).Formula = f'=DATE({start_date.split("-")[0]},{start_date.split("-")[1]},{start_date.split("-")[2]})'
+                else:
+                    ws.Cells(r, 2).Formula = f"=EDATE(B{r - 1},1)"
+                ws.Cells(r, 2).NumberFormat = "YYYY-MM-DD"
+
+            # Payment
+            pay_col = 2 + col_offset
+            ws.Cells(r, pay_col).Formula = f"=$B$7"
+            ws.Cells(r, pay_col).NumberFormat = "$#,##0.00"
+
+            # Interest
+            int_col = 4 + col_offset
+            if m == 1:
+                ws.Cells(r, int_col).Formula = f"=$B$4*$B$5/12"
+            else:
+                bal_col_letter = _col_letter(5 + col_offset)
+                ws.Cells(r, int_col).Formula = f"={bal_col_letter}{r - 1}*$B$5/12"
+            ws.Cells(r, int_col).NumberFormat = "$#,##0.00"
+
+            # Principal
+            prin_col = 3 + col_offset
+            int_col_letter = _col_letter(int_col)
+            pay_col_letter = _col_letter(pay_col)
+            ws.Cells(r, prin_col).Formula = f"={pay_col_letter}{r}-{int_col_letter}{r}"
+            ws.Cells(r, prin_col).NumberFormat = "$#,##0.00"
+
+            # Balance
+            bal_col = 5 + col_offset
+            prin_col_letter = _col_letter(prin_col)
+            if m == 1:
+                ws.Cells(r, bal_col).Formula = f"=$B$4-{prin_col_letter}{r}"
+            else:
+                bal_col_letter = _col_letter(bal_col)
+                ws.Cells(r, bal_col).Formula = f"={bal_col_letter}{r - 1}-{prin_col_letter}{r}"
+            ws.Cells(r, bal_col).NumberFormat = "$#,##0.00"
+
+            # Alternating rows
+            if m % 2 == 0:
+                _apply_fill(ws.Range(f"A{r}:{_col_letter(len(headers))}{r}"), light)
+
+            _apply_font(ws.Cells(r, 1), size=9, name="Segoe UI")
+
+        last_row = header_row + term_months
+        _apply_borders(ws.Range(f"A{header_row}:{_col_letter(len(headers))}{last_row}"),
+                      weight=XL_BORDER_WEIGHT_THIN, color=(180, 195, 220))
+
+        for j in range(len(headers)):
+            ws.Columns(j + 1).ColumnWidth = 16
+
+    return {"sheet": ws.Name, "loan_amount": loan_amount,
+            "annual_rate": annual_rate, "term_months": term_months, "style": style}
+
+
+# ---------------------------------------------------------------------------
+# Grade Book
+# ---------------------------------------------------------------------------
+
+def create_grade_book(sheet, students, assignments, style="standard"):
+    """Create a grade/mark book with weighted averages and letter grades.
+
+    Args:
+        sheet: Sheet name or None for active sheet.
+        students: list of student name strings.
+        assignments: list of {"name": "...", "weight": 0.2, "max_score": 100}.
+        style: "standard" | "colorful" | "minimal".
+
+    Returns:
+        dict with status info.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+
+    if style == "colorful":
+        primary = (123, 31, 162)
+        header_bg = (156, 39, 176)
+        alt_row = (243, 229, 245)
+    elif style == "minimal":
+        primary = (51, 51, 51)
+        header_bg = (66, 66, 66)
+        alt_row = (245, 245, 245)
+    else:
+        primary = (41, 65, 122)
+        header_bg = (41, 65, 122)
+        alt_row = (217, 226, 243)
+
+    n_assignments = len(assignments)
+    n_students = len(students)
+
+    # Title
+    ws.Cells(1, 1).Value = "Grade Book"
+    last_col = 2 + n_assignments + 2  # Student + assignments + weighted avg + letter grade
+    ws.Range(f"A1:{_col_letter(last_col)}1").MergeCells = True
+    _apply_font(ws.Cells(1, 1), bold=True, size=16, name="Segoe UI", color=primary)
+    _set_alignment(ws.Cells(1, 1), h_align=XL_HALIGN_CENTER)
+
+    # Weight row
+    ws.Cells(2, 1).Value = "Weight"
+    _apply_font(ws.Cells(2, 1), bold=True, size=9, name="Segoe UI", color=(120, 120, 120))
+    for j, asgn in enumerate(assignments):
+        ws.Cells(2, 2 + j).Value = asgn.get("weight", 0)
+        ws.Cells(2, 2 + j).NumberFormat = "0%"
+        _apply_font(ws.Cells(2, 2 + j), size=9, name="Segoe UI", color=(120, 120, 120))
+        _set_alignment(ws.Cells(2, 2 + j), h_align=XL_HALIGN_CENTER)
+
+    # Headers
+    header_row = 3
+    ws.Cells(header_row, 1).Value = "Student"
+    for j, asgn in enumerate(assignments):
+        ws.Cells(header_row, 2 + j).Value = asgn.get("name", f"Assignment {j+1}")
+    avg_col = 2 + n_assignments
+    grade_col = avg_col + 1
+    ws.Cells(header_row, avg_col).Value = "Weighted Avg"
+    ws.Cells(header_row, grade_col).Value = "Grade"
+
+    header_range = ws.Range(f"A{header_row}:{_col_letter(grade_col)}{header_row}")
+    _apply_fill(header_range, header_bg)
+    for c in range(1, grade_col + 1):
+        _apply_font(ws.Cells(header_row, c), bold=True, size=10,
+                    name="Segoe UI", color=(255, 255, 255))
+        _set_alignment(ws.Cells(header_row, c), h_align=XL_HALIGN_CENTER)
+
+    # Student rows
+    for i, student in enumerate(students):
+        r = header_row + 1 + i
+        ws.Cells(r, 1).Value = student
+        _apply_font(ws.Cells(r, 1), bold=True, size=10, name="Segoe UI", color=primary)
+
+        for j, asgn in enumerate(assignments):
+            ws.Cells(r, 2 + j).Value = ""
+            max_score = asgn.get("max_score", 100)
+            ws.Cells(r, 2 + j).NumberFormat = f"0"
+            _set_alignment(ws.Cells(r, 2 + j), h_align=XL_HALIGN_CENTER)
+
+        # Weighted average formula
+        # =SUMPRODUCT(scores/max_scores, weights)
+        parts = []
+        for j, asgn in enumerate(assignments):
+            score_cell = f"{_col_letter(2 + j)}{r}"
+            max_s = asgn.get("max_score", 100)
+            weight_cell = f"{_col_letter(2 + j)}2"
+            parts.append(f"({score_cell}/{max_s})*{weight_cell}")
+        formula = "=(" + "+".join(parts) + ")*100"
+        ws.Cells(r, avg_col).Formula = formula
+        ws.Cells(r, avg_col).NumberFormat = "0.0"
+        _apply_font(ws.Cells(r, avg_col), bold=True, size=10, name="Segoe UI")
+        _set_alignment(ws.Cells(r, avg_col), h_align=XL_HALIGN_CENTER)
+
+        # Letter grade formula
+        avg_cell = f"{_col_letter(avg_col)}{r}"
+        grade_formula = (
+            f'=IF({avg_cell}>=90,"A",'
+            f'IF({avg_cell}>=80,"B",'
+            f'IF({avg_cell}>=70,"C",'
+            f'IF({avg_cell}>=60,"D","F"))))'
+        )
+        ws.Cells(r, grade_col).Formula = grade_formula
+        _apply_font(ws.Cells(r, grade_col), bold=True, size=12, name="Segoe UI", color=primary)
+        _set_alignment(ws.Cells(r, grade_col), h_align=XL_HALIGN_CENTER)
+
+        # Alt row coloring
+        if i % 2 == 0:
+            _apply_fill(ws.Range(f"A{r}:{_col_letter(grade_col)}{r}"), alt_row)
+
+    # Class statistics row
+    last_student_row = header_row + n_students
+    stats_row = last_student_row + 2
+    ws.Cells(stats_row, 1).Value = "Class Average"
+    _apply_font(ws.Cells(stats_row, 1), bold=True, size=10, name="Segoe UI", color=primary)
+    avg_letter = _col_letter(avg_col)
+    ws.Cells(stats_row, avg_col).Formula = (
+        f"=AVERAGE({avg_letter}{header_row + 1}:{avg_letter}{last_student_row})"
+    )
+    ws.Cells(stats_row, avg_col).NumberFormat = "0.0"
+    _apply_font(ws.Cells(stats_row, avg_col), bold=True, size=11, name="Segoe UI", color=primary)
+    _set_alignment(ws.Cells(stats_row, avg_col), h_align=XL_HALIGN_CENTER)
+    _apply_fill(ws.Range(f"A{stats_row}:{_col_letter(grade_col)}{stats_row}"), alt_row)
+
+    # Borders
+    data_range = ws.Range(f"A{header_row}:{_col_letter(grade_col)}{last_student_row}")
+    _apply_borders(data_range, weight=XL_BORDER_WEIGHT_THIN, color=(180, 195, 220))
+
+    # Column widths
+    ws.Columns(1).ColumnWidth = 20
+    for j in range(n_assignments):
+        ws.Columns(2 + j).ColumnWidth = 14
+    ws.Columns(avg_col).ColumnWidth = 16
+    ws.Columns(grade_col).ColumnWidth = 10
+
+    return {"sheet": ws.Name, "students": n_students,
+            "assignments": n_assignments, "style": style}
+
+
+# ---------------------------------------------------------------------------
+# Survey Results
+# ---------------------------------------------------------------------------
+
+def create_survey_results(sheet, title, questions, responses, style="visual"):
+    """Create a survey analysis sheet.
+
+    Args:
+        sheet: Sheet name or None for active sheet.
+        title: Survey title.
+        questions: list of {"question": "...", "type": "multiple_choice/scale/text", "options": ["..."]}.
+        responses: list of dicts mapping question index to answer.
+        style: "visual" | "tabular" | "summary".
+
+    Returns:
+        dict with status info.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+
+    primary = (41, 65, 122)
+    accent = (0, 120, 215)
+    light = (217, 226, 243)
+
+    # Title
+    ws.Cells(1, 1).Value = f"Survey Results: {title}"
+    ws.Range("A1:H1").MergeCells = True
+    _apply_font(ws.Cells(1, 1), bold=True, size=16, name="Segoe UI", color=primary)
+
+    ws.Cells(2, 1).Value = f"Total Responses: {len(responses)}"
+    _apply_font(ws.Cells(2, 1), size=11, name="Segoe UI", color=(100, 100, 100))
+
+    current_row = 4
+
+    for q_idx, question in enumerate(questions):
+        q_text = question.get("question", f"Question {q_idx + 1}")
+        q_type = question.get("type", "text")
+        options = question.get("options", [])
+
+        # Question header
+        ws.Cells(current_row, 1).Value = f"Q{q_idx + 1}: {q_text}"
+        ws.Range(f"A{current_row}:H{current_row}").MergeCells = True
+        _apply_font(ws.Cells(current_row, 1), bold=True, size=12,
+                    name="Segoe UI", color=primary)
+        _apply_fill(ws.Range(f"A{current_row}:H{current_row}"), light)
+        current_row += 1
+
+        if q_type == "multiple_choice" and options:
+            # Count responses for each option
+            counts = {opt: 0 for opt in options}
+            q_key = str(q_idx)
+            for resp in responses:
+                answer = resp.get(q_key, resp.get(q_text, ""))
+                if answer in counts:
+                    counts[answer] += 1
+
+            # Headers
+            ws.Cells(current_row, 1).Value = "Option"
+            ws.Cells(current_row, 2).Value = "Count"
+            ws.Cells(current_row, 3).Value = "Percentage"
+            for c in range(1, 4):
+                _apply_font(ws.Cells(current_row, c), bold=True, size=10,
+                            name="Segoe UI", color=(255, 255, 255))
+            _apply_fill(ws.Range(f"A{current_row}:C{current_row}"), accent)
+            current_row += 1
+
+            total_responses = max(sum(counts.values()), 1)
+            for opt_idx, (opt, count) in enumerate(counts.items()):
+                ws.Cells(current_row, 1).Value = opt
+                ws.Cells(current_row, 2).Value = count
+                _set_alignment(ws.Cells(current_row, 2), h_align=XL_HALIGN_CENTER)
+                ws.Cells(current_row, 3).Formula = (
+                    f"=B{current_row}/SUM(B{current_row - opt_idx}:"
+                    f"B{current_row - opt_idx + len(options) - 1})"
+                )
+                ws.Cells(current_row, 3).NumberFormat = "0.0%"
+                _apply_font(ws.Cells(current_row, 1), size=10, name="Segoe UI")
+                _apply_font(ws.Cells(current_row, 2), size=10, name="Segoe UI")
+                if opt_idx % 2 == 0:
+                    _apply_fill(ws.Range(f"A{current_row}:C{current_row}"),
+                               (240, 244, 250))
+                current_row += 1
+
+        elif q_type == "scale":
+            # Aggregate scale responses
+            ws.Cells(current_row, 1).Value = "Statistic"
+            ws.Cells(current_row, 2).Value = "Value"
+            _apply_fill(ws.Range(f"A{current_row}:B{current_row}"), accent)
+            _apply_font(ws.Cells(current_row, 1), bold=True, size=10,
+                        name="Segoe UI", color=(255, 255, 255))
+            _apply_font(ws.Cells(current_row, 2), bold=True, size=10,
+                        name="Segoe UI", color=(255, 255, 255))
+            current_row += 1
+
+            q_key = str(q_idx)
+            values = []
+            for resp in responses:
+                v = resp.get(q_key, resp.get(q_text, None))
+                if v is not None:
+                    try:
+                        values.append(float(v))
+                    except (ValueError, TypeError):
+                        pass
+
+            if values:
+                stats = [
+                    ("Average", sum(values) / len(values)),
+                    ("Min", min(values)),
+                    ("Max", max(values)),
+                    ("Responses", len(values)),
+                ]
+                for stat_name, stat_val in stats:
+                    ws.Cells(current_row, 1).Value = stat_name
+                    ws.Cells(current_row, 2).Value = stat_val
+                    _apply_font(ws.Cells(current_row, 1), bold=True, size=10, name="Segoe UI")
+                    _apply_font(ws.Cells(current_row, 2), size=10, name="Segoe UI")
+                    _set_alignment(ws.Cells(current_row, 2), h_align=XL_HALIGN_CENTER)
+                    current_row += 1
+
+        else:  # text
+            q_key = str(q_idx)
+            for resp in responses:
+                answer = resp.get(q_key, resp.get(q_text, ""))
+                if answer:
+                    ws.Cells(current_row, 1).Value = str(answer)
+                    ws.Range(f"A{current_row}:H{current_row}").MergeCells = True
+                    _apply_font(ws.Cells(current_row, 1), size=10, name="Segoe UI",
+                                color=(80, 80, 80))
+                    current_row += 1
+
+        current_row += 1  # gap between questions
+
+    # Column widths
+    ws.Columns(1).ColumnWidth = 30
+    ws.Columns(2).ColumnWidth = 14
+    ws.Columns(3).ColumnWidth = 14
+
+    return {"sheet": ws.Name, "title": title,
+            "question_count": len(questions),
+            "response_count": len(responses), "style": style}
+
+
+# ---------------------------------------------------------------------------
+# Price List
+# ---------------------------------------------------------------------------
+
+def create_price_list(sheet, title, categories, style="professional"):
+    """Create a product price list.
+
+    Args:
+        sheet: Sheet name or None for active sheet.
+        title: Price list title.
+        categories: list of {"name": "...", "items": [{"name": "...", "description": "...", "price": 0, "unit": "..."}]}.
+        style: "professional" | "modern" | "minimal".
+
+    Returns:
+        dict with status info.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+
+    styles_map = {
+        "professional": {"primary": (41, 65, 122), "accent": (47, 117, 181),
+                          "alt": (217, 226, 243), "border": (180, 195, 220)},
+        "modern": {"primary": (33, 37, 41), "accent": (0, 123, 255),
+                    "alt": (233, 236, 239), "border": (200, 200, 200)},
+        "minimal": {"primary": (51, 51, 51), "accent": (100, 100, 100),
+                     "alt": (248, 248, 248), "border": (220, 220, 220)},
+    }
+    s = styles_map.get(style, styles_map["professional"])
+
+    # Title
+    ws.Cells(1, 1).Value = title
+    ws.Range("A1:E1").MergeCells = True
+    _apply_font(ws.Cells(1, 1), bold=True, size=18, name="Segoe UI", color=s["primary"])
+    _set_alignment(ws.Cells(1, 1), h_align=XL_HALIGN_CENTER)
+
+    ws.Cells(2, 1).Value = f"Last Updated: {datetime.date.today().strftime('%Y-%m-%d')}"
+    ws.Range("A2:E2").MergeCells = True
+    _apply_font(ws.Cells(2, 1), size=9, name="Segoe UI", color=(120, 120, 120))
+    _set_alignment(ws.Cells(2, 1), h_align=XL_HALIGN_CENTER)
+
+    current_row = 4
+    total_items = 0
+
+    for cat in categories:
+        cat_name = cat.get("name", "")
+        items = cat.get("items", [])
+
+        # Category header
+        ws.Cells(current_row, 1).Value = cat_name
+        ws.Range(f"A{current_row}:E{current_row}").MergeCells = True
+        _apply_font(ws.Cells(current_row, 1), bold=True, size=13,
+                    name="Segoe UI", color=(255, 255, 255))
+        _apply_fill(ws.Range(f"A{current_row}:E{current_row}"), s["primary"])
+        current_row += 1
+
+        # Column headers
+        headers = ["Product", "Description", "Price", "Unit", "Notes"]
+        for j, h in enumerate(headers):
+            ws.Cells(current_row, j + 1).Value = h
+            _apply_font(ws.Cells(current_row, j + 1), bold=True, size=10,
+                        name="Segoe UI", color=(255, 255, 255))
+        _apply_fill(ws.Range(f"A{current_row}:E{current_row}"), s["accent"])
+        current_row += 1
+
+        for i, item in enumerate(items):
+            ws.Cells(current_row, 1).Value = item.get("name", "")
+            ws.Cells(current_row, 2).Value = item.get("description", "")
+            ws.Cells(current_row, 3).Value = item.get("price", 0)
+            ws.Cells(current_row, 3).NumberFormat = "$#,##0.00"
+            ws.Cells(current_row, 4).Value = item.get("unit", "each")
+            ws.Cells(current_row, 5).Value = item.get("notes", "")
+
+            for c in range(1, 6):
+                _apply_font(ws.Cells(current_row, c), size=10, name="Segoe UI")
+            _apply_font(ws.Cells(current_row, 3), bold=True)
+            _set_alignment(ws.Cells(current_row, 3), h_align=XL_HALIGN_RIGHT)
+
+            if i % 2 == 0:
+                _apply_fill(ws.Range(f"A{current_row}:E{current_row}"), s["alt"])
+
+            total_items += 1
+            current_row += 1
+
+        # Borders for this category block
+        cat_start = current_row - len(items) - 1
+        _apply_borders(ws.Range(f"A{cat_start}:E{current_row - 1}"),
+                      weight=XL_BORDER_WEIGHT_THIN, color=s["border"])
+
+        current_row += 1  # gap
+
+    # Column widths
+    ws.Columns(1).ColumnWidth = 24
+    ws.Columns(2).ColumnWidth = 35
+    ws.Columns(3).ColumnWidth = 14
+    ws.Columns(4).ColumnWidth = 10
+    ws.Columns(5).ColumnWidth = 20
+
+    return {"sheet": ws.Name, "title": title,
+            "category_count": len(categories),
+            "total_items": total_items, "style": style}
+
+
+# ---------------------------------------------------------------------------
+# Conversion Table
+# ---------------------------------------------------------------------------
+
+def create_conversion_table(sheet, title, from_unit, to_unit, values, formula):
+    """Create a unit conversion table.
+
+    Args:
+        sheet: Sheet name or None for active sheet.
+        title: Table title.
+        from_unit: Source unit name.
+        to_unit: Target unit name.
+        values: list of input values.
+        formula: Conversion formula string where 'x' represents the input value
+                 (e.g. "x*2.54" for inches to cm).
+
+    Returns:
+        dict with status info.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+
+    primary = (41, 65, 122)
+    accent = (47, 117, 181)
+    light = (217, 226, 243)
+
+    # Title
+    ws.Cells(1, 1).Value = title
+    ws.Range("A1:C1").MergeCells = True
+    _apply_font(ws.Cells(1, 1), bold=True, size=16, name="Segoe UI", color=primary)
+    _set_alignment(ws.Cells(1, 1), h_align=XL_HALIGN_CENTER)
+
+    # Formula display
+    ws.Cells(2, 1).Value = f"Formula: {from_unit} -> {to_unit} = {formula}"
+    ws.Range("A2:C2").MergeCells = True
+    _apply_font(ws.Cells(2, 1), size=10, name="Segoe UI", color=(100, 100, 100))
+    _set_alignment(ws.Cells(2, 1), h_align=XL_HALIGN_CENTER)
+
+    # Headers
+    header_row = 4
+    ws.Cells(header_row, 1).Value = from_unit
+    ws.Cells(header_row, 2).Value = to_unit
+    ws.Cells(header_row, 3).Value = "Formula Used"
+    _apply_fill(ws.Range(f"A{header_row}:C{header_row}"), primary)
+    for c in range(1, 4):
+        _apply_font(ws.Cells(header_row, c), bold=True, size=11,
+                    name="Segoe UI", color=(255, 255, 255))
+        _set_alignment(ws.Cells(header_row, c), h_align=XL_HALIGN_CENTER)
+
+    # Convert formula string to Excel formula
+    # Replace 'x' with cell reference
+    for i, val in enumerate(values):
+        r = header_row + 1 + i
+        ws.Cells(r, 1).Value = val
+        _apply_font(ws.Cells(r, 1), size=11, name="Segoe UI")
+        _set_alignment(ws.Cells(r, 1), h_align=XL_HALIGN_CENTER)
+
+        # Convert python-style formula to Excel formula
+        excel_formula = formula.replace("x", f"A{r}").replace("X", f"A{r}")
+        ws.Cells(r, 2).Formula = f"={excel_formula}"
+        ws.Cells(r, 2).NumberFormat = "0.####"
+        _apply_font(ws.Cells(r, 2), bold=True, size=11, name="Segoe UI", color=accent)
+        _set_alignment(ws.Cells(r, 2), h_align=XL_HALIGN_CENTER)
+
+        # Show formula text
+        ws.Cells(r, 3).Value = f"={excel_formula}"
+        _apply_font(ws.Cells(r, 3), size=9, name="Consolas", color=(120, 120, 120))
+
+        if i % 2 == 0:
+            _apply_fill(ws.Range(f"A{r}:C{r}"), light)
+
+    last_row = header_row + len(values)
+    _apply_borders(ws.Range(f"A{header_row}:C{last_row}"),
+                  weight=XL_BORDER_WEIGHT_THIN, color=(180, 195, 220))
+
+    ws.Columns(1).ColumnWidth = 18
+    ws.Columns(2).ColumnWidth = 18
+    ws.Columns(3).ColumnWidth = 24
+
+    return {"sheet": ws.Name, "title": title,
+            "from_unit": from_unit, "to_unit": to_unit,
+            "value_count": len(values)}

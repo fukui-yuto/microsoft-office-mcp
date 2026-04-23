@@ -584,3 +584,115 @@ def word_create_training_manual(
         )
     except Exception as e:
         return f"エラー: {e}"
+
+
+@mcp.tool()
+def word_create_policy_document(
+    title: str,
+    version: str,
+    effective_date: str,
+    sections: list[dict],
+    approval_chain: list[dict] | None = None,
+    style: str = "formal",
+) -> str:
+    """ポリシー文書を作成します。改訂履歴・承認署名欄を含むフォーマル文書。sections: [{"title": "...", "content": "..."}]。approval_chain: [{"name": "名前", "title": "役職", "date": "日付"}]。style: formal, modern。"""
+    try:
+        result = word_advanced.create_policy_document(
+            title, version, effective_date, sections,
+            approval_chain=approval_chain, style=style,
+        )
+        return (
+            f"ポリシー文書を作成しました（タイトル: {result['title']}、"
+            f"バージョン: {result['version']}、セクション数: {result['section_count']}、"
+            f"スタイル: {result['style']}）"
+        )
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def word_create_technical_specification(
+    title: str,
+    version: str,
+    sections: list[dict],
+    revision_history: list[dict] | None = None,
+    style: str = "detailed",
+) -> str:
+    """技術仕様書を作成します。sections: [{"title": "...", "content": "...", "subsections": [{"title": "...", "content": "..."}]}]。revision_history: [{"version": "...", "date": "...", "changes": "..."}]。style: detailed, concise。"""
+    try:
+        result = word_advanced.create_technical_specification(
+            title, version, sections,
+            revision_history=revision_history, style=style,
+        )
+        return (
+            f"技術仕様書を作成しました（タイトル: {result['title']}、"
+            f"バージョン: {result['version']}、セクション数: {result['section_count']}、"
+            f"スタイル: {result['style']}）"
+        )
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def word_create_user_guide(
+    title: str,
+    chapters: list[dict],
+    style: str = "friendly",
+) -> str:
+    """ユーザーガイドを作成します。chapters: [{"title": "章タイトル", "introduction": "導入文", "steps": [{"instruction": "手順", "note": "補足"}]}]。style: friendly（親しみやすい）, technical（技術的）, minimal（ミニマル）。"""
+    try:
+        result = word_advanced.create_user_guide(
+            title, chapters, style=style,
+        )
+        return (
+            f"ユーザーガイドを作成しました（タイトル: {result['title']}、"
+            f"チャプター数: {result['chapter_count']}、スタイル: {result['style']}）"
+        )
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def word_create_press_release(
+    headline: str,
+    dateline: str,
+    body_paragraphs: list[str],
+    company_info: str | None = None,
+    contact_info: dict | None = None,
+) -> str:
+    """プレスリリースを作成します。標準フォーマット（FOR IMMEDIATE RELEASE、###、ボイラープレート）。contact_info: {"name": "名前", "email": "メール", "phone": "電話"}。"""
+    try:
+        result = word_advanced.create_press_release(
+            headline, dateline, body_paragraphs,
+            company_info=company_info, contact_info=contact_info,
+        )
+        return (
+            f"プレスリリースを作成しました（見出し: {result['headline']}、"
+            f"段落数: {result['paragraph_count']}）"
+        )
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def word_create_case_study(
+    title: str,
+    client: str,
+    challenge: str,
+    solution: str,
+    results: list[str] | str,
+    testimonial: dict | None = None,
+    style: str = "professional",
+) -> str:
+    """ケーススタディ文書を作成します。課題→解決策→成果の構成。testimonial: {"quote": "引用文", "author": "著者", "title": "役職"}。style: professional, creative, minimal。"""
+    try:
+        result = word_advanced.create_case_study(
+            title, client, challenge, solution, results,
+            testimonial=testimonial, style=style,
+        )
+        return (
+            f"ケーススタディを作成しました（タイトル: {result['title']}、"
+            f"クライアント: {result['client']}、スタイル: {result['style']}）"
+        )
+    except Exception as e:
+        return f"エラー: {e}"

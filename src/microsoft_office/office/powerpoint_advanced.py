@@ -5432,3 +5432,645 @@ def create_problem_solution_slide(
                      alignment=PP_ALIGN_LEFT)
 
     return {"slide_number": slide_number, "style": style}
+
+
+# ============================================================
+# Mind Map Diagram
+# ============================================================
+
+def create_mind_map(slide_number, center_topic, branches, style="organic"):
+    """Create a mind map diagram on a slide.
+
+    Args:
+        slide_number: Target slide number.
+        center_topic: Central topic text.
+        branches: list of {"topic": "...", "subtopics": ["..."]}.
+        style: "organic" | "structured" | "colorful".
+
+    Returns:
+        dict with status info.
+    """
+    import math
+
+    prs, slide = _get_slide(slide_number)
+    sw, sh = _get_slide_dimensions()
+
+    branch_colors = [
+        (0, 120, 215), (232, 72, 85), (0, 164, 120),
+        (255, 163, 0), (123, 31, 162), (0, 150, 199),
+        (192, 57, 43), (39, 174, 96),
+    ]
+
+    if style == "colorful":
+        bg = (25, 25, 35)
+    else:
+        bg = (248, 250, 252)
+    _set_solid_bg(slide, bg)
+
+    # Center node
+    cx, cy = sw / 2, sh / 2
+    center_w, center_h = 220, 80
+    if style == "colorful":
+        center_fill = (255, 255, 255)
+        center_text_color = (25, 25, 35)
+    else:
+        center_fill = (41, 65, 122)
+        center_text_color = (255, 255, 255)
+
+    center_shape = _add_shape(slide, MSO_SHAPE_ROUNDED_RECTANGLE,
+                              cx - center_w / 2, cy - center_h / 2,
+                              center_w, center_h, fill_rgb=center_fill)
+    _add_shadow(center_shape, blur=10, offset_x=2, offset_y=2, transparency=0.5)
+    _add_textbox(slide, cx - center_w / 2 + 10, cy - center_h / 2 + 10,
+                 center_w - 20, center_h - 20, center_topic,
+                 font_name="Segoe UI", font_size=16, font_color=center_text_color,
+                 bold=True, alignment=PP_ALIGN_CENTER,
+                 vertical_anchor=MSO_ANCHOR_MIDDLE)
+
+    n = len(branches)
+    for i, branch in enumerate(branches):
+        angle = (2 * math.pi * i / n) - math.pi / 2
+        r_main = min(sw, sh) * 0.30
+        bx = cx + r_main * math.cos(angle)
+        by = cy + r_main * math.sin(angle)
+
+        if style == "colorful":
+            color = branch_colors[i % len(branch_colors)]
+        elif style == "organic":
+            color = (68, 114, 196)
+        else:
+            color = (41, 65, 122)
+
+        # Connector line from center to branch
+        connector = slide.Shapes.AddLine(cx, cy, bx, by)
+        connector.Line.ForeColor.RGB = rgb(*color)
+        if style == "organic":
+            connector.Line.Weight = 3
+            connector.Line.DashStyle = MSO_LINE_SOLID
+        elif style == "structured":
+            connector.Line.Weight = 2
+        else:
+            connector.Line.Weight = 3.5
+
+        # Branch node
+        bw, bh = 160, 50
+        _add_shape(slide, MSO_SHAPE_ROUNDED_RECTANGLE,
+                   bx - bw / 2, by - bh / 2, bw, bh, fill_rgb=color)
+        _add_textbox(slide, bx - bw / 2 + 5, by - bh / 2 + 5, bw - 10, bh - 10,
+                     branch.get("topic", ""),
+                     font_name="Segoe UI", font_size=11,
+                     font_color=(255, 255, 255), bold=True,
+                     alignment=PP_ALIGN_CENTER,
+                     vertical_anchor=MSO_ANCHOR_MIDDLE)
+
+        # Subtopics
+        subtopics = branch.get("subtopics", [])
+        for j, sub in enumerate(subtopics):
+            sub_angle = angle + (j - len(subtopics) / 2 + 0.5) * 0.35
+            r_sub = min(sw, sh) * 0.17
+            sx = bx + r_sub * math.cos(sub_angle)
+            sy = by + r_sub * math.sin(sub_angle)
+
+            # Clamp within slide
+            sx = max(60, min(sw - 120, sx))
+            sy = max(30, min(sh - 40, sy))
+
+            # Sub connector
+            sub_conn = slide.Shapes.AddLine(bx, by, sx, sy)
+            sub_color = tuple(min(255, c + 60) for c in color)
+            sub_conn.Line.ForeColor.RGB = rgb(*sub_color)
+            sub_conn.Line.Weight = 1.5
+
+            # Sub node
+            sub_w, sub_h = 120, 34
+            sub_fill = tuple(min(255, c + 40) for c in color)
+            _add_shape(slide, MSO_SHAPE_ROUNDED_RECTANGLE,
+                       sx - sub_w / 2, sy - sub_h / 2, sub_w, sub_h,
+                       fill_rgb=sub_fill)
+            _add_textbox(slide, sx - sub_w / 2 + 4, sy - sub_h / 2 + 4,
+                         sub_w - 8, sub_h - 8, sub,
+                         font_name="Segoe UI", font_size=9,
+                         font_color=(255, 255, 255),
+                         alignment=PP_ALIGN_CENTER,
+                         vertical_anchor=MSO_ANCHOR_MIDDLE)
+
+    return {"slide_number": slide_number, "style": style, "branch_count": n}
+
+
+# ============================================================
+# Hierarchy Slide
+# ============================================================
+
+def create_hierarchy_slide(slide_number, title, levels, style="pyramid"):
+    """Create a hierarchical data slide.
+
+    Args:
+        slide_number: Target slide number.
+        title: Slide title.
+        levels: list of {"label": "...", "items": ["..."]}.
+        style: "pyramid" | "tree" | "layers".
+
+    Returns:
+        dict with status info.
+    """
+    prs, slide = _get_slide(slide_number)
+    sw, sh = _get_slide_dimensions()
+
+    _set_solid_bg(slide, (248, 250, 252))
+
+    # Title
+    _add_textbox(slide, 40, 15, sw - 80, 45, title,
+                 font_name="Segoe UI", font_size=24, font_color=(33, 37, 41),
+                 bold=True, alignment=PP_ALIGN_LEFT)
+
+    n = len(levels)
+    level_colors = [
+        (41, 65, 122), (68, 114, 196), (47, 117, 181),
+        (0, 166, 214), (0, 150, 136), (96, 125, 139),
+        (123, 31, 162), (230, 126, 34),
+    ]
+
+    content_top = 75
+    content_h = sh - content_top - 30
+
+    if style == "pyramid":
+        for i, level in enumerate(levels):
+            ratio = 1.0 - (i * 0.6 / max(n - 1, 1))
+            lw = (sw - 120) * ratio
+            lh = content_h / n - 6
+            lx = (sw - lw) / 2
+            ly = content_top + i * (content_h / n)
+            color = level_colors[i % len(level_colors)]
+
+            _add_shape(slide, MSO_SHAPE_RECTANGLE, lx, ly, lw, lh,
+                       fill_rgb=color)
+
+            label = level.get("label", "")
+            items = level.get("items", [])
+            items_text = " | ".join(items) if items else ""
+            display_text = f"{label}: {items_text}" if items_text else label
+
+            _add_textbox(slide, lx + 10, ly + 4, lw - 20, lh - 8, display_text,
+                         font_name="Segoe UI", font_size=12,
+                         font_color=(255, 255, 255), bold=True,
+                         alignment=PP_ALIGN_CENTER,
+                         vertical_anchor=MSO_ANCHOR_MIDDLE)
+
+    elif style == "tree":
+        root_w = 260
+        root_h = 50
+        root_x = sw / 2 - root_w / 2
+        root_y = content_top
+
+        if n > 0:
+            root = levels[0]
+            _add_shape(slide, MSO_SHAPE_ROUNDED_RECTANGLE, root_x, root_y,
+                       root_w, root_h, fill_rgb=level_colors[0])
+            _add_textbox(slide, root_x + 10, root_y + 8, root_w - 20, root_h - 16,
+                         root.get("label", ""),
+                         font_name="Segoe UI", font_size=16,
+                         font_color=(255, 255, 255), bold=True,
+                         alignment=PP_ALIGN_CENTER,
+                         vertical_anchor=MSO_ANCHOR_MIDDLE)
+
+        for i in range(1, n):
+            level = levels[i]
+            items = level.get("items", [level.get("label", "")])
+            if not items:
+                items = [level.get("label", "")]
+            item_count = len(items)
+            item_w = min(180, (sw - 80) / max(item_count, 1) - 10)
+            item_h = 40
+            total_w = item_count * (item_w + 10) - 10
+            start_x = (sw - total_w) / 2
+            item_y = content_top + i * (content_h / n)
+            color = level_colors[i % len(level_colors)]
+
+            for j, item in enumerate(items):
+                ix = start_x + j * (item_w + 10)
+                _add_shape(slide, MSO_SHAPE_ROUNDED_RECTANGLE, ix, item_y,
+                           item_w, item_h, fill_rgb=color)
+                _add_textbox(slide, ix + 5, item_y + 5, item_w - 10, item_h - 10,
+                             item, font_name="Segoe UI", font_size=10,
+                             font_color=(255, 255, 255), bold=True,
+                             alignment=PP_ALIGN_CENTER,
+                             vertical_anchor=MSO_ANCHOR_MIDDLE)
+
+                parent_cx = sw / 2
+                parent_cy = content_top + (i - 1) * (content_h / n) + 45
+                conn = slide.Shapes.AddLine(parent_cx, parent_cy,
+                                            ix + item_w / 2, item_y)
+                conn.Line.ForeColor.RGB = rgb(*color)
+                conn.Line.Weight = 1.5
+
+    else:  # layers
+        for i, level in enumerate(levels):
+            lh = content_h / n - 8
+            ly = content_top + i * (content_h / n)
+            color = level_colors[i % len(level_colors)]
+
+            _add_shape(slide, MSO_SHAPE_ROUNDED_RECTANGLE, 50, ly, sw - 100, lh,
+                       fill_rgb=color)
+
+            label = level.get("label", "")
+            items = level.get("items", [])
+            items_text = "  \u2022  ".join(items) if items else ""
+            display = f"{label}:  {items_text}" if items_text else label
+
+            _add_textbox(slide, 65, ly + 6, sw - 130, lh - 12, display,
+                         font_name="Segoe UI", font_size=13,
+                         font_color=(255, 255, 255), bold=True,
+                         alignment=PP_ALIGN_LEFT,
+                         vertical_anchor=MSO_ANCHOR_MIDDLE)
+
+    return {"slide_number": slide_number, "style": style, "level_count": n}
+
+
+# ============================================================
+# Metrics Grid
+# ============================================================
+
+def create_metrics_grid(slide_number, title, metrics, columns=3, style="cards"):
+    """Create a grid of metrics/stats.
+
+    Args:
+        slide_number: Target slide number.
+        title: Slide title.
+        metrics: list of {"label": "...", "value": "...", "unit": "...", "trend": "up/down/flat"}.
+        columns: Number of columns.
+        style: "cards" | "minimal" | "dashboard".
+
+    Returns:
+        dict with status info.
+    """
+    prs, slide = _get_slide(slide_number)
+    sw, sh = _get_slide_dimensions()
+
+    _set_solid_bg(slide, (245, 247, 250))
+
+    # Title
+    _add_textbox(slide, 40, 15, sw - 80, 45, title,
+                 font_name="Segoe UI", font_size=24, font_color=(33, 37, 41),
+                 bold=True, alignment=PP_ALIGN_LEFT)
+
+    trend_symbols = {"up": "\u25b2", "down": "\u25bc", "flat": "\u2014"}
+    trend_colors = {"up": (34, 139, 34), "down": (220, 53, 69), "flat": (108, 117, 125)}
+
+    n = len(metrics)
+    rows_count = (n + columns - 1) // columns
+    margin = 40
+    gap = 12
+    card_w = (sw - 2 * margin - (columns - 1) * gap) / columns
+    card_h = min(120, (sh - 100 - (rows_count - 1) * gap) / rows_count)
+    content_top = 75
+
+    for idx, metric in enumerate(metrics):
+        col = idx % columns
+        row = idx // columns
+        cx = margin + col * (card_w + gap)
+        cy = content_top + row * (card_h + gap)
+
+        label = metric.get("label", "")
+        value = str(metric.get("value", ""))
+        unit = metric.get("unit", "")
+        trend = metric.get("trend", "flat")
+
+        if style == "cards":
+            card = _add_shape(slide, MSO_SHAPE_ROUNDED_RECTANGLE, cx, cy, card_w, card_h,
+                              fill_rgb=(255, 255, 255))
+            _add_shadow(card, blur=6, offset_x=1, offset_y=2, transparency=0.7)
+            _add_shape(slide, MSO_SHAPE_RECTANGLE, cx, cy, card_w, 4,
+                       fill_rgb=(41, 65, 122))
+            _add_textbox(slide, cx + 12, cy + 14, card_w - 24, 38,
+                         f"{value}{unit}",
+                         font_name="Segoe UI", font_size=26,
+                         font_color=(33, 37, 41), bold=True,
+                         alignment=PP_ALIGN_LEFT)
+            _add_textbox(slide, cx + 12, cy + 52, card_w - 60, 24, label,
+                         font_name="Segoe UI", font_size=10,
+                         font_color=(108, 117, 125),
+                         alignment=PP_ALIGN_LEFT)
+            sym = trend_symbols.get(trend, "\u2014")
+            tc = trend_colors.get(trend, (108, 117, 125))
+            _add_textbox(slide, cx + card_w - 45, cy + 52, 35, 24, sym,
+                         font_name="Segoe UI", font_size=14,
+                         font_color=tc, bold=True, alignment=PP_ALIGN_CENTER)
+
+        elif style == "minimal":
+            _add_shape(slide, MSO_SHAPE_RECTANGLE, cx, cy + card_h - 2, card_w, 2,
+                       fill_rgb=(200, 210, 225))
+            _add_textbox(slide, cx + 8, cy + 8, card_w - 16, 38,
+                         f"{value}{unit}",
+                         font_name="Segoe UI Light", font_size=30,
+                         font_color=(41, 65, 122), bold=False,
+                         alignment=PP_ALIGN_CENTER)
+            _add_textbox(slide, cx + 8, cy + 50, card_w - 16, 20, label,
+                         font_name="Segoe UI", font_size=10,
+                         font_color=(108, 117, 125),
+                         alignment=PP_ALIGN_CENTER)
+            sym = trend_symbols.get(trend, "\u2014")
+            tc = trend_colors.get(trend, (108, 117, 125))
+            _add_textbox(slide, cx + 8, cy + 72, card_w - 16, 18, sym,
+                         font_name="Segoe UI", font_size=12,
+                         font_color=tc, alignment=PP_ALIGN_CENTER)
+
+        else:  # dashboard
+            _add_shape(slide, MSO_SHAPE_RECTANGLE, cx, cy, card_w, card_h,
+                       fill_rgb=(33, 37, 41))
+            tc = trend_colors.get(trend, (108, 117, 125))
+            _add_shape(slide, MSO_SHAPE_RECTANGLE, cx, cy, 5, card_h,
+                       fill_rgb=tc)
+            _add_textbox(slide, cx + 15, cy + 10, card_w - 25, 40,
+                         f"{value}{unit}",
+                         font_name="Segoe UI", font_size=28,
+                         font_color=(255, 255, 255), bold=True,
+                         alignment=PP_ALIGN_LEFT)
+            _add_textbox(slide, cx + 15, cy + 55, card_w - 25, 20, label,
+                         font_name="Segoe UI", font_size=10,
+                         font_color=(180, 190, 200),
+                         alignment=PP_ALIGN_LEFT)
+            sym = trend_symbols.get(trend, "\u2014")
+            _add_textbox(slide, cx + card_w - 40, cy + 10, 30, 24, sym,
+                         font_name="Segoe UI", font_size=16,
+                         font_color=tc, bold=True, alignment=PP_ALIGN_CENTER)
+
+    return {"slide_number": slide_number, "style": style, "metric_count": n}
+
+
+# ============================================================
+# Workflow Slide
+# ============================================================
+
+def create_workflow_slide(slide_number, title, steps, style="horizontal"):
+    """Create a workflow/process slide.
+
+    Args:
+        slide_number: Target slide number.
+        title: Slide title.
+        steps: list of {"title": "...", "description": "...", "status": "done/active/pending"}.
+        style: "horizontal" | "vertical" | "circular".
+
+    Returns:
+        dict with status info.
+    """
+    import math
+
+    prs, slide = _get_slide(slide_number)
+    sw, sh = _get_slide_dimensions()
+
+    _set_solid_bg(slide, (248, 250, 252))
+
+    # Title
+    _add_textbox(slide, 40, 15, sw - 80, 45, title,
+                 font_name="Segoe UI", font_size=24, font_color=(33, 37, 41),
+                 bold=True, alignment=PP_ALIGN_LEFT)
+
+    status_colors = {
+        "done": (34, 139, 34),
+        "active": (0, 120, 215),
+        "pending": (180, 180, 190),
+    }
+    status_icons = {"done": "\u2713", "active": "\u25cf", "pending": "\u25cb"}
+
+    n = len(steps)
+    content_top = 80
+
+    if style == "horizontal":
+        margin = 50
+        gap = 10
+        step_w = (sw - 2 * margin - (n - 1) * gap) / n
+        step_h = sh - content_top - 50
+        for i, step in enumerate(steps):
+            sx = margin + i * (step_w + gap)
+            sy = content_top
+            status = step.get("status", "pending")
+            color = status_colors.get(status, (180, 180, 190))
+            icon = status_icons.get(status, "\u25cb")
+
+            card = _add_shape(slide, MSO_SHAPE_ROUNDED_RECTANGLE, sx, sy,
+                              step_w, step_h, fill_rgb=(255, 255, 255))
+            _add_shadow(card, blur=4, offset_x=1, offset_y=1, transparency=0.75)
+            _add_shape(slide, MSO_SHAPE_RECTANGLE, sx, sy, step_w, 5,
+                       fill_rgb=color)
+
+            circle_size = 36
+            _add_shape(slide, MSO_SHAPE_OVAL,
+                       sx + step_w / 2 - circle_size / 2, sy + 15,
+                       circle_size, circle_size, fill_rgb=color)
+            _add_textbox(slide, sx + step_w / 2 - circle_size / 2, sy + 17,
+                         circle_size, circle_size - 4, icon,
+                         font_name="Segoe UI", font_size=16,
+                         font_color=(255, 255, 255), bold=True,
+                         alignment=PP_ALIGN_CENTER,
+                         vertical_anchor=MSO_ANCHOR_MIDDLE)
+
+            _add_textbox(slide, sx + 8, sy + 58, step_w - 16, 28,
+                         step.get("title", ""),
+                         font_name="Segoe UI", font_size=12,
+                         font_color=(33, 37, 41), bold=True,
+                         alignment=PP_ALIGN_CENTER)
+
+            desc = step.get("description", "")
+            if desc:
+                _add_textbox(slide, sx + 8, sy + 90, step_w - 16, step_h - 100,
+                             desc, font_name="Segoe UI", font_size=9,
+                             font_color=(100, 100, 110),
+                             alignment=PP_ALIGN_CENTER)
+
+            if i < n - 1:
+                ax = sx + step_w
+                ay = sy + step_h / 2
+                arrow = slide.Shapes.AddLine(ax + 2, ay, ax + gap - 2, ay)
+                arrow.Line.ForeColor.RGB = rgb(150, 150, 160)
+                arrow.Line.Weight = 2
+
+    elif style == "vertical":
+        margin_left = 120
+        step_h = 60
+        gap = 25
+        total_h = n * step_h + (n - 1) * gap
+        start_y = content_top + (sh - content_top - 30 - total_h) / 2
+        start_y = max(content_top, start_y)
+
+        for i, step in enumerate(steps):
+            sy = start_y + i * (step_h + gap)
+            status = step.get("status", "pending")
+            color = status_colors.get(status, (180, 180, 190))
+            icon = status_icons.get(status, "\u25cb")
+
+            circle_size = 30
+            _add_shape(slide, MSO_SHAPE_OVAL,
+                       margin_left - circle_size / 2, sy + step_h / 2 - circle_size / 2,
+                       circle_size, circle_size, fill_rgb=color)
+            _add_textbox(slide, margin_left - circle_size / 2,
+                         sy + step_h / 2 - circle_size / 2,
+                         circle_size, circle_size, icon,
+                         font_name="Segoe UI", font_size=14,
+                         font_color=(255, 255, 255), bold=True,
+                         alignment=PP_ALIGN_CENTER,
+                         vertical_anchor=MSO_ANCHOR_MIDDLE)
+
+            if i < n - 1:
+                lx = margin_left
+                ly = sy + step_h / 2 + circle_size / 2
+                line = slide.Shapes.AddLine(lx, ly, lx, ly + gap + step_h - circle_size)
+                line.Line.ForeColor.RGB = rgb(200, 200, 210)
+                line.Line.Weight = 2
+
+            card_x = margin_left + 30
+            card_w = sw - card_x - 60
+            card = _add_shape(slide, MSO_SHAPE_ROUNDED_RECTANGLE, card_x, sy,
+                              card_w, step_h, fill_rgb=(255, 255, 255))
+            _add_shadow(card, blur=3, offset_x=1, offset_y=1, transparency=0.8)
+            _add_shape(slide, MSO_SHAPE_RECTANGLE, card_x, sy, 4, step_h,
+                       fill_rgb=color)
+
+            _add_textbox(slide, card_x + 14, sy + 6, card_w - 28, 24,
+                         step.get("title", ""),
+                         font_name="Segoe UI", font_size=13,
+                         font_color=(33, 37, 41), bold=True,
+                         alignment=PP_ALIGN_LEFT)
+            desc = step.get("description", "")
+            if desc:
+                _add_textbox(slide, card_x + 14, sy + 30, card_w - 28, 24,
+                             desc, font_name="Segoe UI", font_size=9,
+                             font_color=(100, 100, 110),
+                             alignment=PP_ALIGN_LEFT)
+
+    else:  # circular
+        cx, cy = sw / 2, sh / 2 + 15
+        radius = min(sw, sh) * 0.28
+
+        for i, step in enumerate(steps):
+            angle = (2 * math.pi * i / n) - math.pi / 2
+            px = cx + radius * math.cos(angle)
+            py = cy + radius * math.sin(angle)
+
+            status = step.get("status", "pending")
+            color = status_colors.get(status, (180, 180, 190))
+            icon = status_icons.get(status, "\u25cb")
+
+            if n > 1:
+                next_angle = (2 * math.pi * ((i + 1) % n) / n) - math.pi / 2
+                nx = cx + radius * math.cos(next_angle)
+                ny = cy + radius * math.sin(next_angle)
+                conn = slide.Shapes.AddLine(px, py, nx, ny)
+                conn.Line.ForeColor.RGB = rgb(200, 200, 210)
+                conn.Line.Weight = 1.5
+
+            node_size = 60
+            _add_shape(slide, MSO_SHAPE_OVAL,
+                       px - node_size / 2, py - node_size / 2,
+                       node_size, node_size, fill_rgb=color)
+            _add_textbox(slide, px - node_size / 2, py - node_size / 2,
+                         node_size, node_size, icon,
+                         font_name="Segoe UI", font_size=18,
+                         font_color=(255, 255, 255), bold=True,
+                         alignment=PP_ALIGN_CENTER,
+                         vertical_anchor=MSO_ANCHOR_MIDDLE)
+
+            label_w = 140
+            label_x = px - label_w / 2
+            label_y = py + node_size / 2 + 4
+            _add_textbox(slide, label_x, label_y, label_w, 20,
+                         step.get("title", ""),
+                         font_name="Segoe UI", font_size=9,
+                         font_color=(33, 37, 41), bold=True,
+                         alignment=PP_ALIGN_CENTER)
+
+    return {"slide_number": slide_number, "style": style, "step_count": n}
+
+
+# ============================================================
+# Venn Diagram
+# ============================================================
+
+def create_venn_diagram(slide_number, items, center_text=None, style="classic"):
+    """Create a 2 or 3 circle Venn diagram.
+
+    Args:
+        slide_number: Target slide number.
+        items: list of {"label": "...", "items": ["..."]}.
+        center_text: Optional text for the overlap area.
+        style: "classic" | "solid" | "minimal".
+
+    Returns:
+        dict with status info.
+    """
+    import math
+
+    prs, slide = _get_slide(slide_number)
+    sw, sh = _get_slide_dimensions()
+
+    _set_solid_bg(slide, (255, 255, 255))
+
+    n = min(len(items), 3)
+    colors = [(41, 98, 196), (220, 68, 55), (46, 160, 67)]
+
+    cx, cy = sw / 2, sh / 2
+    circle_r = min(sw, sh) * 0.22
+
+    if style == "classic":
+        transparency = 0.55
+    elif style == "solid":
+        transparency = 0.15
+    else:
+        transparency = 0.70
+
+    positions = []
+    if n == 2:
+        offset = circle_r * 0.55
+        positions = [(cx - offset, cy), (cx + offset, cy)]
+    else:
+        offset = circle_r * 0.50
+        for i in range(3):
+            angle = (2 * math.pi * i / 3) - math.pi / 2
+            positions.append((cx + offset * math.cos(angle),
+                              cy + offset * math.sin(angle)))
+
+    for i in range(n):
+        px, py = positions[i]
+        color = colors[i % len(colors)]
+        circle = _add_shape(slide, MSO_SHAPE_OVAL,
+                            px - circle_r, py - circle_r,
+                            circle_r * 2, circle_r * 2,
+                            fill_rgb=color, fill_transparency=transparency)
+        if style != "minimal":
+            circle.Line.Visible = False
+        else:
+            circle.Line.Visible = True
+            circle.Line.ForeColor.RGB = rgb(*color)
+            circle.Line.Weight = 2.5
+
+        label = items[i].get("label", "")
+        sub_items = items[i].get("items", [])
+        text = label
+        if sub_items:
+            text += "\n" + "\n".join(f"\u2022 {s}" for s in sub_items)
+
+        if n == 2:
+            label_x = px - circle_r - 10 if i == 0 else px + 10
+            label_y = py - 60
+            align = PP_ALIGN_RIGHT if i == 0 else PP_ALIGN_LEFT
+        else:
+            angle = (2 * math.pi * i / 3) - math.pi / 2
+            label_x = px + (circle_r + 10) * math.cos(angle) - 80
+            label_y = py + (circle_r + 10) * math.sin(angle) - 30
+            align = PP_ALIGN_CENTER
+
+        label_x = max(10, min(sw - 170, label_x))
+        label_y = max(10, min(sh - 80, label_y))
+
+        _add_textbox(slide, label_x, label_y, 160, 80, text,
+                     font_name="Segoe UI", font_size=10,
+                     font_color=color, bold=False,
+                     alignment=align)
+
+    if center_text:
+        _add_textbox(slide, cx - 70, cy - 15, 140, 30, center_text,
+                     font_name="Segoe UI", font_size=12,
+                     font_color=(33, 37, 41), bold=True,
+                     alignment=PP_ALIGN_CENTER,
+                     vertical_anchor=MSO_ANCHOR_MIDDLE)
+
+    return {"slide_number": slide_number, "style": style, "circle_count": n}

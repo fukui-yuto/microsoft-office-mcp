@@ -625,3 +625,94 @@ def powerpoint_create_problem_solution_slide(
         return f"スライド {result['slide_number']} に課題→解決スライド（{result['style']}）を作成しました"
     except Exception as e:
         return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_create_mind_map(
+    slide_number: int,
+    center_topic: str,
+    branches: str,
+    style: str = "organic",
+) -> str:
+    """マインドマップ図を作成します。branches: JSON文字列 [{"topic": "ブランチ名", "subtopics": ["サブトピック1"]}]。style: organic（曲線コネクタ）, structured（直線）, colorful（各ブランチ別色）"""
+    try:
+        branches_list = json.loads(branches) if isinstance(branches, str) else branches
+        result = ppt_adv.create_mind_map(
+            slide_number, center_topic, branches_list, style=style,
+        )
+        return f"スライド {result['slide_number']} にマインドマップ（{result['style']}、{result['branch_count']}ブランチ）を作成しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_create_hierarchy_slide(
+    slide_number: int,
+    title: str,
+    levels: str,
+    style: str = "pyramid",
+) -> str:
+    """階層構造スライドを作成します。levels: JSON文字列 [{"label": "レベル名", "items": ["項目1"]}]。style: pyramid（逆ピラミッド）, tree（ツリー構造）, layers（積み重ねレイヤー）"""
+    try:
+        levels_list = json.loads(levels) if isinstance(levels, str) else levels
+        result = ppt_adv.create_hierarchy_slide(
+            slide_number, title, levels_list, style=style,
+        )
+        return f"スライド {result['slide_number']} に階層構造（{result['style']}、{result['level_count']}レベル）を作成しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_create_metrics_grid(
+    slide_number: int,
+    title: str,
+    metrics: str,
+    columns: int = 3,
+    style: str = "cards",
+) -> str:
+    """メトリクスグリッドスライドを作成します。metrics: JSON文字列 [{"label": "ラベル", "value": "値", "unit": "単位", "trend": "up/down/flat"}]。style: cards, minimal, dashboard"""
+    try:
+        metrics_list = json.loads(metrics) if isinstance(metrics, str) else metrics
+        result = ppt_adv.create_metrics_grid(
+            slide_number, title, metrics_list, columns=columns, style=style,
+        )
+        return f"スライド {result['slide_number']} にメトリクスグリッド（{result['style']}、{result['metric_count']}件）を作成しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_create_workflow_slide(
+    slide_number: int,
+    title: str,
+    steps: str,
+    style: str = "horizontal",
+) -> str:
+    """ワークフロースライドを作成します。steps: JSON文字列 [{"title": "ステップ名", "description": "説明", "status": "done/active/pending"}]。style: horizontal（横並び）, vertical（縦並び）, circular（円形配置）"""
+    try:
+        steps_list = json.loads(steps) if isinstance(steps, str) else steps
+        result = ppt_adv.create_workflow_slide(
+            slide_number, title, steps_list, style=style,
+        )
+        return f"スライド {result['slide_number']} にワークフロー（{result['style']}、{result['step_count']}ステップ）を作成しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_create_venn_diagram(
+    slide_number: int,
+    items: str,
+    center_text: str | None = None,
+    style: str = "classic",
+) -> str:
+    """ベン図（2〜3円）を作成します。items: JSON文字列 [{"label": "ラベル", "items": ["項目1"]}]。style: classic（半透明重なり）, solid（不透明）, minimal（輪郭のみ）"""
+    try:
+        items_list = json.loads(items) if isinstance(items, str) else items
+        result = ppt_adv.create_venn_diagram(
+            slide_number, items_list, center_text=center_text, style=style,
+        )
+        return f"スライド {result['slide_number']} にベン図（{result['style']}、{result['circle_count']}円）を作成しました"
+    except Exception as e:
+        return f"エラー: {e}"

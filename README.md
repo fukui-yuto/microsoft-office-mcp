@@ -102,7 +102,7 @@ Claude Code で普通に会話するだけです：
 「PDFで出力して」
 ```
 
-## ツール一覧（469ツール）
+## ツール一覧（484ツール）
 
 ### PowerPoint 基本（115ツール）
 
@@ -142,7 +142,7 @@ Claude Code で普通に会話するだけです：
 | ヘッダー・フッター | `add_header_footer` `set_slide_notes_format` |
 | ファイル操作 | `duplicate_presentation` `insert_slides_from` |
 
-### PowerPoint デザインプリセット（34ツール）
+### PowerPoint デザインプリセット（39ツール）
 
 | カテゴリ | ツール |
 |----------|--------|
@@ -158,6 +158,8 @@ Claude Code で普通に会話するだけです：
 | ビジネステンプレート | `create_swot_slide` `create_roadmap_slide` `create_pricing_table` `create_testimonial_slide` |
 | 比較・分析 | `create_before_after_slide` `create_problem_solution_slide` |
 | ショーケース | `create_feature_showcase` `create_data_table_slide` `create_thank_you_slide` |
+| ダイアグラム | `create_mind_map` `create_hierarchy_slide` `create_venn_diagram` |
+| ダッシュボード | `create_metrics_grid` `create_workflow_slide` |
 
 ### Word 基本（119ツール）
 
@@ -198,7 +200,7 @@ Claude Code で普通に会話するだけです：
 | デフォルト設定 | `set_default_font` |
 | 法務 | `add_table_of_authorities` |
 
-### Word テンプレート（28ツール）
+### Word テンプレート（33ツール）
 
 | カテゴリ | ツール |
 |----------|--------|
@@ -213,7 +215,9 @@ Claude Code で普通に会話するだけです：
 | 署名 | `add_signature_block` |
 | レポート | `create_executive_summary` `create_status_report` |
 | 申請・報告 | `create_change_request` `create_incident_report` |
-| 教育 | `create_training_manual` |
+| 教育 | `create_training_manual` `create_user_guide` |
+| 規程・仕様 | `create_policy_document` `create_technical_specification` |
+| 広報・事例 | `create_press_release` `create_case_study` |
 
 ### Excel 基本（140ツール）
 
@@ -259,7 +263,7 @@ Claude Code で普通に会話するだけです：
 | スタイル | `create_named_style` `apply_alternating_colors` |
 | データ取得 | `get_distinct_values` `vlookup` `create_summary_sheet` |
 
-### Excel テンプレート（33ツール）
+### Excel テンプレート（38ツール）
 
 | カテゴリ | ツール |
 |----------|--------|
@@ -274,6 +278,8 @@ Claude Code で普通に会話するだけです：
 | ダッシュボード高度 | `create_kpi_dashboard` `create_vendor_comparison` |
 | 財務 | `create_cash_flow_statement` |
 | ライフスタイル | `create_workout_tracker` `create_meal_planner` |
+| 計算・分析 | `create_loan_calculator` `create_grade_book` `create_survey_results` |
+| カタログ | `create_price_list` `create_conversion_table` |
 
 ## 技術構成
 
@@ -297,8 +303,8 @@ src/microsoft_office/
     └── excel_advanced.py    # 332行 - 20ツール
 ```
 
-- **総コード行数**: 32,170行+
-- **総ツール数**: 469ツール
+- **総コード行数**: 34,386行+
+- **総ツール数**: 484ツール
 - **MCP SDK**: `mcp[cli]` (FastMCP)
 - **Office 制御**: `pywin32` (win32com.client) による COM オートメーション
 - **パッケージ管理**: `uv`
