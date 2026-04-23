@@ -10,7 +10,7 @@ mcp = FastMCP(
 
 def main():
     # Import tool modules to register @mcp.tool() decorators
-    from microsoft_office.tools import powerpoint, word, excel  # noqa: F401
+    from microsoft_office.tools import powerpoint, word, excel, word_advanced, powerpoint_advanced, excel_advanced  # noqa: F401
 
     mcp.run(transport="stdio")
 

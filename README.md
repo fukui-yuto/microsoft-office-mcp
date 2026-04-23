@@ -70,7 +70,10 @@ Claude Code で普通に会話するだけです：
 ```
 「新しいプレゼンを作って」
 「5枚のスライドで会社紹介資料を作って、デザインも凝って」
-「3枚目にグラフを追加して」
+「モダンなタイトルスライドをデザインして」
+「プロセスフローを矢印スタイルで作って」
+「比較スライドをVS形式で作って」
+「チームメンバー紹介スライドを作って」
 「スライドにフェードのアニメーションを付けて」
 「PDFで出力して」
 ```
@@ -79,9 +82,11 @@ Claude Code で普通に会話するだけです：
 
 ```
 「議事録のテンプレートを作って」
-「ヘッダーとフッターを追加して」
-「目次を挿入して」
-「透かしを入れて」
+「ビジネスレターを作成して」
+「請求書を作って」
+「レポートテンプレートを生成して」
+「履歴書をモダンスタイルで作って」
+「契約書テンプレートを作って」
 「PDFで出力して」
 ```
 
@@ -89,15 +94,17 @@ Claude Code で普通に会話するだけです：
 
 ```
 「売上管理表を作って、罫線と書式も整えて」
-「棒グラフを追加して」
-「条件付き書式を設定して」
-「ピボットテーブルを作成して」
+「ダッシュボードヘッダーを作って」
+「KPIカードを並べて」
+「ガントチャートを作成して」
+「スコアカードを信号機スタイルで作って」
+「財務レポートのレイアウトを作って」
 「PDFで出力して」
 ```
 
-## ツール一覧（120ツール）
+## ツール一覧（288ツール）
 
-### PowerPoint（45ツール）
+### PowerPoint 基本（78ツール）
 
 | カテゴリ | ツール |
 |----------|--------|
@@ -112,8 +119,30 @@ Claude Code で普通に会話するだけです：
 | アニメーション | `set_slide_transition` `add_animation` |
 | ノート・セクション | `set_speaker_notes` `get_speaker_notes` `add_section` `get_sections` |
 | エクスポート | `export_to_pdf` |
+| 図形管理 | `align_shapes` `distribute_shapes` `set_shape_z_order` `duplicate_shape` `delete_shape` `get_shape_properties` `copy_shape_to_slide` `set_shape_size` |
+| テキスト効果 | `set_text_shadow` `set_text_glow` `set_text_outline` `set_text_gradient_fill` `add_rich_textbox` |
+| 高度な塗りつぶし | `set_shape_pattern_fill` `set_shape_texture_fill` `set_shape_picture_fill` |
+| フリーフォーム | `add_freeform_shape` |
+| 表の高度な操作 | `format_table_cell` `merge_table_cells` `set_table_border` |
+| マスター・レイアウト | `get_slide_layouts` `apply_slide_layout` `set_slide_number_visibility` |
+| メディア | `add_video` `add_audio` |
+| 高度なアニメーション | `add_motion_path` `set_animation_trigger` `set_animation_order` |
+| 図形の装飾 | `set_shape_border` |
+| スライドエクスポート | `export_slide_as_image` |
+| テキスト配置 | `set_shape_text_vertical` `set_shape_text_margin` `set_shape_autofit` |
 
-### Word（36ツール）
+### PowerPoint デザインプリセット（15ツール）
+
+| カテゴリ | ツール |
+|----------|--------|
+| テーマ・マスター | `apply_theme_colors` `set_master_font` |
+| 透かし | `add_watermark` |
+| スライドデザイン | `create_title_slide_design` `create_content_slide_design` `create_section_divider` `create_closing_slide` |
+| 装飾要素 | `add_decorative_element` `add_progress_bar` |
+| 構造化スライド | `create_agenda_slide` `create_comparison_slide` `create_process_flow` `create_quote_slide` `create_team_slide` |
+| スライド番号 | `add_slide_number_footer` |
+
+### Word 基本（71ツール）
 
 | カテゴリ | ツール |
 |----------|--------|
@@ -128,8 +157,29 @@ Claude Code で普通に会話するだけです：
 | レビュー | `add_comment` `get_comments` `enable_track_changes` `accept_all_changes` `reject_all_changes` |
 | 装飾 | `add_watermark` `set_page_borders` |
 | エクスポート | `export_to_pdf` |
+| スタイル管理 | `create_style` `apply_style` `get_styles` `modify_style` |
+| 脚注・文末脚注 | `add_footnote` `add_endnote` `get_footnotes` `get_endnotes` |
+| 表の高度な操作 | `merge_table_cells` `split_table_cell` `format_table_cell` `set_table_cell_borders` `set_table_width` |
+| 図形 | `add_shape` `add_line` |
+| テキスト装飾 | `add_drop_cap` `set_text_highlight` `set_character_spacing` `add_text_effect` |
+| ページレイアウト | `insert_page_break` `insert_column_break` `set_paragraph_borders` `set_paragraph_shading` `add_horizontal_line` |
+| 文書プロパティ | `set_document_properties` `get_document_properties` `get_document_statistics` |
+| 高度な機能 | `add_cross_reference` `insert_field` `set_tab_stops` `protect_document` `unprotect_document` |
+| コンテンツコントロール | `add_content_control` `insert_building_block` |
+| リスト高度 | `set_list_level` `restart_list_numbering` |
 
-### Excel（39ツール）
+### Word テンプレート（15ツール）
+
+| カテゴリ | ツール |
+|----------|--------|
+| カバーページ | `create_cover_page` `add_cover_page_image` |
+| テーマ | `setup_document_theme` |
+| テンプレート | `create_meeting_minutes` `create_report_template` `create_letter` `create_invoice` `create_resume` `create_newsletter` `create_contract` |
+| 書式一括設定 | `format_all_headings` |
+| 装飾要素 | `add_sidebar` `add_callout_box` |
+| 参照 | `create_table_of_figures` `insert_caption` |
+
+### Excel 基本（89ツール）
 
 | カテゴリ | ツール |
 |----------|--------|
@@ -146,23 +196,54 @@ Claude Code で普通に会話するだけです：
 | コメント | `add_comment` `get_comments` |
 | 印刷・出力 | `set_print_setup` `export_to_pdf` |
 | 保護 | `protect_sheet` `unprotect_sheet` |
+| スパークライン | `add_sparkline` `format_sparkline` |
+| 高度な条件付き書式 | `set_conditional_formatting_color_scale` `set_conditional_formatting_data_bar` `set_conditional_formatting_icon_set` |
+| グループ化 | `group_rows` `ungroup_rows` `group_columns` `ungroup_columns` `set_outline_level` `collapse_group` |
+| ハイパーリンク | `add_hyperlink` `add_internal_link` |
+| 画像・図形 | `insert_image` `add_shape` `add_textbox` |
+| 高度な書式 | `set_cell_style` `auto_fit_columns` `auto_fit_rows` `set_cell_indent` `set_text_rotation` `set_wrap_text` `set_cell_pattern` |
+| データ操作 | `copy_range` `clear_range` `find_value` `replace_value` `remove_duplicates` `text_to_columns` `transpose_range` |
+| グラフ高度 | `format_chart` `format_chart_series` `add_chart_trendline` `set_chart_area_format` |
+| ピボット高度 | `format_pivot_table` `add_pivot_field` `refresh_pivot_table` |
+| ブック管理 | `set_workbook_properties` `get_workbook_statistics` `set_tab_color` `hide_sheet` `unhide_sheet` `copy_sheet` `move_sheet` |
+| 印刷高度 | `set_print_area` `set_print_titles` `add_page_break` |
+| 保護高度 | `protect_workbook` `unprotect_workbook` `lock_cells` |
+
+### Excel テンプレート（20ツール）
+
+| カテゴリ | ツール |
+|----------|--------|
+| ダッシュボード | `create_dashboard_header` `create_kpi_cards` `add_data_summary` `create_heatmap` |
+| テーブル | `create_data_table` `create_summary_row` `apply_table_theme` `create_comparison_table` |
+| テンプレート | `create_input_form` `create_calendar` `create_gantt_chart` `create_scorecard` `create_financial_report` `create_invoice_template` `create_timesheet` `create_checklist` |
+| ナビゲーション | `add_sheet_navigation` |
+| 印刷準備 | `setup_print_ready` |
+| 数値書式 | `format_as_currency` `format_as_percentage` |
 
 ## 技術構成
 
 ```
 src/microsoft_office/
-├── server.py        # FastMCP サーバー（エントリポイント）
-├── com_utils.py     # COM 共通ユーティリティ
-├── office/          # COM オートメーションロジック（3,628行）
-│   ├── powerpoint.py   # 1,599行 - 33関数
-│   ├── word.py         # 851行 - 36関数
-│   └── excel.py        # 1,178行 - 39関数
-└── tools/           # MCP ツール定義（1,934行）
-    ├── powerpoint.py   # 816行 - 45ツール
-    ├── word.py         # 524行 - 36ツール
-    └── excel.py        # 594行 - 39ツール
+├── server.py              # FastMCP サーバー（エントリポイント）
+├── com_utils.py           # COM 共通ユーティリティ
+├── office/                # COM オートメーションロジック（13,460行）
+│   ├── powerpoint.py        # 2,710行 - 66関数
+│   ├── powerpoint_advanced.py # 2,362行 - 15関数
+│   ├── word.py              # 1,700行 - 71関数
+│   ├── word_advanced.py     # 1,910行 - 15関数
+│   ├── excel.py             # 2,714行 - 89関数
+│   └── excel_advanced.py    # 2,064行 - 20関数
+└── tools/                 # MCP ツール定義（4,935行）
+    ├── powerpoint.py        # 1,427行 - 78ツール
+    ├── powerpoint_advanced.py # 270行 - 15ツール
+    ├── word.py              # 1,126行 - 71ツール
+    ├── word_advanced.py     # 289行 - 15ツール
+    ├── excel.py             # 1,491行 - 89ツール
+    └── excel_advanced.py    # 332行 - 20ツール
 ```
 
+- **総コード行数**: 18,395行+
+- **総ツール数**: 288ツール
 - **MCP SDK**: `mcp[cli]` (FastMCP)
 - **Office 制御**: `pywin32` (win32com.client) による COM オートメーション
 - **パッケージ管理**: `uv`
