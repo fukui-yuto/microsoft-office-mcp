@@ -102,9 +102,9 @@ Claude Code で普通に会話するだけです：
 「PDFで出力して」
 ```
 
-## ツール一覧（288ツール）
+## ツール一覧（394ツール）
 
-### PowerPoint 基本（78ツール）
+### PowerPoint 基本（105ツール）
 
 | カテゴリ | ツール |
 |----------|--------|
@@ -130,6 +130,12 @@ Claude Code で普通に会話するだけです：
 | 図形の装飾 | `set_shape_border` |
 | スライドエクスポート | `export_slide_as_image` |
 | テキスト配置 | `set_shape_text_vertical` `set_shape_text_margin` `set_shape_autofit` |
+| スライド操作 | `set_slide_background_image` `get_slide_count` `clear_slide` |
+| 図形詳細 | `set_shape_opacity` `rotate_shape` `flip_shape` `set_shape_name` `find_shape_by_name` `list_shapes` |
+| テキスト詳細 | `add_superscript` `add_subscript` `set_paragraph_spacing` `set_text_columns` `clear_shape_text` |
+| グラフ書式 | `format_chart_title` `format_chart_axis` `format_chart_legend` `set_chart_style` `format_chart_data_labels` `add_chart_data_table` |
+| ダイアグラム | `create_org_chart` `create_pyramid_diagram` `create_circular_diagram` `create_matrix_diagram` |
+| プレゼン全体 | `set_all_slides_background` `apply_font_to_all` `get_presentation_summary` |
 
 ### PowerPoint デザインプリセット（15ツール）
 
@@ -142,7 +148,7 @@ Claude Code で普通に会話するだけです：
 | 構造化スライド | `create_agenda_slide` `create_comparison_slide` `create_process_flow` `create_quote_slide` `create_team_slide` |
 | スライド番号 | `add_slide_number_footer` |
 
-### Word 基本（71ツール）
+### Word 基本（109ツール）
 
 | カテゴリ | ツール |
 |----------|--------|
@@ -167,6 +173,13 @@ Claude Code で普通に会話するだけです：
 | 高度な機能 | `add_cross_reference` `insert_field` `set_tab_stops` `protect_document` `unprotect_document` |
 | コンテンツコントロール | `add_content_control` `insert_building_block` |
 | リスト高度 | `set_list_level` `restart_list_numbering` |
+| テキスト装飾詳細 | `set_text_color_range` `set_text_size_range` `add_strikethrough` `set_underline_style` `add_small_caps` `add_all_caps` |
+| 段落詳細 | `set_keep_with_next` `set_keep_together` `set_page_break_before` `set_widow_orphan_control` `set_outline_level` `get_paragraph_count` |
+| 表詳細 | `set_table_row_height` `set_table_cell_width` `set_table_alignment` `add_table_row` `delete_table_row` `add_table_column` `delete_table_column` `get_table_data` `set_table_repeat_header` |
+| セクション管理 | `get_section_count` `set_section_page_setup` `set_section_header` `set_section_footer` `link_section_header` |
+| ナビゲーション | `go_to_page` `get_page_count` `insert_text_at_bookmark` `get_paragraph_text` `get_paragraph_range` |
+| 検索詳細 | `find_text` `find_all` `highlight_found_text` |
+| 差し込み印刷 | `start_mail_merge` `insert_merge_field` `execute_mail_merge` |
 
 ### Word テンプレート（15ツール）
 
@@ -179,7 +192,7 @@ Claude Code で普通に会話するだけです：
 | 装飾要素 | `add_sidebar` `add_callout_box` |
 | 参照 | `create_table_of_figures` `insert_caption` |
 
-### Excel 基本（89ツール）
+### Excel 基本（130ツール）
 
 | カテゴリ | ツール |
 |----------|--------|
@@ -208,6 +221,16 @@ Claude Code で普通に会話するだけです：
 | ブック管理 | `set_workbook_properties` `get_workbook_statistics` `set_tab_color` `hide_sheet` `unhide_sheet` `copy_sheet` `move_sheet` |
 | 印刷高度 | `set_print_area` `set_print_titles` `add_page_break` |
 | 保護高度 | `protect_workbook` `unprotect_workbook` `lock_cells` |
+| 配列数式 | `set_array_formula` `evaluate_formula` `set_formula_range` `create_named_formula` |
+| データ分析 | `calculate_statistics` `create_frequency_distribution` `goal_seek` `create_data_table_analysis` |
+| 高度な書式2 | `set_rich_text_cell` `add_cell_dropdown` `set_cell_hyperlink_format` `clear_all_formatting` |
+| チャート拡張 | `add_combo_chart` `add_pie_chart` `add_scatter_chart` `add_stock_chart` `add_radar_chart` |
+| ブックナビ | `activate_sheet` `get_active_sheet` `get_used_range` `get_last_row` `get_last_column` |
+| データ操作2 | `fill_series` `concatenate_range` `split_text_by_rows` `apply_formula_to_range` `create_sequence` |
+| 条件操作 | `highlight_cells` `count_if` `sum_if` |
+| 表示設定 | `set_gridlines_visible` `set_headings_visible` `set_zoom_level` `set_sheet_direction` |
+| バリデーション拡張 | `add_number_validation` `add_date_validation` `add_text_length_validation` |
+| 監査 | `trace_precedents` `trace_dependents` `check_errors` `get_cell_formula` |
 
 ### Excel テンプレート（20ツール）
 
@@ -226,24 +249,24 @@ Claude Code で普通に会話するだけです：
 src/microsoft_office/
 ├── server.py              # FastMCP サーバー（エントリポイント）
 ├── com_utils.py           # COM 共通ユーティリティ
-├── office/                # COM オートメーションロジック（13,460行）
-│   ├── powerpoint.py        # 2,710行 - 66関数
+├── office/                # COM オートメーションロジック（16,422行）
+│   ├── powerpoint.py        # 3,768行 - 109関数
 │   ├── powerpoint_advanced.py # 2,362行 - 15関数
-│   ├── word.py              # 1,700行 - 71関数
+│   ├── word.py              # 2,312行 - 110関数
 │   ├── word_advanced.py     # 1,910行 - 15関数
-│   ├── excel.py             # 2,714行 - 89関数
+│   ├── excel.py             # 4,006行 - 133関数
 │   └── excel_advanced.py    # 2,064行 - 20関数
-└── tools/                 # MCP ツール定義（4,935行）
-    ├── powerpoint.py        # 1,427行 - 78ツール
+└── tools/                 # MCP ツール定義（6,474行）
+    ├── powerpoint.py        # 1,871行 - 105ツール
     ├── powerpoint_advanced.py # 270行 - 15ツール
-    ├── word.py              # 1,126行 - 71ツール
+    ├── word.py              # 1,607行 - 109ツール
     ├── word_advanced.py     # 289行 - 15ツール
-    ├── excel.py             # 1,491行 - 89ツール
+    ├── excel.py             # 2,105行 - 130ツール
     └── excel_advanced.py    # 332行 - 20ツール
 ```
 
-- **総コード行数**: 18,395行+
-- **総ツール数**: 288ツール
+- **総コード行数**: 22,896行+
+- **総ツール数**: 394ツール
 - **MCP SDK**: `mcp[cli]` (FastMCP)
 - **Office 制御**: `pywin32` (win32com.client) による COM オートメーション
 - **パッケージ管理**: `uv`

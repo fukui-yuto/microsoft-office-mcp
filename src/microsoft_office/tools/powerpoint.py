@@ -1425,3 +1425,447 @@ def powerpoint_set_shape_autofit(
         return f"スライド {result['slide_number']} の図形の自動調整を設定しました"
     except Exception as e:
         return f"エラー: {e}"
+
+
+# ============================================================
+# Slide Manipulation (Extended)
+# ============================================================
+
+@mcp.tool()
+def powerpoint_set_slide_background_image(slide_number: int, image_path: str) -> str:
+    """スライドの背景に画像を設定します。"""
+    try:
+        result = ppt.set_slide_background_image(slide_number, image_path)
+        return f"スライド {result['slide_number']} の背景画像を設定しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_get_slide_count() -> str:
+    """プレゼンテーションの総スライド数を取得します。"""
+    try:
+        result = ppt.get_slide_count()
+        return f"スライド数: {result['slide_count']}"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_clear_slide(slide_number: int) -> str:
+    """スライド上のすべての図形を削除します（白紙に戻す）。"""
+    try:
+        result = ppt.clear_slide(slide_number)
+        return f"スライド {result['slide_number']} から {result['deleted']} 個の図形を削除しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+# ============================================================
+# Shape Advanced
+# ============================================================
+
+@mcp.tool()
+def powerpoint_set_shape_opacity(slide_number: int, shape_index: int, opacity: float) -> str:
+    """図形の不透明度を設定します。opacity: 0（完全透明）〜100（完全不透明）。"""
+    try:
+        result = ppt.set_shape_opacity(slide_number, shape_index, opacity)
+        return f"スライド {result['slide_number']} の図形の不透明度を設定しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_rotate_shape(slide_number: int, shape_index: int, angle: float) -> str:
+    """図形を指定角度に回転します。angle: 回転角度（度数）。"""
+    try:
+        result = ppt.rotate_shape(slide_number, shape_index, angle)
+        return f"スライド {result['slide_number']} の図形を {angle} 度に回転しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_flip_shape(slide_number: int, shape_index: int, direction: str) -> str:
+    """図形を反転します。direction: "horizontal"=左右反転, "vertical"=上下反転。"""
+    try:
+        result = ppt.flip_shape(slide_number, shape_index, direction)
+        return f"スライド {result['slide_number']} の図形を反転しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_set_shape_name(slide_number: int, shape_index: int, name: str) -> str:
+    """図形の名前を変更します。"""
+    try:
+        result = ppt.set_shape_name(slide_number, shape_index, name)
+        return f"スライド {result['slide_number']} の図形名を '{result['name']}' に変更しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_find_shape_by_name(slide_number: int, name: str) -> str:
+    """名前で図形を検索し、そのインデックスを返します。"""
+    try:
+        result = ppt.find_shape_by_name(slide_number, name)
+        if result["shape_index"] == -1:
+            return f"スライド {result['slide_number']} に '{name}' という図形は見つかりませんでした"
+        return f"スライド {result['slide_number']} の '{name}' はインデックス {result['shape_index']} です"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_list_shapes(slide_number: int) -> str:
+    """スライド上のすべての図形をリスト表示します（インデックス、名前、タイプ、位置、サイズ）。"""
+    try:
+        result = ppt.list_shapes(slide_number)
+        lines = [f"スライド {result['slide_number']} の図形一覧:"]
+        for s in result["shapes"]:
+            lines.append(
+                f"  [{s['index']}] {s['name']} (type={s['type']}, "
+                f"left={s['left']:.1f}, top={s['top']:.1f}, "
+                f"width={s['width']:.1f}, height={s['height']:.1f})"
+            )
+        return "\n".join(lines)
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+# ============================================================
+# Text Advanced
+# ============================================================
+
+@mcp.tool()
+def powerpoint_add_superscript(
+    slide_number: int, shape_index: int, text: str, base_text: str | None = None,
+) -> str:
+    """図形に上付き文字を追加します。base_textを指定すると既存テキストを置き換えてから追加します。"""
+    try:
+        result = ppt.add_superscript(slide_number, shape_index, text, base_text)
+        if "error" in result:
+            return f"エラー: {result['error']}"
+        return f"スライド {result['slide_number']} の図形に上付き文字を追加しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_add_subscript(
+    slide_number: int, shape_index: int, text: str, base_text: str | None = None,
+) -> str:
+    """図形に下付き文字を追加します。base_textを指定すると既存テキストを置き換えてから追加します。"""
+    try:
+        result = ppt.add_subscript(slide_number, shape_index, text, base_text)
+        if "error" in result:
+            return f"エラー: {result['error']}"
+        return f"スライド {result['slide_number']} の図形に下付き文字を追加しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_set_paragraph_spacing(
+    slide_number: int,
+    shape_index: int,
+    paragraph_index: int,
+    space_before: float | None = None,
+    space_after: float | None = None,
+    line_spacing: float | None = None,
+) -> str:
+    """段落の間隔を設定します。space_before/space_after: 段落前後の間隔（ポイント）。line_spacing: 行間隔。"""
+    try:
+        result = ppt.set_paragraph_spacing(
+            slide_number, shape_index, paragraph_index,
+            space_before=space_before, space_after=space_after,
+            line_spacing=line_spacing,
+        )
+        if "error" in result:
+            return f"エラー: {result['error']}"
+        return f"スライド {result['slide_number']} の段落間隔を設定しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_set_text_columns(
+    slide_number: int, shape_index: int, num_columns: int, spacing: float = 18,
+) -> str:
+    """図形内のテキストを複数列に設定します。num_columns: 列数、spacing: 列間の間隔（ポイント）。"""
+    try:
+        result = ppt.set_text_columns(slide_number, shape_index, num_columns, spacing)
+        if "error" in result:
+            return f"エラー: {result['error']}"
+        return f"スライド {result['slide_number']} の図形を {num_columns} 列に設定しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_clear_shape_text(slide_number: int, shape_index: int) -> str:
+    """図形内のすべてのテキストを削除します。"""
+    try:
+        result = ppt.clear_shape_text(slide_number, shape_index)
+        if "error" in result:
+            return f"エラー: {result['error']}"
+        return f"スライド {result['slide_number']} の図形のテキストを削除しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+# ============================================================
+# Advanced Chart Operations
+# ============================================================
+
+@mcp.tool()
+def powerpoint_format_chart_title(
+    slide_number: int,
+    shape_index: int,
+    title: str,
+    font_size: float | None = None,
+    bold: bool | None = None,
+    font_color: list[int] | None = None,
+) -> str:
+    """グラフのタイトルをフォーマットします。font_color=[R,G,B]。"""
+    try:
+        result = ppt.format_chart_title(
+            slide_number, shape_index, title,
+            font_size=font_size, bold=bold,
+            font_color=tuple(font_color) if font_color else None,
+        )
+        return f"スライド {result['slide_number']} のグラフタイトルを設定しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_format_chart_axis(
+    slide_number: int,
+    shape_index: int,
+    axis_type: str,
+    title: str | None = None,
+    min_value: float | None = None,
+    max_value: float | None = None,
+    number_format: str | None = None,
+) -> str:
+    """グラフの軸をフォーマットします。axis_type: "x"=カテゴリ軸, "y"=値軸。"""
+    try:
+        result = ppt.format_chart_axis(
+            slide_number, shape_index, axis_type,
+            title=title, min_value=min_value, max_value=max_value,
+            number_format=number_format,
+        )
+        return f"スライド {result['slide_number']} のグラフ軸（{result['axis_type']}）を設定しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_format_chart_legend(
+    slide_number: int,
+    shape_index: int,
+    position: str | None = None,
+    font_size: float | None = None,
+    visible: bool = True,
+) -> str:
+    """グラフの凡例をフォーマットします。position: "bottom", "top", "left", "right"。"""
+    try:
+        result = ppt.format_chart_legend(
+            slide_number, shape_index,
+            position=position, font_size=font_size, visible=visible,
+        )
+        return f"スライド {result['slide_number']} のグラフ凡例を設定しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_set_chart_style(slide_number: int, shape_index: int, style_index: int) -> str:
+    """グラフに組み込みスタイルを適用します。style_index: 1〜48。"""
+    try:
+        result = ppt.set_chart_style(slide_number, shape_index, style_index)
+        return f"スライド {result['slide_number']} のグラフにスタイル {style_index} を適用しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_format_chart_data_labels(
+    slide_number: int,
+    shape_index: int,
+    show_value: bool = True,
+    show_percentage: bool = False,
+    show_category: bool = False,
+    font_size: float | None = None,
+    font_color: list[int] | None = None,
+) -> str:
+    """グラフのデータラベルをフォーマットします。font_color=[R,G,B]。"""
+    try:
+        result = ppt.format_chart_data_labels(
+            slide_number, shape_index,
+            show_value=show_value, show_percentage=show_percentage,
+            show_category=show_category, font_size=font_size,
+            font_color=tuple(font_color) if font_color else None,
+        )
+        return f"スライド {result['slide_number']} のグラフデータラベルを設定しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_add_chart_data_table(
+    slide_number: int,
+    shape_index: int,
+    show_legend_keys: bool = True,
+    show_outline: bool = True,
+) -> str:
+    """グラフの下にデータテーブルを追加します。"""
+    try:
+        result = ppt.add_chart_data_table(
+            slide_number, shape_index,
+            show_legend_keys=show_legend_keys, show_outline=show_outline,
+        )
+        return f"スライド {result['slide_number']} のグラフにデータテーブルを追加しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+# ============================================================
+# SmartArt-like Diagrams
+# ============================================================
+
+@mcp.tool()
+def powerpoint_create_org_chart(
+    slide_number: int,
+    data: str,
+    left: float = 50,
+    top: float = 80,
+    width: float = 860,
+    height: float = 400,
+) -> str:
+    """組織図を作成します。dataはJSON文字列: {"name": "CEO", "title": "役職", "children": [...]}'。"""
+    try:
+        parsed = json.loads(data) if isinstance(data, str) else data
+        result = ppt.create_org_chart(slide_number, parsed, left, top, width, height)
+        return f"スライド {result['slide_number']} に組織図を作成しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_create_pyramid_diagram(
+    slide_number: int,
+    items: list[str],
+    left: float = 200,
+    top: float = 60,
+    width: float = 560,
+    height: float = 420,
+    colors: list[list[int]] | None = None,
+) -> str:
+    """ピラミッド（三角形）図を作成します。itemsは上から下への項目リスト。colors=[[R,G,B],...]。"""
+    try:
+        color_tuples = [tuple(c) for c in colors] if colors else None
+        result = ppt.create_pyramid_diagram(
+            slide_number, items, left, top, width, height, colors=color_tuples,
+        )
+        return f"スライド {result['slide_number']} にピラミッド図を作成しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_create_circular_diagram(
+    slide_number: int,
+    items: list[str],
+    center_text: str | None = None,
+    left: float = 180,
+    top: float = 40,
+    width: float = 600,
+    height: float = 460,
+    colors: list[list[int]] | None = None,
+) -> str:
+    """円形（放射状）図を作成します。itemsは中心の周りに配置する項目リスト。center_textは中心のテキスト。"""
+    try:
+        color_tuples = [tuple(c) for c in colors] if colors else None
+        result = ppt.create_circular_diagram(
+            slide_number, items, center_text=center_text,
+            left=left, top=top, width=width, height=height, colors=color_tuples,
+        )
+        return f"スライド {result['slide_number']} に円形図を作成しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_create_matrix_diagram(
+    slide_number: int,
+    quadrants: str,
+    title: str | None = None,
+    x_label: str | None = None,
+    y_label: str | None = None,
+    left: float = 100,
+    top: float = 60,
+    width: float = 760,
+    height: float = 420,
+) -> str:
+    """2x2マトリクス図を作成します。quadrantsはJSON文字列: [{"title": "Q1", "items": ["項目1"]}, ...]（4象限分）。"""
+    try:
+        parsed = json.loads(quadrants) if isinstance(quadrants, str) else quadrants
+        result = ppt.create_matrix_diagram(
+            slide_number, parsed, title=title,
+            x_label=x_label, y_label=y_label,
+            left=left, top=top, width=width, height=height,
+        )
+        return f"スライド {result['slide_number']} にマトリクス図を作成しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+# ============================================================
+# Presentation-wide Operations
+# ============================================================
+
+@mcp.tool()
+def powerpoint_set_all_slides_background(
+    color: list[int] | None = None, image_path: str | None = None,
+) -> str:
+    """すべてのスライドの背景を一括設定します。color=[R,G,B]またはimage_pathで画像を指定。"""
+    try:
+        result = ppt.set_all_slides_background(
+            color=tuple(color) if color else None,
+            image_path=image_path,
+        )
+        return f"{result['slide_count']} 枚のスライドの背景を設定しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_apply_font_to_all(font_name: str, target: str = "all") -> str:
+    """プレゼンテーション全体にフォントを適用します。target: "all"=すべて, "titles"=タイトルのみ, "body"=本文のみ。"""
+    try:
+        result = ppt.apply_font_to_all(font_name, target)
+        return (
+            f"{result['slide_count']} 枚のスライドの "
+            f"{result['shapes_modified']} 個の図形にフォント '{font_name}' を適用しました"
+        )
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def powerpoint_get_presentation_summary() -> str:
+    """プレゼンテーションの概要を取得します（スライド数、図形数、テキスト文字数、使用フォント）。"""
+    try:
+        result = ppt.get_presentation_summary()
+        lines = [
+            f"スライド数: {result['slide_count']}",
+            f"図形数: {result['total_shapes']}",
+            f"テキスト文字数: {result['total_text_chars']}",
+            f"使用フォント: {', '.join(result['fonts_used']) if result['fonts_used'] else 'なし'}",
+        ]
+        return "\n".join(lines)
+    except Exception as e:
+        return f"エラー: {e}"

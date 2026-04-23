@@ -2712,3 +2712,1295 @@ def lock_cells(
     ws = _get_ws(app, sheet)
     ws.Range(range_str).Locked = locked
     return {"range": range_str, "locked": locked, "sheet": ws.Name}
+
+
+# ---------------------------------------------------------------------------
+# Advanced Formula Functions
+# ---------------------------------------------------------------------------
+
+def set_array_formula(sheet: str | None, range_str: str, formula: str) -> dict:
+    """Set an array formula (CSE or dynamic) on a range.
+
+    Args:
+        sheet: Optional sheet name.
+        range_str: Target range address (e.g. "A1:A10").
+        formula: Array formula string (e.g. "=TRANSPOSE(B1:D1)").
+
+    Returns:
+        dict with range, formula, and sheet name.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    rng = ws.Range(range_str)
+    rng.FormulaArray = formula
+    return {"range": range_str, "formula": formula, "sheet": ws.Name}
+
+
+def evaluate_formula(sheet: str | None, formula: str) -> dict:
+    """Evaluate a formula and return the result without placing it in a cell.
+
+    Args:
+        sheet: Optional sheet name (for context).
+        formula: Formula to evaluate (e.g. "=SUM(1,2,3)").
+
+    Returns:
+        dict with formula and result.
+    """
+    app = _get_app()
+    _get_ws(app, sheet)  # ensure sheet context
+    result = app.Evaluate(formula)
+    return {"formula": formula, "result": result}
+
+
+def set_formula_range(sheet: str | None, start_cell: str, formulas: list[list[str]]) -> dict:
+    """Set multiple formulas at once from a 2D list.
+
+    Args:
+        sheet: Optional sheet name.
+        start_cell: Top-left cell address (e.g. "A1").
+        formulas: 2D list of formula strings.
+
+    Returns:
+        dict with start cell, dimensions, and sheet name.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    start = ws.Range(start_cell)
+    rows = len(formulas)
+    cols = len(formulas[0]) if rows > 0 else 0
+    for r_idx, row in enumerate(formulas):
+        for c_idx, formula in enumerate(row):
+            ws.Cells(start.Row + r_idx, start.Column + c_idx).Formula = formula
+    return {"start_cell": start_cell, "rows": rows, "cols": cols, "sheet": ws.Name}
+
+
+def create_named_formula(name: str, formula: str, sheet: str | None = None) -> dict:
+    """Create a named formula (not a named range).
+
+    Args:
+        name: Name for the formula.
+        formula: Formula string (e.g. "=Sheet1!A1*2").
+        sheet: Optional sheet name for scope. If None, workbook-level.
+
+    Returns:
+        dict with name and formula.
+    """
+    app = _get_app()
+    wb = app.ActiveWorkbook
+    if sheet is not None:
+        ws = wb.Worksheets(sheet)
+        # Sheet-level named formula
+        ws.Names.Add(Name=name, RefersTo=formula)
+    else:
+        wb.Names.Add(Name=name, RefersTo=formula)
+    return {"name": name, "formula": formula, "scope": sheet or "Workbook"}
+
+
+# ---------------------------------------------------------------------------
+# Data Analysis
+# ---------------------------------------------------------------------------
+
+def calculate_statistics(sheet: str | None, range_str: str) -> dict:
+    """Calculate descriptive statistics for a range.
+
+    Args:
+        sheet: Optional sheet name.
+        range_str: Data range address (e.g. "A1:A100").
+
+    Returns:
+        dict with sum, avg, min, max, count, stdev, median.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    rng_ref = f"'{ws.Name}'!{range_str}"
+    stats = {
+        "sum": app.Evaluate(f"=SUM({rng_ref})"),
+        "avg": app.Evaluate(f"=AVERAGE({rng_ref})"),
+        "min": app.Evaluate(f"=MIN({rng_ref})"),
+        "max": app.Evaluate(f"=MAX({rng_ref})"),
+        "count": app.Evaluate(f"=COUNT({rng_ref})"),
+        "stdev": app.Evaluate(f"=STDEV({rng_ref})"),
+        "median": app.Evaluate(f"=MEDIAN({rng_ref})"),
+        "sheet": ws.Name,
+        "range": range_str,
+    }
+    return stats
+
+
+def create_frequency_distribution(
+    sheet: str | None,
+    data_range: str,
+    bins_range: str,
+    output_cell: str,
+) -> dict:
+    """Create a frequency distribution.
+
+    Args:
+        sheet: Optional sheet name.
+        data_range: Range containing data values.
+        bins_range: Range containing bin boundaries.
+        output_cell: Top-left cell for output.
+
+    Returns:
+        dict with output location and sheet name.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    data_ref = f"'{ws.Name}'!{data_range}"
+    bins_ref = f"'{ws.Name}'!{bins_range}"
+    # Count the number of bins to determine output size
+    bins_count = ws.Range(bins_range).Rows.Count
+    output_rows = bins_count + 1  # FREQUENCY returns one more than bins
+    out_start = ws.Range(output_cell)
+    end_row = out_start.Row + output_rows - 1
+    end_col_letter = out_start.Columns(1).Address.split("$")[1]
+    out_range_str = f"{output_cell}:{end_col_letter}{end_row}"
+    out_rng = ws.Range(out_range_str)
+    out_rng.FormulaArray = f"=FREQUENCY({data_ref},{bins_ref})"
+    return {"output_range": out_range_str, "bins_count": bins_count, "sheet": ws.Name}
+
+
+def goal_seek(
+    sheet: str | None,
+    target_cell: str,
+    target_value: float,
+    changing_cell: str,
+) -> dict:
+    """Perform Goal Seek analysis.
+
+    Args:
+        sheet: Optional sheet name.
+        target_cell: Cell containing the formula to reach target value.
+        target_value: Desired value for the target cell.
+        changing_cell: Cell to adjust to reach the target.
+
+    Returns:
+        dict with target cell, achieved value, changing cell value, and sheet.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    target_rng = ws.Range(target_cell)
+    changing_rng = ws.Range(changing_cell)
+    target_rng.GoalSeek(Goal=target_value, ChangingCell=changing_rng)
+    return {
+        "target_cell": target_cell,
+        "target_value": target_value,
+        "achieved_value": target_rng.Value,
+        "changing_cell": changing_cell,
+        "changing_value": changing_rng.Value,
+        "sheet": ws.Name,
+    }
+
+
+def create_data_table_analysis(
+    sheet: str | None,
+    row_input_cell: str | None,
+    col_input_cell: str | None,
+    formula_cell: str,
+    row_values_range: str | None = None,
+    col_values_range: str | None = None,
+) -> dict:
+    """Create a What-If data table for sensitivity analysis.
+
+    Args:
+        sheet: Optional sheet name.
+        row_input_cell: Row input cell reference (for one/two-variable table).
+        col_input_cell: Column input cell reference (for one/two-variable table).
+        formula_cell: Cell containing the formula.
+        row_values_range: Range with row input values (top row of table).
+        col_values_range: Range with column input values (left column of table).
+
+    Returns:
+        dict with table info and sheet name.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    # Build the data table range
+    # For a one-variable (column) table: formula in top-left, values in left column
+    # For a two-variable table: formula in top-left, row values on top, col values on left
+    row_input = ws.Range(row_input_cell) if row_input_cell else None
+    col_input = ws.Range(col_input_cell) if col_input_cell else None
+
+    # Determine table range from the values ranges and formula cell
+    formula_rng = ws.Range(formula_cell)
+    if row_values_range and col_values_range:
+        # Two-variable table
+        row_vals = ws.Range(row_values_range)
+        col_vals = ws.Range(col_values_range)
+        last_col = row_vals.Columns(row_vals.Columns.Count).Column
+        last_row = col_vals.Rows(col_vals.Rows.Count).Row
+        table_range = ws.Range(
+            ws.Cells(formula_rng.Row, formula_rng.Column),
+            ws.Cells(last_row, last_col),
+        )
+    elif col_values_range:
+        # One-variable column table
+        col_vals = ws.Range(col_values_range)
+        last_row = col_vals.Rows(col_vals.Rows.Count).Row
+        table_range = ws.Range(
+            ws.Cells(formula_rng.Row, formula_rng.Column),
+            ws.Cells(last_row, formula_rng.Column),
+        )
+    elif row_values_range:
+        # One-variable row table
+        row_vals = ws.Range(row_values_range)
+        last_col = row_vals.Columns(row_vals.Columns.Count).Column
+        table_range = ws.Range(
+            ws.Cells(formula_rng.Row, formula_rng.Column),
+            ws.Cells(formula_rng.Row, last_col),
+        )
+    else:
+        raise ValueError("At least one of row_values_range or col_values_range is required")
+
+    if row_input and col_input:
+        table_range.Table(RowInput=row_input, ColumnInput=col_input)
+    elif col_input:
+        table_range.Table(ColumnInput=col_input)
+    elif row_input:
+        table_range.Table(RowInput=row_input)
+
+    return {
+        "formula_cell": formula_cell,
+        "table_address": table_range.Address,
+        "sheet": ws.Name,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Advanced Formatting
+# ---------------------------------------------------------------------------
+
+def set_rich_text_cell(sheet: str | None, cell: str, runs: list[dict]) -> dict:
+    """Set rich text (multiple formatted runs) in a single cell.
+
+    Args:
+        sheet: Optional sheet name.
+        cell: Cell address (e.g. "A1").
+        runs: List of dicts with keys: text, bold, italic, color, size, underline.
+              Example: [{"text": "Hello ", "bold": True, "color": [255,0,0]},
+                        {"text": "World", "italic": True}]
+
+    Returns:
+        dict with cell address and sheet name.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    rng = ws.Range(cell)
+    # Build the full text first
+    full_text = "".join(run["text"] for run in runs)
+    rng.Value = full_text
+    # Apply formatting to each run
+    pos = 1  # COM uses 1-based character positions
+    for run in runs:
+        length = len(run["text"])
+        chars = rng.Characters(pos, length)
+        if run.get("bold") is not None:
+            chars.Font.Bold = run["bold"]
+        if run.get("italic") is not None:
+            chars.Font.Italic = run["italic"]
+        if run.get("color") is not None:
+            c = run["color"]
+            chars.Font.Color = rgb(c[0], c[1], c[2])
+        if run.get("size") is not None:
+            chars.Font.Size = run["size"]
+        if run.get("underline") is not None:
+            chars.Font.Underline = run["underline"]
+        pos += length
+    return {"cell": cell, "runs_count": len(runs), "sheet": ws.Name}
+
+
+def add_cell_dropdown(
+    sheet: str | None,
+    cell: str,
+    items: list[str],
+    show_error: bool = True,
+) -> dict:
+    """Add a simple dropdown list to a cell.
+
+    Args:
+        sheet: Optional sheet name.
+        cell: Cell address (e.g. "B2").
+        items: List of dropdown items.
+        show_error: Show error if invalid value entered.
+
+    Returns:
+        dict with cell address and item count.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    rng = ws.Range(cell)
+    rng.Validation.Delete()
+    formula_list = ",".join(items)
+    rng.Validation.Add(Type=XL_DV_LIST, Formula1=formula_list)
+    rng.Validation.ShowError = show_error
+    return {"cell": cell, "items_count": len(items), "sheet": ws.Name}
+
+
+def set_cell_hyperlink_format(
+    sheet: str | None,
+    cell: str,
+    display_text: str | None = None,
+    color: list[int] | None = None,
+    underline: bool = True,
+) -> dict:
+    """Format the appearance of a hyperlink cell.
+
+    Args:
+        sheet: Optional sheet name.
+        cell: Cell address (e.g. "A1").
+        display_text: Optional display text override.
+        color: Optional RGB color list [r, g, b].
+        underline: Whether to underline the text.
+
+    Returns:
+        dict with cell address and sheet name.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    rng = ws.Range(cell)
+    if display_text is not None:
+        rng.Value = display_text
+    if color is not None:
+        rng.Font.Color = rgb(color[0], color[1], color[2])
+    # 2 = xlUnderlineStyleSingle, -4142 = xlUnderlineStyleNone
+    rng.Font.Underline = 2 if underline else -4142
+    return {"cell": cell, "sheet": ws.Name}
+
+
+def clear_all_formatting(sheet: str | None, range_str: str | None = None) -> dict:
+    """Clear all formatting from a range or the entire sheet.
+
+    Args:
+        sheet: Optional sheet name.
+        range_str: Optional range address. If None, clears entire sheet.
+
+    Returns:
+        dict with range (or "All") and sheet name.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    if range_str:
+        ws.Range(range_str).ClearFormats()
+    else:
+        ws.Cells.ClearFormats()
+    return {"range": range_str or "All", "sheet": ws.Name}
+
+
+# ---------------------------------------------------------------------------
+# Chart Types Extended
+# ---------------------------------------------------------------------------
+
+# Additional chart type constants
+XL_CHART_PIE_EXPLODED = 69
+XL_CHART_SCATTER_LINES = -4169
+XL_CHART_SCATTER_SMOOTH = 72
+XL_CHART_BUBBLE = 15
+XL_CHART_RADAR = -4151
+XL_CHART_RADAR_FILLED = 82
+XL_CHART_STOCK_HLC = 88
+XL_CHART_STOCK_OHLC = 89
+XL_CHART_AREA_STACKED = 76
+XL_CHART_LINE_STACKED = 63
+XL_CHART_COLUMN_CLUSTERED_2 = 51
+
+
+def _cell_to_position(ws, position_cell: str) -> tuple[float, float]:
+    """Convert a cell address to (left, top) in points."""
+    cell = ws.Range(position_cell)
+    return cell.Left, cell.Top
+
+
+def add_combo_chart(
+    sheet: str | None,
+    data_range: str,
+    chart_types: list[str],
+    series_on_secondary: list[int] | None = None,
+    position_cell: str = "E1",
+    width: float = 480,
+    height: float = 300,
+) -> dict:
+    """Add a combo chart with multiple chart types per series.
+
+    Args:
+        sheet: Optional sheet name.
+        data_range: Source data range address.
+        chart_types: List of chart type strings per series ("column", "line", "area").
+        series_on_secondary: List of 1-based series indices on secondary axis.
+        position_cell: Cell for chart position.
+        width: Chart width in points.
+        height: Chart height in points.
+
+    Returns:
+        dict with chart name and sheet name.
+    """
+    type_map = {
+        "column": XL_CHART_COLUMN_CLUSTERED,
+        "line": XL_CHART_LINE,
+        "area": XL_CHART_AREA,
+    }
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    left, top = _cell_to_position(ws, position_cell)
+    chart_obj = ws.ChartObjects().Add(left, top, width, height)
+    chart = chart_obj.Chart
+    chart.SetSourceData(Source=ws.Range(data_range))
+    # Default to column clustered initially
+    chart.ChartType = XL_CHART_COLUMN_CLUSTERED
+    # Set chart type per series
+    for i, ct in enumerate(chart_types):
+        if i < chart.SeriesCollection().Count:
+            series = chart.SeriesCollection(i + 1)
+            series.ChartType = type_map.get(ct, XL_CHART_COLUMN_CLUSTERED)
+    # Set secondary axis for specified series
+    if series_on_secondary:
+        for idx in series_on_secondary:
+            if idx <= chart.SeriesCollection().Count:
+                chart.SeriesCollection(idx).AxisGroup = 2  # xlSecondary
+    return {"chart_name": chart_obj.Name, "sheet": ws.Name}
+
+
+def add_pie_chart(
+    sheet: str | None,
+    data_range: str,
+    position_cell: str = "E1",
+    width: float = 400,
+    height: float = 300,
+    explode: list[int] | None = None,
+    show_percentage: bool = True,
+) -> dict:
+    """Add a pie chart.
+
+    Args:
+        sheet: Optional sheet name.
+        data_range: Source data range address.
+        position_cell: Cell for chart position.
+        width: Chart width in points.
+        height: Chart height in points.
+        explode: List of 1-based point indices to explode (separate from pie).
+        show_percentage: Show percentage data labels.
+
+    Returns:
+        dict with chart name and sheet name.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    left, top = _cell_to_position(ws, position_cell)
+    chart_obj = ws.ChartObjects().Add(left, top, width, height)
+    chart = chart_obj.Chart
+    chart.SetSourceData(Source=ws.Range(data_range))
+    chart.ChartType = XL_CHART_PIE
+    if show_percentage:
+        chart.SeriesCollection(1).HasDataLabels = True
+        chart.SeriesCollection(1).DataLabels().ShowPercentage = True
+        chart.SeriesCollection(1).DataLabels().ShowValue = False
+    if explode:
+        for pt_idx in explode:
+            chart.SeriesCollection(1).Points(pt_idx).Explosion = 25
+    return {"chart_name": chart_obj.Name, "sheet": ws.Name}
+
+
+def add_scatter_chart(
+    sheet: str | None,
+    data_range: str,
+    position_cell: str = "E1",
+    width: float = 480,
+    height: float = 300,
+    show_trendline: bool = False,
+    bubble: bool = False,
+) -> dict:
+    """Add a scatter or bubble chart.
+
+    Args:
+        sheet: Optional sheet name.
+        data_range: Source data range address.
+        position_cell: Cell for chart position.
+        width: Chart width in points.
+        height: Chart height in points.
+        show_trendline: Add linear trendline.
+        bubble: Use bubble chart instead of scatter.
+
+    Returns:
+        dict with chart name and sheet name.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    left, top = _cell_to_position(ws, position_cell)
+    chart_obj = ws.ChartObjects().Add(left, top, width, height)
+    chart = chart_obj.Chart
+    chart.SetSourceData(Source=ws.Range(data_range))
+    chart.ChartType = XL_CHART_BUBBLE if bubble else XL_CHART_SCATTER
+    if show_trendline and chart.SeriesCollection().Count > 0:
+        chart.SeriesCollection(1).Trendlines().Add()
+    return {"chart_name": chart_obj.Name, "sheet": ws.Name}
+
+
+def add_stock_chart(
+    sheet: str | None,
+    data_range: str,
+    position_cell: str = "E1",
+    width: float = 480,
+    height: float = 300,
+    chart_subtype: str = "hlc",
+) -> dict:
+    """Add a stock chart.
+
+    Args:
+        sheet: Optional sheet name.
+        data_range: Source data range address.
+        position_cell: Cell for chart position.
+        width: Chart width in points.
+        height: Chart height in points.
+        chart_subtype: "hlc" for High-Low-Close, "ohlc" for Open-High-Low-Close.
+
+    Returns:
+        dict with chart name and sheet name.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    left, top = _cell_to_position(ws, position_cell)
+    chart_obj = ws.ChartObjects().Add(left, top, width, height)
+    chart = chart_obj.Chart
+    chart.SetSourceData(Source=ws.Range(data_range))
+    chart.ChartType = XL_CHART_STOCK_OHLC if chart_subtype == "ohlc" else XL_CHART_STOCK_HLC
+    return {"chart_name": chart_obj.Name, "sheet": ws.Name}
+
+
+def add_radar_chart(
+    sheet: str | None,
+    data_range: str,
+    position_cell: str = "E1",
+    width: float = 400,
+    height: float = 300,
+    filled: bool = False,
+) -> dict:
+    """Add a radar (spider) chart.
+
+    Args:
+        sheet: Optional sheet name.
+        data_range: Source data range address.
+        position_cell: Cell for chart position.
+        width: Chart width in points.
+        height: Chart height in points.
+        filled: Use filled radar chart.
+
+    Returns:
+        dict with chart name and sheet name.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    left, top = _cell_to_position(ws, position_cell)
+    chart_obj = ws.ChartObjects().Add(left, top, width, height)
+    chart = chart_obj.Chart
+    chart.SetSourceData(Source=ws.Range(data_range))
+    chart.ChartType = XL_CHART_RADAR_FILLED if filled else XL_CHART_RADAR
+    return {"chart_name": chart_obj.Name, "sheet": ws.Name}
+
+
+# ---------------------------------------------------------------------------
+# Workbook Navigation
+# ---------------------------------------------------------------------------
+
+def activate_sheet(sheet: str) -> dict:
+    """Activate (switch to) a specific worksheet.
+
+    Args:
+        sheet: Sheet name to activate.
+
+    Returns:
+        dict with activated sheet name.
+    """
+    app = _get_app()
+    wb = app.ActiveWorkbook
+    ws = wb.Worksheets(sheet)
+    ws.Activate()
+    return {"sheet": ws.Name}
+
+
+def get_active_sheet() -> dict:
+    """Get the name of the currently active sheet.
+
+    Returns:
+        dict with active sheet name.
+    """
+    app = _get_app()
+    ws = app.ActiveWorkbook.ActiveSheet
+    return {"sheet": ws.Name}
+
+
+def get_used_range(sheet: str | None = None) -> dict:
+    """Get the used range address and dimensions.
+
+    Args:
+        sheet: Optional sheet name.
+
+    Returns:
+        dict with address, rows, columns, and sheet name.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    used = ws.UsedRange
+    return {
+        "address": used.Address,
+        "rows": used.Rows.Count,
+        "columns": used.Columns.Count,
+        "sheet": ws.Name,
+    }
+
+
+def get_last_row(sheet: str | None = None, column: str = "A") -> dict:
+    """Get the last used row number in a specific column.
+
+    Args:
+        sheet: Optional sheet name.
+        column: Column letter (default "A").
+
+    Returns:
+        dict with last row number, column, and sheet name.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    # Find last used row by going up from the bottom
+    last_row = ws.Cells(ws.Rows.Count, ws.Range(f"{column}1").Column).End(-4162).Row  # xlUp = -4162
+    return {"last_row": last_row, "column": column, "sheet": ws.Name}
+
+
+def get_last_column(sheet: str | None = None, row: int = 1) -> dict:
+    """Get the last used column number in a specific row.
+
+    Args:
+        sheet: Optional sheet name.
+        row: Row number (default 1).
+
+    Returns:
+        dict with last column number, column letter, row, and sheet name.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    # Find last used column by going left from the right
+    last_col = ws.Cells(row, ws.Columns.Count).End(-4159).Column  # xlToLeft = -4159
+    col_letter = ws.Cells(1, last_col).Address.split("$")[1]
+    return {"last_column": last_col, "column_letter": col_letter, "row": row, "sheet": ws.Name}
+
+
+# ---------------------------------------------------------------------------
+# Advanced Data Operations
+# ---------------------------------------------------------------------------
+
+def fill_series(
+    sheet: str | None,
+    start_cell: str,
+    end_cell: str,
+    fill_type: str = "linear",
+    step: float = 1,
+) -> dict:
+    """Auto-fill a series of values.
+
+    Args:
+        sheet: Optional sheet name.
+        start_cell: Starting cell with seed value.
+        end_cell: Ending cell for the fill.
+        fill_type: "linear", "growth", "date", or "auto".
+        step: Step value for the series.
+
+    Returns:
+        dict with start, end, fill type, and sheet name.
+    """
+    fill_type_map = {
+        "linear": 0,    # xlFillDefault -> use DataSeries with xlLinear
+        "growth": 1,     # xlGrowth
+        "date": 3,       # xlChronological
+        "auto": -1,      # use AutoFill instead
+    }
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    start_rng = ws.Range(start_cell)
+    end_rng = ws.Range(end_cell)
+    fill_rng = ws.Range(start_cell, end_cell)
+
+    if fill_type == "auto":
+        # Use AutoFill
+        start_rng.AutoFill(Destination=fill_rng)
+    else:
+        # Determine direction
+        if start_rng.Column == end_rng.Column:
+            # Vertical - fill down rows
+            row_size = end_rng.Row - start_rng.Row + 1
+            type_const = 0 if fill_type == "linear" else fill_type_map.get(fill_type, 0)
+            fill_rng.DataSeries(Rowcol=1, Type=type_const, Step=step)  # 1=xlColumns
+        else:
+            # Horizontal - fill across columns
+            type_const = 0 if fill_type == "linear" else fill_type_map.get(fill_type, 0)
+            fill_rng.DataSeries(Rowcol=2, Type=type_const, Step=step)  # 2=xlRows
+
+    return {"start": start_cell, "end": end_cell, "fill_type": fill_type, "sheet": ws.Name}
+
+
+def concatenate_range(
+    sheet: str | None,
+    range_str: str,
+    separator: str = ", ",
+) -> dict:
+    """Concatenate all values in a range into a single string.
+
+    Args:
+        sheet: Optional sheet name.
+        range_str: Range address (e.g. "A1:A10").
+        separator: Separator between values.
+
+    Returns:
+        dict with the concatenated result and sheet name.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    rng = ws.Range(range_str)
+    values = rng.Value
+    # Handle different return types from COM
+    parts = []
+    if values is None:
+        pass
+    elif isinstance(values, tuple):
+        for row in values:
+            if isinstance(row, tuple):
+                for v in row:
+                    if v is not None:
+                        parts.append(str(v))
+            else:
+                if row is not None:
+                    parts.append(str(row))
+    else:
+        parts.append(str(values))
+    result = separator.join(parts)
+    return {"result": result, "count": len(parts), "sheet": ws.Name}
+
+
+def split_text_by_rows(
+    sheet: str | None,
+    cell: str,
+    separator: str | None = None,
+    target_cell: str | None = None,
+) -> dict:
+    """Split cell text into multiple rows.
+
+    Args:
+        sheet: Optional sheet name.
+        cell: Source cell address.
+        separator: Delimiter to split on. If None, splits by newline.
+        target_cell: Starting cell for output. If None, uses cell below source.
+
+    Returns:
+        dict with parts count and sheet name.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    value = ws.Range(cell).Value
+    if value is None:
+        return {"parts": 0, "sheet": ws.Name}
+    text = str(value)
+    sep = separator if separator is not None else "\n"
+    parts = text.split(sep)
+    # Determine output location
+    if target_cell:
+        out = ws.Range(target_cell)
+    else:
+        src = ws.Range(cell)
+        out = ws.Cells(src.Row + 1, src.Column)
+    for i, part in enumerate(parts):
+        ws.Cells(out.Row + i, out.Column).Value = part.strip()
+    return {"parts": len(parts), "target_start": out.Address, "sheet": ws.Name}
+
+
+def apply_formula_to_range(
+    sheet: str | None,
+    range_str: str,
+    formula_template: str,
+) -> dict:
+    """Apply a formula pattern to each cell in a range.
+
+    The formula_template uses {row} and {col} as placeholders for the
+    current cell's row number and column letter.
+
+    Args:
+        sheet: Optional sheet name.
+        range_str: Target range address.
+        formula_template: Formula with {row} and {col} placeholders.
+                         Example: "=A{row}*B{row}"
+
+    Returns:
+        dict with range, formula template, and sheet name.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    rng = ws.Range(range_str)
+    for r in range(1, rng.Rows.Count + 1):
+        for c in range(1, rng.Columns.Count + 1):
+            cell = rng.Cells(r, c)
+            row_num = cell.Row
+            col_letter = ws.Cells(1, cell.Column).Address.split("$")[1]
+            formula = formula_template.replace("{row}", str(row_num)).replace("{col}", col_letter)
+            cell.Formula = formula
+    return {"range": range_str, "formula_template": formula_template, "sheet": ws.Name}
+
+
+def create_sequence(
+    sheet: str | None,
+    start_cell: str,
+    count: int,
+    start_value: float = 1,
+    step: float = 1,
+    direction: str = "down",
+) -> dict:
+    """Generate a number sequence in cells.
+
+    Args:
+        sheet: Optional sheet name.
+        start_cell: Starting cell address.
+        count: Number of values to generate.
+        start_value: First value in the sequence.
+        step: Increment between values.
+        direction: "down" for vertical, "right" for horizontal.
+
+    Returns:
+        dict with start cell, count, direction, and sheet name.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    cell = ws.Range(start_cell)
+    for i in range(count):
+        value = start_value + i * step
+        if direction == "right":
+            ws.Cells(cell.Row, cell.Column + i).Value = value
+        else:
+            ws.Cells(cell.Row + i, cell.Column).Value = value
+    return {
+        "start_cell": start_cell,
+        "count": count,
+        "start_value": start_value,
+        "step": step,
+        "direction": direction,
+        "sheet": ws.Name,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Conditional Operations
+# ---------------------------------------------------------------------------
+
+def highlight_cells(
+    sheet: str | None,
+    range_str: str,
+    condition: str,
+    color: list[int],
+) -> dict:
+    """Highlight cells meeting a condition.
+
+    Args:
+        sheet: Optional sheet name.
+        range_str: Target range address.
+        condition: Condition string: ">50", "<0", "=100", ">=10", "<=5",
+                   "contains:text", "empty", "not_empty".
+        color: RGB color list [r, g, b] for the fill.
+
+    Returns:
+        dict with range, condition, highlighted count, and sheet name.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    rng = ws.Range(range_str)
+    fill_color = rgb(color[0], color[1], color[2])
+    count = 0
+    for r in range(1, rng.Rows.Count + 1):
+        for c in range(1, rng.Columns.Count + 1):
+            cell = rng.Cells(r, c)
+            val = cell.Value
+            match = False
+            if condition == "empty":
+                match = val is None or str(val).strip() == ""
+            elif condition == "not_empty":
+                match = val is not None and str(val).strip() != ""
+            elif condition.startswith("contains:"):
+                search_text = condition[9:]
+                match = val is not None and search_text in str(val)
+            else:
+                # Numeric comparison
+                if val is not None:
+                    try:
+                        num_val = float(val)
+                        if condition.startswith(">="):
+                            match = num_val >= float(condition[2:])
+                        elif condition.startswith("<="):
+                            match = num_val <= float(condition[2:])
+                        elif condition.startswith(">"):
+                            match = num_val > float(condition[1:])
+                        elif condition.startswith("<"):
+                            match = num_val < float(condition[1:])
+                        elif condition.startswith("="):
+                            match = num_val == float(condition[1:])
+                    except (ValueError, TypeError):
+                        pass
+            if match:
+                cell.Interior.Color = fill_color
+                count += 1
+    return {"range": range_str, "condition": condition, "highlighted": count, "sheet": ws.Name}
+
+
+def count_if(sheet: str | None, range_str: str, criteria: str) -> dict:
+    """Count cells matching criteria (COUNTIF).
+
+    Args:
+        sheet: Optional sheet name.
+        range_str: Range to count in.
+        criteria: Criteria string (e.g. ">10", "Apple", "<>0").
+
+    Returns:
+        dict with count result, range, criteria, and sheet name.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    rng_ref = f"'{ws.Name}'!{range_str}"
+    result = app.Evaluate(f'=COUNTIF({rng_ref},"{criteria}")')
+    return {"count": result, "range": range_str, "criteria": criteria, "sheet": ws.Name}
+
+
+def sum_if(
+    sheet: str | None,
+    range_str: str,
+    criteria: str,
+    sum_range: str | None = None,
+) -> dict:
+    """Sum cells matching criteria (SUMIF).
+
+    Args:
+        sheet: Optional sheet name.
+        range_str: Range to evaluate criteria against.
+        criteria: Criteria string (e.g. ">10", "Apple").
+        sum_range: Optional range to sum. If None, sums the criteria range.
+
+    Returns:
+        dict with sum result, range, criteria, and sheet name.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    rng_ref = f"'{ws.Name}'!{range_str}"
+    if sum_range:
+        sum_ref = f"'{ws.Name}'!{sum_range}"
+        result = app.Evaluate(f'=SUMIF({rng_ref},"{criteria}",{sum_ref})')
+    else:
+        result = app.Evaluate(f'=SUMIF({rng_ref},"{criteria}")')
+    return {"sum": result, "range": range_str, "criteria": criteria, "sheet": ws.Name}
+
+
+# ---------------------------------------------------------------------------
+# Sheet Appearance
+# ---------------------------------------------------------------------------
+
+def set_gridlines_visible(sheet: str | None, visible: bool = True) -> dict:
+    """Show or hide gridlines on a worksheet.
+
+    Args:
+        sheet: Optional sheet name.
+        visible: True to show gridlines, False to hide.
+
+    Returns:
+        dict with visibility state and sheet name.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    ws.Activate()
+    app.ActiveWindow.DisplayGridlines = visible
+    return {"visible": visible, "sheet": ws.Name}
+
+
+def set_headings_visible(sheet: str | None, visible: bool = True) -> dict:
+    """Show or hide row and column headings on a worksheet.
+
+    Args:
+        sheet: Optional sheet name.
+        visible: True to show headings, False to hide.
+
+    Returns:
+        dict with visibility state and sheet name.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    ws.Activate()
+    app.ActiveWindow.DisplayHeadings = visible
+    return {"visible": visible, "sheet": ws.Name}
+
+
+def set_zoom_level(sheet: str | None, zoom_percent: int) -> dict:
+    """Set the zoom level of a worksheet.
+
+    Args:
+        sheet: Optional sheet name.
+        zoom_percent: Zoom percentage (10-400).
+
+    Returns:
+        dict with zoom level and sheet name.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    ws.Activate()
+    zoom = max(10, min(400, zoom_percent))
+    app.ActiveWindow.Zoom = zoom
+    return {"zoom": zoom, "sheet": ws.Name}
+
+
+def set_sheet_direction(sheet: str | None, direction: str = "ltr") -> dict:
+    """Set the sheet reading direction.
+
+    Args:
+        sheet: Optional sheet name.
+        direction: "ltr" for left-to-right, "rtl" for right-to-left.
+
+    Returns:
+        dict with direction and sheet name.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    # xlLTR = -5003, xlRTL = -5004
+    ws.DisplayRightToLeft = (direction == "rtl")
+    return {"direction": direction, "sheet": ws.Name}
+
+
+# ---------------------------------------------------------------------------
+# Validation Extended
+# ---------------------------------------------------------------------------
+
+def add_number_validation(
+    sheet: str | None,
+    range_str: str,
+    min_value: float | None = None,
+    max_value: float | None = None,
+    input_message: str | None = None,
+    error_message: str | None = None,
+) -> dict:
+    """Add number range validation to cells.
+
+    Args:
+        sheet: Optional sheet name.
+        range_str: Target range address.
+        min_value: Minimum allowed value.
+        max_value: Maximum allowed value.
+        input_message: Optional input prompt message.
+        error_message: Optional error alert message.
+
+    Returns:
+        dict with range and sheet name.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    rng = ws.Range(range_str)
+    rng.Validation.Delete()
+    kwargs = {"Type": XL_DV_DECIMAL}
+    if min_value is not None and max_value is not None:
+        kwargs["Operator"] = XL_CF_BETWEEN  # 1 = xlBetween
+        kwargs["Formula1"] = str(min_value)
+        kwargs["Formula2"] = str(max_value)
+    elif min_value is not None:
+        kwargs["Operator"] = XL_CF_GREATER_EQUAL  # 7
+        kwargs["Formula1"] = str(min_value)
+    elif max_value is not None:
+        kwargs["Operator"] = XL_CF_LESS_EQUAL  # 8
+        kwargs["Formula1"] = str(max_value)
+    rng.Validation.Add(**kwargs)
+    if input_message:
+        rng.Validation.InputMessage = input_message
+    if error_message:
+        rng.Validation.ErrorMessage = error_message
+    return {"range": range_str, "sheet": ws.Name}
+
+
+def add_date_validation(
+    sheet: str | None,
+    range_str: str,
+    min_date: str | None = None,
+    max_date: str | None = None,
+    input_message: str | None = None,
+) -> dict:
+    """Add date range validation to cells.
+
+    Args:
+        sheet: Optional sheet name.
+        range_str: Target range address.
+        min_date: Minimum date string (e.g. "2024-01-01").
+        max_date: Maximum date string (e.g. "2024-12-31").
+        input_message: Optional input prompt message.
+
+    Returns:
+        dict with range and sheet name.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    rng = ws.Range(range_str)
+    rng.Validation.Delete()
+    kwargs = {"Type": XL_DV_DATE}
+    if min_date is not None and max_date is not None:
+        kwargs["Operator"] = XL_CF_BETWEEN
+        kwargs["Formula1"] = min_date
+        kwargs["Formula2"] = max_date
+    elif min_date is not None:
+        kwargs["Operator"] = XL_CF_GREATER_EQUAL
+        kwargs["Formula1"] = min_date
+    elif max_date is not None:
+        kwargs["Operator"] = XL_CF_LESS_EQUAL
+        kwargs["Formula1"] = max_date
+    rng.Validation.Add(**kwargs)
+    if input_message:
+        rng.Validation.InputMessage = input_message
+    return {"range": range_str, "sheet": ws.Name}
+
+
+def add_text_length_validation(
+    sheet: str | None,
+    range_str: str,
+    min_length: int | None = None,
+    max_length: int | None = None,
+    input_message: str | None = None,
+) -> dict:
+    """Add text length validation to cells.
+
+    Args:
+        sheet: Optional sheet name.
+        range_str: Target range address.
+        min_length: Minimum text length.
+        max_length: Maximum text length.
+        input_message: Optional input prompt message.
+
+    Returns:
+        dict with range and sheet name.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    rng = ws.Range(range_str)
+    rng.Validation.Delete()
+    kwargs = {"Type": XL_DV_TEXT_LENGTH}
+    if min_length is not None and max_length is not None:
+        kwargs["Operator"] = XL_CF_BETWEEN
+        kwargs["Formula1"] = str(min_length)
+        kwargs["Formula2"] = str(max_length)
+    elif min_length is not None:
+        kwargs["Operator"] = XL_CF_GREATER_EQUAL
+        kwargs["Formula1"] = str(min_length)
+    elif max_length is not None:
+        kwargs["Operator"] = XL_CF_LESS_EQUAL
+        kwargs["Formula1"] = str(max_length)
+    rng.Validation.Add(**kwargs)
+    if input_message:
+        rng.Validation.InputMessage = input_message
+    return {"range": range_str, "sheet": ws.Name}
+
+
+# ---------------------------------------------------------------------------
+# Error Handling & Audit
+# ---------------------------------------------------------------------------
+
+def trace_precedents(sheet: str | None, cell: str) -> dict:
+    """Get cells that a formula references (precedents).
+
+    Args:
+        sheet: Optional sheet name.
+        cell: Cell address containing a formula.
+
+    Returns:
+        dict with list of precedent cell addresses and sheet name.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    rng = ws.Range(cell)
+    formula = rng.Formula
+    if not formula or not str(formula).startswith("="):
+        return {"cell": cell, "precedents": [], "sheet": ws.Name}
+    # Use NavigateArrow after ShowPrecedents
+    rng.ShowPrecedents()
+    precedents = []
+    try:
+        prec = rng.Precedents
+        for i in range(1, prec.Count + 1):
+            precedents.append(prec.Item(i).Address)
+    except Exception:
+        pass
+    rng.Parent.ClearArrows()
+    return {"cell": cell, "precedents": precedents, "sheet": ws.Name}
+
+
+def trace_dependents(sheet: str | None, cell: str) -> dict:
+    """Get cells that reference this cell (dependents).
+
+    Args:
+        sheet: Optional sheet name.
+        cell: Cell address.
+
+    Returns:
+        dict with list of dependent cell addresses and sheet name.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    rng = ws.Range(cell)
+    rng.ShowDependents()
+    dependents = []
+    try:
+        deps = rng.Dependents
+        for i in range(1, deps.Count + 1):
+            dependents.append(deps.Item(i).Address)
+    except Exception:
+        pass
+    rng.Parent.ClearArrows()
+    return {"cell": cell, "dependents": dependents, "sheet": ws.Name}
+
+
+def check_errors(sheet: str | None, range_str: str | None = None) -> dict:
+    """Find all error cells in a range or the entire sheet.
+
+    Args:
+        sheet: Optional sheet name.
+        range_str: Optional range address. If None, checks entire used range.
+
+    Returns:
+        dict with list of error cells (address and error type) and sheet name.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    if range_str:
+        rng = ws.Range(range_str)
+    else:
+        rng = ws.UsedRange
+    errors = []
+    # xlCellTypeFormulas with error value
+    try:
+        error_cells = rng.SpecialCells(1, 16)  # xlCellTypeFormulas=1, xlErrors=16
+        for i in range(1, error_cells.Areas.Count + 1):
+            area = error_cells.Areas(i)
+            for r in range(1, area.Rows.Count + 1):
+                for c in range(1, area.Columns.Count + 1):
+                    cell = area.Cells(r, c)
+                    errors.append({
+                        "cell": cell.Address,
+                        "error": str(cell.Value),
+                    })
+    except Exception:
+        # No error cells found (SpecialCells raises if none match)
+        pass
+    return {"errors": errors, "count": len(errors), "sheet": ws.Name}
+
+
+def get_cell_formula(sheet: str | None, cell: str) -> dict:
+    """Get the formula in a cell (not the calculated value).
+
+    Args:
+        sheet: Optional sheet name.
+        cell: Cell address.
+
+    Returns:
+        dict with cell address, formula, has_formula flag, and sheet name.
+    """
+    app = _get_app()
+    ws = _get_ws(app, sheet)
+    rng = ws.Range(cell)
+    formula = rng.Formula
+    has_formula = bool(formula and str(formula).startswith("="))
+    return {
+        "cell": cell,
+        "formula": str(formula) if formula else "",
+        "has_formula": has_formula,
+        "sheet": ws.Name,
+    }

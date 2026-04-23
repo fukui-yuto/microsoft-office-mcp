@@ -1489,3 +1489,617 @@ def excel_lock_cells(
         return f"[{result['sheet']}] {result['range']} を{status}しました"
     except Exception as e:
         return f"エラー: {e}"
+
+
+# ---------------------------------------------------------------------------
+# Advanced Formula Functions
+# ---------------------------------------------------------------------------
+
+
+@mcp.tool()
+def excel_set_array_formula(
+    range_str: str,
+    formula: str,
+    sheet: str | None = None,
+) -> str:
+    """配列数式を設定します。CSE配列数式またはダイナミック配列に対応。"""
+    try:
+        result = excel.set_array_formula(sheet=sheet, range_str=range_str, formula=formula)
+        return f"[{result['sheet']}] {result['range']} に配列数式を設定しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_evaluate_formula(
+    formula: str,
+    sheet: str | None = None,
+) -> str:
+    """数式を評価して結果を返します（セルに配置せずに計算）。"""
+    try:
+        result = excel.evaluate_formula(sheet=sheet, formula=formula)
+        return f"数式 {result['formula']} の結果: {result['result']}"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_set_formula_range(
+    start_cell: str,
+    formulas: list[list[str]],
+    sheet: str | None = None,
+) -> str:
+    """複数の数式を一括設定します。formulasは2次元リスト。"""
+    try:
+        result = excel.set_formula_range(sheet=sheet, start_cell=start_cell, formulas=formulas)
+        return f"[{result['sheet']}] {result['start_cell']}から{result['rows']}行x{result['cols']}列の数式を設定しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_create_named_formula(
+    name: str,
+    formula: str,
+    sheet: str | None = None,
+) -> str:
+    """名前付き数式を作成します（名前付き範囲ではなく数式）。"""
+    try:
+        result = excel.create_named_formula(name=name, formula=formula, sheet=sheet)
+        return f"名前付き数式 '{result['name']}' を作成しました（スコープ: {result['scope']}）"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_calculate_statistics(
+    range_str: str,
+    sheet: str | None = None,
+) -> str:
+    """範囲の記述統計量を計算します（合計、平均、最小、最大、件数、標準偏差、中央値）。"""
+    try:
+        result = excel.calculate_statistics(sheet=sheet, range_str=range_str)
+        lines = [f"[{result['sheet']}] {result['range']} の統計:"]
+        for k, label in [("sum","合計"),("avg","平均"),("min","最小"),("max","最大"),("count","件数"),("stdev","標準偏差"),("median","中央値")]:
+            lines.append(f"  {label}: {result[k]}")
+        return "\n".join(lines)
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_create_frequency_distribution(
+    data_range: str,
+    bins_range: str,
+    output_cell: str,
+    sheet: str | None = None,
+) -> str:
+    """度数分布を作成します。"""
+    try:
+        result = excel.create_frequency_distribution(sheet=sheet, data_range=data_range, bins_range=bins_range, output_cell=output_cell)
+        return f"[{result['sheet']}] {result['output_range']} に度数分布を作成しました（{result['bins_count']}ビン）"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_goal_seek(
+    target_cell: str,
+    target_value: float,
+    changing_cell: str,
+    sheet: str | None = None,
+) -> str:
+    """ゴールシーク分析を実行します。目標値に達するように変化セルを調整します。"""
+    try:
+        result = excel.goal_seek(sheet=sheet, target_cell=target_cell, target_value=target_value, changing_cell=changing_cell)
+        return f"[{result['sheet']}] ゴールシーク完了: {result['target_cell']}={result['achieved_value']} (変化セル {result['changing_cell']}={result['changing_value']})"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_create_data_table_analysis(
+    formula_cell: str,
+    row_input_cell: str | None = None,
+    col_input_cell: str | None = None,
+    row_values_range: str | None = None,
+    col_values_range: str | None = None,
+    sheet: str | None = None,
+) -> str:
+    """What-Ifデータテーブル（感度分析）を作成します。"""
+    try:
+        result = excel.create_data_table_analysis(
+            sheet=sheet, row_input_cell=row_input_cell, col_input_cell=col_input_cell,
+            formula_cell=formula_cell, row_values_range=row_values_range, col_values_range=col_values_range,
+        )
+        return f"[{result['sheet']}] データテーブルを作成しました: {result['table_address']}"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_set_rich_text_cell(
+    cell: str,
+    runs: list[dict],
+    sheet: str | None = None,
+) -> str:
+    """セル内にリッチテキスト（複数書式）を設定します。runs=[{"text":"Hello","bold":true,"color":[255,0,0]},...]"""
+    try:
+        result = excel.set_rich_text_cell(sheet=sheet, cell=cell, runs=runs)
+        return f"[{result['sheet']}] {result['cell']} にリッチテキストを設定しました（{result['runs_count']}ラン）"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_add_cell_dropdown(
+    cell: str,
+    items: list[str],
+    show_error: bool = True,
+    sheet: str | None = None,
+) -> str:
+    """セルにドロップダウンリストを追加します。"""
+    try:
+        result = excel.add_cell_dropdown(sheet=sheet, cell=cell, items=items, show_error=show_error)
+        return f"[{result['sheet']}] {result['cell']} にドロップダウンを追加しました（{result['items_count']}項目）"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_set_cell_hyperlink_format(
+    cell: str,
+    display_text: str | None = None,
+    color: list[int] | None = None,
+    underline: bool = True,
+    sheet: str | None = None,
+) -> str:
+    """ハイパーリンクセルの書式を設定します。color=[R,G,B]。"""
+    try:
+        result = excel.set_cell_hyperlink_format(
+            sheet=sheet, cell=cell, display_text=display_text,
+            color=tuple(color) if color else None, underline=underline,
+        )
+        return f"[{result['sheet']}] {result['cell']} のハイパーリンク書式を設定しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_clear_all_formatting(
+    range_str: str | None = None,
+    sheet: str | None = None,
+) -> str:
+    """範囲またはシート全体の書式をクリアします。"""
+    try:
+        result = excel.clear_all_formatting(sheet=sheet, range_str=range_str)
+        return f"[{result['sheet']}] {result['range']} の書式をクリアしました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_add_combo_chart(
+    data_range: str,
+    chart_types: list[str],
+    series_on_secondary: list[int] | None = None,
+    position_cell: str = "E1",
+    width: float = 480,
+    height: float = 300,
+    sheet: str | None = None,
+) -> str:
+    """コンボチャート（複合グラフ）を追加します。chart_types: 系列ごとの型("column","line","area")。"""
+    try:
+        result = excel.add_combo_chart(
+            sheet=sheet, data_range=data_range, chart_types=chart_types,
+            series_on_secondary=series_on_secondary, position_cell=position_cell, width=width, height=height,
+        )
+        return f"[{result['sheet']}] コンボチャート '{result['chart_name']}' を追加しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_add_pie_chart(
+    data_range: str,
+    position_cell: str = "E1",
+    width: float = 400,
+    height: float = 300,
+    explode: list[int] | None = None,
+    show_percentage: bool = True,
+    sheet: str | None = None,
+) -> str:
+    """円グラフを追加します。explode: 分離するデータポイントのインデックスリスト(1始まり)。"""
+    try:
+        result = excel.add_pie_chart(
+            sheet=sheet, data_range=data_range, position_cell=position_cell,
+            width=width, height=height, explode=explode, show_percentage=show_percentage,
+        )
+        return f"[{result['sheet']}] 円グラフ '{result['chart_name']}' を追加しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_add_scatter_chart(
+    data_range: str,
+    position_cell: str = "E1",
+    width: float = 480,
+    height: float = 300,
+    show_trendline: bool = False,
+    bubble: bool = False,
+    sheet: str | None = None,
+) -> str:
+    """散布図またはバブルチャートを追加します。"""
+    try:
+        result = excel.add_scatter_chart(
+            sheet=sheet, data_range=data_range, position_cell=position_cell,
+            width=width, height=height, show_trendline=show_trendline, bubble=bubble,
+        )
+        return f"[{result['sheet']}] 散布図 '{result['chart_name']}' を追加しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_add_stock_chart(
+    data_range: str,
+    position_cell: str = "E1",
+    width: float = 480,
+    height: float = 300,
+    chart_subtype: str = "hlc",
+    sheet: str | None = None,
+) -> str:
+    """株価チャートを追加します。chart_subtype: "hlc"(高値-安値-終値)、"ohlc"(始値-高値-安値-終値)。"""
+    try:
+        result = excel.add_stock_chart(
+            sheet=sheet, data_range=data_range, position_cell=position_cell,
+            width=width, height=height, chart_subtype=chart_subtype,
+        )
+        return f"[{result['sheet']}] 株価チャート '{result['chart_name']}' を追加しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_add_radar_chart(
+    data_range: str,
+    position_cell: str = "E1",
+    width: float = 400,
+    height: float = 300,
+    filled: bool = False,
+    sheet: str | None = None,
+) -> str:
+    """レーダーチャート（スパイダーチャート）を追加します。"""
+    try:
+        result = excel.add_radar_chart(
+            sheet=sheet, data_range=data_range, position_cell=position_cell,
+            width=width, height=height, filled=filled,
+        )
+        return f"[{result['sheet']}] レーダーチャート '{result['chart_name']}' を追加しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_activate_sheet(sheet: str) -> str:
+    """指定シートをアクティブ（表示）にします。"""
+    try:
+        result = excel.activate_sheet(sheet=sheet)
+        return f"シート '{result['sheet']}' をアクティブにしました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_get_active_sheet() -> str:
+    """現在アクティブなシート名を取得します。"""
+    try:
+        result = excel.get_active_sheet()
+        return f"アクティブシート: {result['sheet']}"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_get_used_range(sheet: str | None = None) -> str:
+    """使用範囲のアドレスとサイズを取得します。"""
+    try:
+        result = excel.get_used_range(sheet=sheet)
+        return f"[{result['sheet']}] 使用範囲: {result['address']} ({result['rows']}行 x {result['columns']}列)"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_get_last_row(column: str = "A", sheet: str | None = None) -> str:
+    """指定列の最終使用行番号を取得します。"""
+    try:
+        result = excel.get_last_row(sheet=sheet, column=column)
+        return f"[{result['sheet']}] {result['column']}列の最終行: {result['last_row']}"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_get_last_column(row: int = 1, sheet: str | None = None) -> str:
+    """指定行の最終使用列番号を取得します。"""
+    try:
+        result = excel.get_last_column(sheet=sheet, row=row)
+        return f"[{result['sheet']}] {result['row']}行目の最終列: {result['column_letter']} (列{result['last_column']})"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_fill_series(
+    start_cell: str,
+    end_cell: str,
+    fill_type: str = "linear",
+    step: float = 1,
+    sheet: str | None = None,
+) -> str:
+    """連続データを自動入力します。fill_type: "linear","growth","date","auto"。"""
+    try:
+        result = excel.fill_series(sheet=sheet, start_cell=start_cell, end_cell=end_cell, fill_type=fill_type, step=step)
+        return f"[{result['sheet']}] {result['start']}から{result['end']}に{result['fill_type']}系列を入力しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_concatenate_range(
+    range_str: str,
+    separator: str = ", ",
+    sheet: str | None = None,
+) -> str:
+    """範囲内の値を連結して1つの文字列にします。"""
+    try:
+        result = excel.concatenate_range(sheet=sheet, range_str=range_str, separator=separator)
+        return f"[{result['sheet']}] 連結結果（{result['count']}セル）: {result['result']}"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_split_text_by_rows(
+    cell: str,
+    separator: str | None = None,
+    target_cell: str | None = None,
+    sheet: str | None = None,
+) -> str:
+    """セルのテキストを分割して複数行に展開します。"""
+    try:
+        result = excel.split_text_by_rows(sheet=sheet, cell=cell, separator=separator, target_cell=target_cell)
+        return f"[{result['sheet']}] {result['parts']}個に分割しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_apply_formula_to_range(
+    range_str: str,
+    formula_template: str,
+    sheet: str | None = None,
+) -> str:
+    """範囲内の各セルに数式パターンを適用します。{row}と{col}がプレースホルダー。例: "=A{row}*B{row}"。"""
+    try:
+        result = excel.apply_formula_to_range(sheet=sheet, range_str=range_str, formula_template=formula_template)
+        return f"[{result['sheet']}] {result['range']} に数式パターンを適用しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_create_sequence(
+    start_cell: str,
+    count: int,
+    start_value: float = 1,
+    step: float = 1,
+    direction: str = "down",
+    sheet: str | None = None,
+) -> str:
+    """数列を生成します。direction: "down"(縦)、"right"(横)。"""
+    try:
+        result = excel.create_sequence(
+            sheet=sheet, start_cell=start_cell, count=count,
+            start_value=start_value, step=step, direction=direction,
+        )
+        return f"[{result['sheet']}] {result['start_cell']}から{result['count']}個の数列を生成しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_highlight_cells(
+    range_str: str,
+    condition: str,
+    color: list[int],
+    sheet: str | None = None,
+) -> str:
+    """条件に合うセルをハイライトします。condition: ">50","<0","=100","contains:text","empty","not_empty"。color=[R,G,B]。"""
+    try:
+        result = excel.highlight_cells(sheet=sheet, range_str=range_str, condition=condition, color=color)
+        return f"[{result['sheet']}] {result['range']} で{result['highlighted']}セルをハイライトしました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_count_if(
+    range_str: str,
+    criteria: str,
+    sheet: str | None = None,
+) -> str:
+    """条件に合うセル数をカウントします（COUNTIF）。"""
+    try:
+        result = excel.count_if(sheet=sheet, range_str=range_str, criteria=criteria)
+        return f"[{result['sheet']}] 条件'{result['criteria']}'に合うセル: {result['count']}件"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_sum_if(
+    range_str: str,
+    criteria: str,
+    sum_range: str | None = None,
+    sheet: str | None = None,
+) -> str:
+    """条件に合うセルの合計を計算します（SUMIF）。"""
+    try:
+        result = excel.sum_if(sheet=sheet, range_str=range_str, criteria=criteria, sum_range=sum_range)
+        return f"[{result['sheet']}] 条件'{result['criteria']}'の合計: {result['sum']}"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_set_gridlines_visible(visible: bool = True, sheet: str | None = None) -> str:
+    """グリッド線の表示/非表示を切り替えます。"""
+    try:
+        result = excel.set_gridlines_visible(sheet=sheet, visible=visible)
+        status = "表示" if result['visible'] else "非表示"
+        return f"[{result['sheet']}] グリッド線を{status}にしました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_set_headings_visible(visible: bool = True, sheet: str | None = None) -> str:
+    """行列見出しの表示/非表示を切り替えます。"""
+    try:
+        result = excel.set_headings_visible(sheet=sheet, visible=visible)
+        status = "表示" if result['visible'] else "非表示"
+        return f"[{result['sheet']}] 行列見出しを{status}にしました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_set_zoom_level(zoom_percent: int, sheet: str | None = None) -> str:
+    """ズームレベルを設定します（10-400%）。"""
+    try:
+        result = excel.set_zoom_level(sheet=sheet, zoom_percent=zoom_percent)
+        return f"[{result['sheet']}] ズームを{result['zoom']}%に設定しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_set_sheet_direction(direction: str = "ltr", sheet: str | None = None) -> str:
+    """シートの読み取り方向を設定します。direction: "ltr"(左→右)、"rtl"(右→左)。"""
+    try:
+        result = excel.set_sheet_direction(sheet=sheet, direction=direction)
+        return f"[{result['sheet']}] 方向を{result['direction']}に設定しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_add_number_validation(
+    range_str: str,
+    min_value: float | None = None,
+    max_value: float | None = None,
+    input_message: str | None = None,
+    error_message: str | None = None,
+    sheet: str | None = None,
+) -> str:
+    """数値範囲の入力規則を追加します。"""
+    try:
+        result = excel.add_number_validation(
+            sheet=sheet, range_str=range_str, min_value=min_value,
+            max_value=max_value, input_message=input_message, error_message=error_message,
+        )
+        return f"[{result['sheet']}] {result['range']} に数値バリデーションを追加しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_add_date_validation(
+    range_str: str,
+    min_date: str | None = None,
+    max_date: str | None = None,
+    input_message: str | None = None,
+    sheet: str | None = None,
+) -> str:
+    """日付範囲の入力規則を追加します。日付形式: "2024-01-01"。"""
+    try:
+        result = excel.add_date_validation(
+            sheet=sheet, range_str=range_str, min_date=min_date,
+            max_date=max_date, input_message=input_message,
+        )
+        return f"[{result['sheet']}] {result['range']} に日付バリデーションを追加しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_add_text_length_validation(
+    range_str: str,
+    min_length: int | None = None,
+    max_length: int | None = None,
+    input_message: str | None = None,
+    sheet: str | None = None,
+) -> str:
+    """文字数制限の入力規則を追加します。"""
+    try:
+        result = excel.add_text_length_validation(
+            sheet=sheet, range_str=range_str, min_length=min_length,
+            max_length=max_length, input_message=input_message,
+        )
+        return f"[{result['sheet']}] {result['range']} にテキスト長バリデーションを追加しました"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_trace_precedents(cell: str, sheet: str | None = None) -> str:
+    """数式が参照しているセル（参照元）を取得します。"""
+    try:
+        result = excel.trace_precedents(sheet=sheet, cell=cell)
+        if result['precedents']:
+            return f"[{result['sheet']}] {result['cell']} の参照元: {', '.join(result['precedents'])}"
+        return f"[{result['sheet']}] {result['cell']} には参照元がありません"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_trace_dependents(cell: str, sheet: str | None = None) -> str:
+    """このセルを参照しているセル（参照先）を取得します。"""
+    try:
+        result = excel.trace_dependents(sheet=sheet, cell=cell)
+        if result['dependents']:
+            return f"[{result['sheet']}] {result['cell']} の参照先: {', '.join(result['dependents'])}"
+        return f"[{result['sheet']}] {result['cell']} を参照しているセルはありません"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_check_errors(range_str: str | None = None, sheet: str | None = None) -> str:
+    """範囲内のエラーセル（#N/A, #VALUE!等）を検出します。"""
+    try:
+        result = excel.check_errors(sheet=sheet, range_str=range_str)
+        if result['errors']:
+            lines = [f"[{result['sheet']}] {result['count']}個のエラーを検出:"]
+            for err in result['errors'][:20]:
+                lines.append(f"  {err['cell']}: {err['error']}")
+            return "\n".join(lines)
+        return f"[{result['sheet']}] エラーは検出されませんでした"
+    except Exception as e:
+        return f"エラー: {e}"
+
+
+@mcp.tool()
+def excel_get_cell_formula(cell: str, sheet: str | None = None) -> str:
+    """セルの数式を取得します（計算結果ではなく数式そのもの）。"""
+    try:
+        result = excel.get_cell_formula(sheet=sheet, cell=cell)
+        if result['has_formula']:
+            return f"[{result['sheet']}] {result['cell']} の数式: {result['formula']}"
+        return f"[{result['sheet']}] {result['cell']} には数式がありません（値: {result['formula']}）"
+    except Exception as e:
+        return f"エラー: {e}"

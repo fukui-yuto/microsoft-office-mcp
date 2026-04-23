@@ -1698,3 +1698,615 @@ def restart_list_numbering(paragraph_index: int) -> dict:
     except Exception:
         pass
     return {"paragraph_index": paragraph_index}
+
+
+# ---------------------------------------------------------------------------
+# Underline style constants
+# ---------------------------------------------------------------------------
+
+WD_UNDERLINE_NONE = 0
+# WD_UNDERLINE_SINGLE = 1  # already defined above
+# WD_UNDERLINE_DOUBLE = 3  # already defined above
+WD_UNDERLINE_DOTTED = 4
+WD_UNDERLINE_DASHED = 7  # wdUnderlineDash
+WD_UNDERLINE_WAVY = 11
+WD_UNDERLINE_THICK = 6
+
+_UNDERLINE_STYLE_MAP = {
+    "none": WD_UNDERLINE_NONE,
+    "single": WD_UNDERLINE_SINGLE,
+    "double": WD_UNDERLINE_DOUBLE,
+    "dotted": WD_UNDERLINE_DOTTED,
+    "dashed": WD_UNDERLINE_DASHED,
+    "wavy": WD_UNDERLINE_WAVY,
+    "thick": WD_UNDERLINE_THICK,
+}
+
+# Row height rule constants
+WD_ROW_HEIGHT_EXACT = 2
+WD_ROW_HEIGHT_AT_LEAST = 1
+WD_ROW_HEIGHT_AUTO = 0
+
+_ROW_HEIGHT_RULE_MAP = {
+    "exact": WD_ROW_HEIGHT_EXACT,
+    "at_least": WD_ROW_HEIGHT_AT_LEAST,
+    "auto": WD_ROW_HEIGHT_AUTO,
+}
+
+# Table alignment constants
+WD_TABLE_ALIGN_LEFT = 0
+WD_TABLE_ALIGN_CENTER = 1
+WD_TABLE_ALIGN_RIGHT = 2
+
+_TABLE_ALIGNMENT_MAP = {
+    "left": WD_TABLE_ALIGN_LEFT,
+    "center": WD_TABLE_ALIGN_CENTER,
+    "right": WD_TABLE_ALIGN_RIGHT,
+}
+
+
+# ---------------------------------------------------------------------------
+# 11. Advanced Text Formatting
+# ---------------------------------------------------------------------------
+
+def set_text_color_range(
+    paragraph_index: int,
+    start_char: int,
+    end_char: int,
+    color: tuple[int, int, int],
+) -> dict:
+    """Color specific characters in a paragraph. start_char/end_char are 0-based offsets."""
+    app = _get_app()
+    doc = app.ActiveDocument
+    para = doc.Paragraphs(paragraph_index)
+    rng = para.Range
+    para_start = rng.Start
+    sub_rng = doc.Range(para_start + start_char, para_start + end_char)
+    sub_rng.Font.Color = rgb(*color)
+    return {
+        "paragraph_index": paragraph_index,
+        "start_char": start_char,
+        "end_char": end_char,
+    }
+
+
+def set_text_size_range(
+    paragraph_index: int,
+    start_char: int,
+    end_char: int,
+    font_size: float,
+) -> dict:
+    """Set font size for specific characters in a paragraph. start_char/end_char are 0-based offsets."""
+    app = _get_app()
+    doc = app.ActiveDocument
+    para = doc.Paragraphs(paragraph_index)
+    rng = para.Range
+    para_start = rng.Start
+    sub_rng = doc.Range(para_start + start_char, para_start + end_char)
+    sub_rng.Font.Size = font_size
+    return {
+        "paragraph_index": paragraph_index,
+        "start_char": start_char,
+        "end_char": end_char,
+        "font_size": font_size,
+    }
+
+
+def add_strikethrough(paragraph_index: int, double: bool = False) -> dict:
+    """Add strikethrough to a paragraph. double=True for double strikethrough."""
+    app = _get_app()
+    doc = app.ActiveDocument
+    para = doc.Paragraphs(paragraph_index)
+    if double:
+        para.Range.Font.DoubleStrikeThrough = True
+    else:
+        para.Range.Font.StrikeThrough = True
+    return {"paragraph_index": paragraph_index, "double": double}
+
+
+def set_underline_style(paragraph_index: int, style: str) -> dict:
+    """Set underline style for a paragraph. style: 'single','double','dotted','dashed','wavy','thick','none'."""
+    app = _get_app()
+    doc = app.ActiveDocument
+    para = doc.Paragraphs(paragraph_index)
+    ul_val = _UNDERLINE_STYLE_MAP.get(style, WD_UNDERLINE_SINGLE)
+    para.Range.Font.Underline = ul_val
+    return {"paragraph_index": paragraph_index, "style": style}
+
+
+def add_small_caps(paragraph_index: int) -> dict:
+    """Set small caps on a paragraph."""
+    app = _get_app()
+    doc = app.ActiveDocument
+    para = doc.Paragraphs(paragraph_index)
+    para.Range.Font.SmallCaps = True
+    return {"paragraph_index": paragraph_index}
+
+
+def add_all_caps(paragraph_index: int) -> dict:
+    """Set all caps on a paragraph."""
+    app = _get_app()
+    doc = app.ActiveDocument
+    para = doc.Paragraphs(paragraph_index)
+    para.Range.Font.AllCaps = True
+    return {"paragraph_index": paragraph_index}
+
+
+# ---------------------------------------------------------------------------
+# 12. Advanced Paragraph
+# ---------------------------------------------------------------------------
+
+def set_keep_with_next(paragraph_index: int, keep: bool = True) -> dict:
+    """Keep paragraph with the next paragraph (no page break between)."""
+    app = _get_app()
+    doc = app.ActiveDocument
+    para = doc.Paragraphs(paragraph_index)
+    para.Format.KeepWithNext = keep
+    return {"paragraph_index": paragraph_index, "keep": keep}
+
+
+def set_keep_together(paragraph_index: int, keep: bool = True) -> dict:
+    """Keep paragraph together (no break in middle)."""
+    app = _get_app()
+    doc = app.ActiveDocument
+    para = doc.Paragraphs(paragraph_index)
+    para.Format.KeepTogether = keep
+    return {"paragraph_index": paragraph_index, "keep": keep}
+
+
+def set_page_break_before(paragraph_index: int, break_before: bool = True) -> dict:
+    """Set page break before a paragraph."""
+    app = _get_app()
+    doc = app.ActiveDocument
+    para = doc.Paragraphs(paragraph_index)
+    para.Format.PageBreakBefore = break_before
+    return {"paragraph_index": paragraph_index, "break_before": break_before}
+
+
+def set_widow_orphan_control(paragraph_index: int, control: bool = True) -> dict:
+    """Set widow/orphan control for a paragraph."""
+    app = _get_app()
+    doc = app.ActiveDocument
+    para = doc.Paragraphs(paragraph_index)
+    para.Format.WidowControl = control
+    return {"paragraph_index": paragraph_index, "control": control}
+
+
+def set_outline_level(paragraph_index: int, level: int) -> dict:
+    """Set outline level for a paragraph. 0=body text, 1-9=outline levels."""
+    app = _get_app()
+    doc = app.ActiveDocument
+    para = doc.Paragraphs(paragraph_index)
+    # wdOutlineLevelBodyText = 10, wdOutlineLevel1 = 1, etc.
+    if level == 0:
+        para.Format.OutlineLevel = 10  # wdOutlineLevelBodyText
+    else:
+        para.Format.OutlineLevel = level
+    return {"paragraph_index": paragraph_index, "level": level}
+
+
+def get_paragraph_count() -> dict:
+    """Get total paragraph count of the active document."""
+    app = _get_app()
+    doc = app.ActiveDocument
+    return {"paragraph_count": doc.Paragraphs.Count}
+
+
+# ---------------------------------------------------------------------------
+# 13. Table Advanced
+# ---------------------------------------------------------------------------
+
+def set_table_row_height(
+    table_index: int,
+    row: int,
+    height: float,
+    rule: str = "exact",
+) -> dict:
+    """Set row height in a table. rule: 'exact','at_least','auto'."""
+    app = _get_app()
+    doc = app.ActiveDocument
+    table = doc.Tables(table_index)
+    r = table.Rows(row)
+    r.HeightRule = _ROW_HEIGHT_RULE_MAP.get(rule, WD_ROW_HEIGHT_EXACT)
+    r.Height = height
+    return {"table_index": table_index, "row": row, "height": height, "rule": rule}
+
+
+def set_table_cell_width(
+    table_index: int,
+    row: int,
+    col: int,
+    width: float,
+) -> dict:
+    """Set individual cell width in points."""
+    app = _get_app()
+    doc = app.ActiveDocument
+    table = doc.Tables(table_index)
+    cell = table.Cell(row, col)
+    cell.Width = width
+    return {"table_index": table_index, "row": row, "col": col, "width": width}
+
+
+def set_table_alignment(table_index: int, alignment: str) -> dict:
+    """Set table alignment. alignment: 'left','center','right'."""
+    app = _get_app()
+    doc = app.ActiveDocument
+    table = doc.Tables(table_index)
+    table.Rows.Alignment = _TABLE_ALIGNMENT_MAP.get(alignment, WD_TABLE_ALIGN_LEFT)
+    return {"table_index": table_index, "alignment": alignment}
+
+
+def add_table_row(
+    table_index: int,
+    position: int | None = None,
+    values: list[str] | None = None,
+) -> dict:
+    """Add a row to a table. position is 1-based row index (None=end)."""
+    app = _get_app()
+    doc = app.ActiveDocument
+    table = doc.Tables(table_index)
+    if position is not None:
+        before_row = table.Rows(position)
+        table.Rows.Add(BeforeRow=before_row)
+        new_row_idx = position
+    else:
+        table.Rows.Add()
+        new_row_idx = table.Rows.Count
+    if values:
+        for ci, val in enumerate(values):
+            if ci < table.Columns.Count:
+                table.Cell(new_row_idx, ci + 1).Range.Text = val
+    return {
+        "table_index": table_index,
+        "row": new_row_idx,
+        "row_count": table.Rows.Count,
+    }
+
+
+def delete_table_row(table_index: int, row: int) -> dict:
+    """Delete a row from a table. row is 1-based."""
+    app = _get_app()
+    doc = app.ActiveDocument
+    table = doc.Tables(table_index)
+    table.Rows(row).Delete()
+    return {"table_index": table_index, "deleted_row": row, "row_count": table.Rows.Count}
+
+
+def add_table_column(table_index: int, position: int | None = None) -> dict:
+    """Add a column to a table. position is 1-based column index (None=end)."""
+    app = _get_app()
+    doc = app.ActiveDocument
+    table = doc.Tables(table_index)
+    if position is not None:
+        before_col = table.Columns(position)
+        table.Columns.Add(BeforeColumn=before_col)
+    else:
+        table.Columns.Add()
+    return {"table_index": table_index, "col_count": table.Columns.Count}
+
+
+def delete_table_column(table_index: int, col: int) -> dict:
+    """Delete a column from a table. col is 1-based."""
+    app = _get_app()
+    doc = app.ActiveDocument
+    table = doc.Tables(table_index)
+    table.Columns(col).Delete()
+    return {"table_index": table_index, "deleted_col": col, "col_count": table.Columns.Count}
+
+
+def get_table_data(table_index: int) -> dict:
+    """Read all table data as a 2D array."""
+    app = _get_app()
+    doc = app.ActiveDocument
+    table = doc.Tables(table_index)
+    rows = table.Rows.Count
+    cols = table.Columns.Count
+    data = []
+    for r in range(1, rows + 1):
+        row_data = []
+        for c in range(1, cols + 1):
+            try:
+                text = table.Cell(r, c).Range.Text
+                # Remove trailing \r\x07 that Word appends to cell text
+                text = text.rstrip("\r\x07")
+                row_data.append(text)
+            except Exception:
+                row_data.append("")
+        data.append(row_data)
+    return {"table_index": table_index, "rows": rows, "cols": cols, "data": data}
+
+
+def set_table_repeat_header(table_index: int, repeat: bool = True) -> dict:
+    """Set first row as a repeating header row on each page."""
+    app = _get_app()
+    doc = app.ActiveDocument
+    table = doc.Tables(table_index)
+    table.Rows(1).HeadingFormat = repeat
+    return {"table_index": table_index, "repeat": repeat}
+
+
+# ---------------------------------------------------------------------------
+# 14. Section Management
+# ---------------------------------------------------------------------------
+
+def get_section_count() -> dict:
+    """Get the number of sections in the active document."""
+    app = _get_app()
+    doc = app.ActiveDocument
+    return {"section_count": doc.Sections.Count}
+
+
+def set_section_page_setup(
+    section_index: int,
+    orientation: int | None = None,
+    width: float | None = None,
+    height: float | None = None,
+    top_margin: float | None = None,
+    bottom_margin: float | None = None,
+    left_margin: float | None = None,
+    right_margin: float | None = None,
+) -> dict:
+    """Set page setup for a specific section."""
+    app = _get_app()
+    doc = app.ActiveDocument
+    sec = doc.Sections(section_index)
+    ps = sec.PageSetup
+    if orientation is not None:
+        ps.Orientation = orientation
+    if width is not None:
+        ps.PageWidth = width
+    if height is not None:
+        ps.PageHeight = height
+    if top_margin is not None:
+        ps.TopMargin = top_margin
+    if bottom_margin is not None:
+        ps.BottomMargin = bottom_margin
+    if left_margin is not None:
+        ps.LeftMargin = left_margin
+    if right_margin is not None:
+        ps.RightMargin = right_margin
+    return {"section_index": section_index}
+
+
+def set_section_header(
+    section_index: int,
+    text: str,
+    alignment: int | None = None,
+) -> dict:
+    """Set header text for a specific section."""
+    app = _get_app()
+    doc = app.ActiveDocument
+    sec = doc.Sections(section_index)
+    # wdHeaderFooterPrimary = 1
+    header = sec.Headers(1)
+    header.Range.Text = text
+    if alignment is not None:
+        header.Range.ParagraphFormat.Alignment = alignment
+    return {"section_index": section_index, "text": text}
+
+
+def set_section_footer(
+    section_index: int,
+    text: str,
+    alignment: int | None = None,
+) -> dict:
+    """Set footer text for a specific section."""
+    app = _get_app()
+    doc = app.ActiveDocument
+    sec = doc.Sections(section_index)
+    # wdHeaderFooterPrimary = 1
+    footer = sec.Footers(1)
+    footer.Range.Text = text
+    if alignment is not None:
+        footer.Range.ParagraphFormat.Alignment = alignment
+    return {"section_index": section_index, "text": text}
+
+
+def link_section_header(section_index: int, link_to_previous: bool = True) -> dict:
+    """Link or unlink a section header to/from the previous section."""
+    app = _get_app()
+    doc = app.ActiveDocument
+    sec = doc.Sections(section_index)
+    # wdHeaderFooterPrimary = 1
+    sec.Headers(1).LinkToPrevious = link_to_previous
+    return {"section_index": section_index, "link_to_previous": link_to_previous}
+
+
+# ---------------------------------------------------------------------------
+# 15. Document Navigation & Structure
+# ---------------------------------------------------------------------------
+
+def go_to_page(page_number: int) -> dict:
+    """Navigate to a specific page."""
+    app = _get_app()
+    # wdGoToPage = 1, wdGoToAbsolute = 1
+    app.Selection.GoTo(What=1, Which=1, Count=page_number)
+    return {"page_number": page_number}
+
+
+def get_page_count() -> dict:
+    """Get total page count of the active document."""
+    app = _get_app()
+    doc = app.ActiveDocument
+    doc.Repaginate()
+    # wdStatisticPages = 2
+    page_count = doc.ComputeStatistics(2)
+    return {"page_count": page_count}
+
+
+def insert_text_at_bookmark(bookmark_name: str, text: str) -> dict:
+    """Insert text at a bookmark location."""
+    app = _get_app()
+    doc = app.ActiveDocument
+    if not doc.Bookmarks.Exists(bookmark_name):
+        raise ValueError(f"Bookmark '{bookmark_name}' not found")
+    bm = doc.Bookmarks(bookmark_name)
+    rng = bm.Range
+    rng.Text = text
+    return {"bookmark_name": bookmark_name, "text": text}
+
+
+def get_paragraph_text(paragraph_index: int) -> dict:
+    """Get text of a specific paragraph."""
+    app = _get_app()
+    doc = app.ActiveDocument
+    para = doc.Paragraphs(paragraph_index)
+    text = para.Range.Text
+    # Remove trailing paragraph mark
+    text = text.rstrip("\r")
+    return {"paragraph_index": paragraph_index, "text": text}
+
+
+def get_paragraph_range(start_index: int, end_index: int) -> dict:
+    """Get text of a range of paragraphs."""
+    app = _get_app()
+    doc = app.ActiveDocument
+    paragraphs = []
+    for i in range(start_index, end_index + 1):
+        para = doc.Paragraphs(i)
+        text = para.Range.Text.rstrip("\r")
+        paragraphs.append({"index": i, "text": text})
+    return {"start_index": start_index, "end_index": end_index, "paragraphs": paragraphs}
+
+
+# ---------------------------------------------------------------------------
+# 16. Advanced Find
+# ---------------------------------------------------------------------------
+
+def find_text(
+    text: str,
+    match_case: bool = False,
+    match_whole_word: bool = False,
+) -> dict:
+    """Find text in the document. Returns paragraph index and position of first match."""
+    app = _get_app()
+    doc = app.ActiveDocument
+    rng = doc.Content
+    find = rng.Find
+    find.ClearFormatting()
+    found = find.Execute(
+        FindText=text,
+        MatchCase=match_case,
+        MatchWholeWord=match_whole_word,
+        Forward=True,
+        Wrap=1,  # wdFindStop
+    )
+    if found:
+        # Determine which paragraph the found range is in
+        found_start = rng.Start
+        para_index = None
+        for i in range(1, doc.Paragraphs.Count + 1):
+            p = doc.Paragraphs(i)
+            if p.Range.Start <= found_start < p.Range.End:
+                para_index = i
+                break
+        char_pos = found_start - doc.Paragraphs(para_index).Range.Start if para_index else 0
+        return {
+            "found": True,
+            "text": text,
+            "paragraph_index": para_index,
+            "char_position": char_pos,
+        }
+    return {"found": False, "text": text}
+
+
+def find_all(text: str, match_case: bool = False) -> dict:
+    """Find all occurrences of text. Returns list of locations."""
+    app = _get_app()
+    doc = app.ActiveDocument
+    locations = []
+    rng = doc.Content
+    find = rng.Find
+    find.ClearFormatting()
+    while find.Execute(
+        FindText=text,
+        MatchCase=match_case,
+        Forward=True,
+        Wrap=0,  # wdFindStop
+    ):
+        found_start = rng.Start
+        para_index = None
+        for i in range(1, doc.Paragraphs.Count + 1):
+            p = doc.Paragraphs(i)
+            if p.Range.Start <= found_start < p.Range.End:
+                para_index = i
+                break
+        char_pos = found_start - doc.Paragraphs(para_index).Range.Start if para_index else 0
+        locations.append({
+            "paragraph_index": para_index,
+            "char_position": char_pos,
+            "start": found_start,
+        })
+        # Move past this match to find next
+        rng.Start = rng.End
+        rng.End = doc.Content.End
+    return {"text": text, "count": len(locations), "locations": locations}
+
+
+def highlight_found_text(
+    text: str,
+    highlight_color: int = 7,
+    match_case: bool = False,
+) -> dict:
+    """Find and highlight all occurrences of text. highlight_color: WdColorIndex (7=yellow)."""
+    app = _get_app()
+    doc = app.ActiveDocument
+    rng = doc.Content
+    find = rng.Find
+    find.ClearFormatting()
+    find.Replacement.ClearFormatting()
+    find.Replacement.Highlight = True
+    # Set highlight color
+    app.Options.DefaultHighlightColorIndex = highlight_color
+    count = 0
+    while find.Execute(
+        FindText=text,
+        MatchCase=match_case,
+        Forward=True,
+        Wrap=0,  # wdFindStop
+    ):
+        rng.HighlightColorIndex = highlight_color
+        count += 1
+        rng.Start = rng.End
+        rng.End = doc.Content.End
+    return {"text": text, "highlight_color": highlight_color, "count": count}
+
+
+# ---------------------------------------------------------------------------
+# 17. Mail Merge Support
+# ---------------------------------------------------------------------------
+
+def start_mail_merge(data_source_path: str) -> dict:
+    """Start mail merge with a data source file (CSV/Excel)."""
+    app = _get_app()
+    doc = app.ActiveDocument
+    abs_path = ensure_absolute_path(data_source_path)
+    doc.MailMerge.OpenDataSource(Name=abs_path)
+    return {"data_source": abs_path, "merge_state": doc.MailMerge.State}
+
+
+def insert_merge_field(field_name: str) -> dict:
+    """Insert a merge field at the current cursor position."""
+    app = _get_app()
+    doc = app.ActiveDocument
+    rng = app.Selection.Range
+    doc.MailMerge.Fields.Add(Range=rng, Name=field_name)
+    return {"field_name": field_name}
+
+
+def execute_mail_merge(output_path: str | None = None) -> dict:
+    """Execute mail merge and optionally save the result."""
+    app = _get_app()
+    doc = app.ActiveDocument
+    mm = doc.MailMerge
+    # wdSendToNewDocument = 0
+    mm.Destination = 0
+    mm.Execute()
+    result_doc = app.ActiveDocument
+    if output_path:
+        result_doc.SaveAs2(ensure_absolute_path(output_path))
+    return {
+        "executed": True,
+        "output_name": result_doc.Name,
+        "output_path": output_path,
+    }

@@ -2708,3 +2708,1061 @@ def set_shape_autofit(
     shape = slide.Shapes(shape_index)
     shape.TextFrame.AutoSize = autofit_map.get(autofit_type, 0)
     return {"slide_number": slide_number}
+
+
+# ============================================================
+# Slide Manipulation (Extended)
+# ============================================================
+
+def set_slide_background_image(slide_number: int, image_path: str) -> dict:
+    """Set a background image for a slide.
+
+    Args:
+        slide_number: 1-based slide index.
+        image_path: Path to the image file.
+
+    Returns:
+        Dict with slide_number.
+    """
+    app = _get_app()
+    prs = app.ActivePresentation
+    slide = prs.Slides(slide_number)
+    abs_path = ensure_absolute_path(image_path)
+    slide.FollowMasterBackground = False
+    slide.Background.Fill.UserPicture(abs_path)
+    return {"slide_number": slide_number}
+
+
+def get_slide_count() -> dict:
+    """Return the total number of slides.
+
+    Returns:
+        Dict with slide_count.
+    """
+    app = _get_app()
+    prs = app.ActivePresentation
+    return {"slide_count": prs.Slides.Count}
+
+
+def clear_slide(slide_number: int) -> dict:
+    """Remove all shapes from a slide (clean slate).
+
+    Args:
+        slide_number: 1-based slide index.
+
+    Returns:
+        Dict with slide_number and count of deleted shapes.
+    """
+    app = _get_app()
+    prs = app.ActivePresentation
+    slide = prs.Slides(slide_number)
+    count = slide.Shapes.Count
+    for i in range(count, 0, -1):
+        slide.Shapes(i).Delete()
+    return {"slide_number": slide_number, "deleted": count}
+
+
+# ============================================================
+# Shape Advanced
+# ============================================================
+
+def set_shape_opacity(slide_number: int, shape_index: int, opacity: float) -> dict:
+    """Set shape opacity (0-100).
+
+    Args:
+        slide_number: 1-based slide index.
+        shape_index: 1-based shape index.
+        opacity: Opacity value 0 (fully transparent) to 100 (fully opaque).
+
+    Returns:
+        Dict with slide_number and shape_index.
+    """
+    app = _get_app()
+    prs = app.ActivePresentation
+    slide = prs.Slides(slide_number)
+    shape = slide.Shapes(shape_index)
+    # Transparency is 0.0 (opaque) to 1.0 (transparent), inverse of opacity
+    shape.Fill.Transparency = 1.0 - (opacity / 100.0)
+    return {"slide_number": slide_number, "shape_index": shape_index}
+
+
+def rotate_shape(slide_number: int, shape_index: int, angle: float) -> dict:
+    """Rotate shape to specific angle.
+
+    Args:
+        slide_number: 1-based slide index.
+        shape_index: 1-based shape index.
+        angle: Rotation angle in degrees.
+
+    Returns:
+        Dict with slide_number and shape_index.
+    """
+    app = _get_app()
+    prs = app.ActivePresentation
+    slide = prs.Slides(slide_number)
+    shape = slide.Shapes(shape_index)
+    shape.Rotation = angle
+    return {"slide_number": slide_number, "shape_index": shape_index}
+
+
+def flip_shape(slide_number: int, shape_index: int, direction: str) -> dict:
+    """Flip shape horizontally or vertically.
+
+    Args:
+        slide_number: 1-based slide index.
+        shape_index: 1-based shape index.
+        direction: "horizontal" or "vertical".
+
+    Returns:
+        Dict with slide_number and shape_index.
+    """
+    app = _get_app()
+    prs = app.ActivePresentation
+    slide = prs.Slides(slide_number)
+    shape = slide.Shapes(shape_index)
+    # msoFlipHorizontal=0, msoFlipVertical=1
+    if direction == "horizontal":
+        shape.Flip(0)
+    elif direction == "vertical":
+        shape.Flip(1)
+    return {"slide_number": slide_number, "shape_index": shape_index}
+
+
+def set_shape_name(slide_number: int, shape_index: int, name: str) -> dict:
+    """Rename a shape.
+
+    Args:
+        slide_number: 1-based slide index.
+        shape_index: 1-based shape index.
+        name: New name for the shape.
+
+    Returns:
+        Dict with slide_number, shape_index, and name.
+    """
+    app = _get_app()
+    prs = app.ActivePresentation
+    slide = prs.Slides(slide_number)
+    shape = slide.Shapes(shape_index)
+    shape.Name = name
+    return {"slide_number": slide_number, "shape_index": shape_index, "name": name}
+
+
+def find_shape_by_name(slide_number: int, name: str) -> dict:
+    """Find shape index by name.
+
+    Args:
+        slide_number: 1-based slide index.
+        name: Shape name to search for.
+
+    Returns:
+        Dict with slide_number, name, and shape_index (or -1 if not found).
+    """
+    app = _get_app()
+    prs = app.ActivePresentation
+    slide = prs.Slides(slide_number)
+    for i in range(1, slide.Shapes.Count + 1):
+        if slide.Shapes(i).Name == name:
+            return {"slide_number": slide_number, "name": name, "shape_index": i}
+    return {"slide_number": slide_number, "name": name, "shape_index": -1}
+
+
+def list_shapes(slide_number: int) -> dict:
+    """List all shapes with their index, name, type, position, size.
+
+    Args:
+        slide_number: 1-based slide index.
+
+    Returns:
+        Dict with slide_number and list of shape info dicts.
+    """
+    app = _get_app()
+    prs = app.ActivePresentation
+    slide = prs.Slides(slide_number)
+    shapes = []
+    for i in range(1, slide.Shapes.Count + 1):
+        shape = slide.Shapes(i)
+        shapes.append({
+            "index": i,
+            "name": shape.Name,
+            "type": shape.Type,
+            "left": shape.Left,
+            "top": shape.Top,
+            "width": shape.Width,
+            "height": shape.Height,
+        })
+    return {"slide_number": slide_number, "shapes": shapes}
+
+
+# ============================================================
+# Text Advanced
+# ============================================================
+
+def add_superscript(slide_number: int, shape_index: int, text: str,
+                    base_text: str | None = None) -> dict:
+    """Add superscript text to a shape.
+
+    Args:
+        slide_number: 1-based slide index.
+        shape_index: 1-based shape index.
+        text: Superscript text to add.
+        base_text: Optional base text to prepend before superscript.
+
+    Returns:
+        Dict with slide_number and shape_index.
+    """
+    app = _get_app()
+    prs = app.ActivePresentation
+    slide = prs.Slides(slide_number)
+    shape = slide.Shapes(shape_index)
+    if not shape.HasTextFrame:
+        return {"error": f"Shape {shape_index} has no text frame"}
+    tf = shape.TextFrame.TextRange
+    if base_text is not None:
+        tf.Text = base_text
+        # Append superscript after base text
+        run = tf.InsertAfter(text)
+    else:
+        run = tf.InsertAfter(text)
+    run.Font.Superscript = True
+    return {"slide_number": slide_number, "shape_index": shape_index}
+
+
+def add_subscript(slide_number: int, shape_index: int, text: str,
+                  base_text: str | None = None) -> dict:
+    """Add subscript text to a shape.
+
+    Args:
+        slide_number: 1-based slide index.
+        shape_index: 1-based shape index.
+        text: Subscript text to add.
+        base_text: Optional base text to prepend before subscript.
+
+    Returns:
+        Dict with slide_number and shape_index.
+    """
+    app = _get_app()
+    prs = app.ActivePresentation
+    slide = prs.Slides(slide_number)
+    shape = slide.Shapes(shape_index)
+    if not shape.HasTextFrame:
+        return {"error": f"Shape {shape_index} has no text frame"}
+    tf = shape.TextFrame.TextRange
+    if base_text is not None:
+        tf.Text = base_text
+        run = tf.InsertAfter(text)
+    else:
+        run = tf.InsertAfter(text)
+    run.Font.Subscript = True
+    return {"slide_number": slide_number, "shape_index": shape_index}
+
+
+def set_paragraph_spacing(
+    slide_number: int,
+    shape_index: int,
+    paragraph_index: int,
+    space_before: float | None = None,
+    space_after: float | None = None,
+    line_spacing: float | None = None,
+) -> dict:
+    """Set paragraph spacing control.
+
+    Args:
+        slide_number: 1-based slide index.
+        shape_index: 1-based shape index.
+        paragraph_index: 1-based paragraph index.
+        space_before: Space before paragraph in points.
+        space_after: Space after paragraph in points.
+        line_spacing: Line spacing in points.
+
+    Returns:
+        Dict with slide_number, shape_index, and paragraph_index.
+    """
+    app = _get_app()
+    prs = app.ActivePresentation
+    slide = prs.Slides(slide_number)
+    shape = slide.Shapes(shape_index)
+    if not shape.HasTextFrame:
+        return {"error": f"Shape {shape_index} has no text frame"}
+    para = shape.TextFrame.TextRange.Paragraphs(paragraph_index)
+    pf = para.ParagraphFormat
+    if space_before is not None:
+        pf.SpaceBefore = space_before
+    if space_after is not None:
+        pf.SpaceAfter = space_after
+    if line_spacing is not None:
+        pf.LineRuleWithin = True
+        pf.SpaceWithin = line_spacing
+    return {
+        "slide_number": slide_number,
+        "shape_index": shape_index,
+        "paragraph_index": paragraph_index,
+    }
+
+
+def set_text_columns(slide_number: int, shape_index: int,
+                     num_columns: int, spacing: float = 18) -> dict:
+    """Set text columns in a shape.
+
+    Args:
+        slide_number: 1-based slide index.
+        shape_index: 1-based shape index.
+        num_columns: Number of text columns.
+        spacing: Spacing between columns in points.
+
+    Returns:
+        Dict with slide_number and shape_index.
+    """
+    app = _get_app()
+    prs = app.ActivePresentation
+    slide = prs.Slides(slide_number)
+    shape = slide.Shapes(shape_index)
+    if not shape.HasTextFrame:
+        return {"error": f"Shape {shape_index} has no text frame"}
+    shape.TextFrame2.Column.Number = num_columns
+    shape.TextFrame2.Column.Spacing = spacing
+    return {"slide_number": slide_number, "shape_index": shape_index}
+
+
+def clear_shape_text(slide_number: int, shape_index: int) -> dict:
+    """Clear all text from a shape.
+
+    Args:
+        slide_number: 1-based slide index.
+        shape_index: 1-based shape index.
+
+    Returns:
+        Dict with slide_number and shape_index.
+    """
+    app = _get_app()
+    prs = app.ActivePresentation
+    slide = prs.Slides(slide_number)
+    shape = slide.Shapes(shape_index)
+    if not shape.HasTextFrame:
+        return {"error": f"Shape {shape_index} has no text frame"}
+    shape.TextFrame.TextRange.Text = ""
+    return {"slide_number": slide_number, "shape_index": shape_index}
+
+
+# ============================================================
+# Advanced Chart Operations
+# ============================================================
+
+def format_chart_title(
+    slide_number: int,
+    shape_index: int,
+    title: str,
+    font_size: float | None = None,
+    bold: bool | None = None,
+    font_color: tuple[int, int, int] | None = None,
+) -> dict:
+    """Format chart title.
+
+    Args:
+        slide_number: 1-based slide index.
+        shape_index: 1-based shape index of the chart.
+        title: Chart title text.
+        font_size: Font size in points.
+        bold: Whether title should be bold.
+        font_color: Font color as (R, G, B).
+
+    Returns:
+        Dict with slide_number and shape_index.
+    """
+    app = _get_app()
+    prs = app.ActivePresentation
+    slide = prs.Slides(slide_number)
+    shape = slide.Shapes(shape_index)
+    chart = shape.Chart
+    chart.HasTitle = True
+    chart.ChartTitle.Text = title
+    font = chart.ChartTitle.Format.TextFrame2.TextRange.Font
+    if font_size is not None:
+        font.Size = font_size
+    if bold is not None:
+        font.Bold = bold
+    if font_color is not None:
+        font.Fill.ForeColor.RGB = rgb(*font_color)
+    return {"slide_number": slide_number, "shape_index": shape_index}
+
+
+def format_chart_axis(
+    slide_number: int,
+    shape_index: int,
+    axis_type: str,
+    title: str | None = None,
+    min_value: float | None = None,
+    max_value: float | None = None,
+    number_format: str | None = None,
+) -> dict:
+    """Format chart axis.
+
+    Args:
+        slide_number: 1-based slide index.
+        shape_index: 1-based shape index of the chart.
+        axis_type: "x" for category axis, "y" for value axis.
+        title: Axis title text.
+        min_value: Minimum axis value.
+        max_value: Maximum axis value.
+        number_format: Number format string (e.g. "#,##0").
+
+    Returns:
+        Dict with slide_number, shape_index, and axis_type.
+    """
+    app = _get_app()
+    prs = app.ActivePresentation
+    slide = prs.Slides(slide_number)
+    shape = slide.Shapes(shape_index)
+    chart = shape.Chart
+    # xlCategory=1, xlValue=2
+    axis_id = 1 if axis_type == "x" else 2
+    axis = chart.Axes(axis_id)
+    if title is not None:
+        axis.HasTitle = True
+        axis.AxisTitle.Text = title
+    if min_value is not None:
+        axis.MinimumScale = min_value
+    if max_value is not None:
+        axis.MaximumScale = max_value
+    if number_format is not None:
+        axis.TickLabels.NumberFormat = number_format
+    return {"slide_number": slide_number, "shape_index": shape_index, "axis_type": axis_type}
+
+
+def format_chart_legend(
+    slide_number: int,
+    shape_index: int,
+    position: str | None = None,
+    font_size: float | None = None,
+    visible: bool = True,
+) -> dict:
+    """Format chart legend.
+
+    Args:
+        slide_number: 1-based slide index.
+        shape_index: 1-based shape index of the chart.
+        position: Legend position: "bottom", "top", "left", "right".
+        font_size: Font size in points.
+        visible: Whether legend is visible.
+
+    Returns:
+        Dict with slide_number and shape_index.
+    """
+    app = _get_app()
+    prs = app.ActivePresentation
+    slide = prs.Slides(slide_number)
+    shape = slide.Shapes(shape_index)
+    chart = shape.Chart
+    chart.HasLegend = visible
+    if visible and chart.HasLegend:
+        legend = chart.Legend
+        # xlLegendPositionBottom=-4107, xlLegendPositionTop=-4160,
+        # xlLegendPositionLeft=-4131, xlLegendPositionRight=-4152
+        pos_map = {
+            "bottom": -4107,
+            "top": -4160,
+            "left": -4131,
+            "right": -4152,
+        }
+        if position and position in pos_map:
+            legend.Position = pos_map[position]
+        if font_size is not None:
+            legend.Format.TextFrame2.TextRange.Font.Size = font_size
+    return {"slide_number": slide_number, "shape_index": shape_index}
+
+
+def set_chart_style(slide_number: int, shape_index: int, style_index: int) -> dict:
+    """Apply a built-in chart style (1-48).
+
+    Args:
+        slide_number: 1-based slide index.
+        shape_index: 1-based shape index of the chart.
+        style_index: Chart style index (1-48).
+
+    Returns:
+        Dict with slide_number and shape_index.
+    """
+    app = _get_app()
+    prs = app.ActivePresentation
+    slide = prs.Slides(slide_number)
+    shape = slide.Shapes(shape_index)
+    shape.Chart.ChartStyle = style_index
+    return {"slide_number": slide_number, "shape_index": shape_index}
+
+
+def format_chart_data_labels(
+    slide_number: int,
+    shape_index: int,
+    show_value: bool = True,
+    show_percentage: bool = False,
+    show_category: bool = False,
+    font_size: float | None = None,
+    font_color: tuple[int, int, int] | None = None,
+) -> dict:
+    """Format chart data labels.
+
+    Args:
+        slide_number: 1-based slide index.
+        shape_index: 1-based shape index of the chart.
+        show_value: Show data values.
+        show_percentage: Show percentages.
+        show_category: Show category names.
+        font_size: Font size in points.
+        font_color: Font color as (R, G, B).
+
+    Returns:
+        Dict with slide_number and shape_index.
+    """
+    app = _get_app()
+    prs = app.ActivePresentation
+    slide = prs.Slides(slide_number)
+    shape = slide.Shapes(shape_index)
+    chart = shape.Chart
+    for i in range(1, chart.SeriesCollection().Count + 1):
+        series = chart.SeriesCollection(i)
+        series.HasDataLabels = True
+        labels = series.DataLabels()
+        labels.ShowValue = show_value
+        labels.ShowPercentage = show_percentage
+        labels.ShowCategoryName = show_category
+        if font_size is not None:
+            labels.Format.TextFrame2.TextRange.Font.Size = font_size
+        if font_color is not None:
+            labels.Format.TextFrame2.TextRange.Font.Fill.ForeColor.RGB = rgb(*font_color)
+    return {"slide_number": slide_number, "shape_index": shape_index}
+
+
+def add_chart_data_table(
+    slide_number: int,
+    shape_index: int,
+    show_legend_keys: bool = True,
+    show_outline: bool = True,
+) -> dict:
+    """Add a data table below a chart.
+
+    Args:
+        slide_number: 1-based slide index.
+        shape_index: 1-based shape index of the chart.
+        show_legend_keys: Whether to show legend keys in the data table.
+        show_outline: Whether to show data table outline.
+
+    Returns:
+        Dict with slide_number and shape_index.
+    """
+    app = _get_app()
+    prs = app.ActivePresentation
+    slide = prs.Slides(slide_number)
+    shape = slide.Shapes(shape_index)
+    chart = shape.Chart
+    chart.HasDataTable = True
+    dt = chart.DataTable
+    dt.ShowLegendKey = show_legend_keys
+    dt.HasBorderOutline = show_outline
+    return {"slide_number": slide_number, "shape_index": shape_index}
+
+
+# ============================================================
+# SmartArt-like Diagrams (built with shapes)
+# ============================================================
+
+def _create_org_box(slide, name, title, left, top, width, height,
+                    fill_rgb=(41, 65, 122), font_color_rgb=(255, 255, 255)):
+    """Helper: create a single org chart box with name and title."""
+    shape = slide.Shapes.AddShape(MSO_SHAPE_ROUNDED_RECTANGLE, left, top, width, height)
+    shape.Fill.Solid()
+    shape.Fill.ForeColor.RGB = rgb(*fill_rgb)
+    shape.Line.Visible = False
+    if shape.HasTextFrame:
+        tf = shape.TextFrame
+        tf.WordWrap = True
+        tf.MarginLeft = 4
+        tf.MarginRight = 4
+        tf.MarginTop = 4
+        tf.MarginBottom = 4
+        tr = tf.TextRange
+        tr.Text = name
+        if title:
+            tr.Text = name + "\n" + title
+            # Format name (first line) bold
+            tr.Paragraphs(1).Font.Bold = True
+            tr.Paragraphs(1).Font.Size = 10
+            tr.Paragraphs(1).Font.Color.RGB = rgb(*font_color_rgb)
+            if tr.Paragraphs().Count > 1:
+                tr.Paragraphs(2).Font.Size = 8
+                tr.Paragraphs(2).Font.Color.RGB = rgb(*font_color_rgb)
+        else:
+            tr.Font.Bold = True
+            tr.Font.Size = 10
+            tr.Font.Color.RGB = rgb(*font_color_rgb)
+        tr.ParagraphFormat.Alignment = PP_ALIGN_CENTER
+    return shape
+
+
+def _draw_org_tree(slide, node, cx, top, width, height, h_gap, v_gap, level=0):
+    """Recursively draw org chart nodes and connectors."""
+    box = _create_org_box(
+        slide, node.get("name", ""), node.get("title", ""),
+        cx - width / 2, top, width, height,
+    )
+    children = node.get("children", [])
+    if not children:
+        return
+    child_top = top + height + v_gap
+    total_width = len(children) * width + (len(children) - 1) * h_gap
+    start_x = cx - total_width / 2 + width / 2
+    for i, child in enumerate(children):
+        child_cx = start_x + i * (width + h_gap)
+        _draw_org_tree(slide, child, child_cx, child_top, width, height, h_gap, v_gap, level + 1)
+        # Draw connector from parent bottom center to child top center
+        parent_bx = cx
+        parent_by = top + height
+        child_tx = child_cx
+        child_ty = child_top
+        connector = slide.Shapes.AddLine(parent_bx, parent_by, child_tx, child_ty)
+        connector.Line.ForeColor.RGB = rgb(100, 100, 100)
+        connector.Line.Weight = 1.5
+
+
+def create_org_chart(
+    slide_number: int,
+    data: dict,
+    left: float = 50,
+    top: float = 80,
+    width: float = 860,
+    height: float = 400,
+) -> dict:
+    """Create an org chart from hierarchy data.
+
+    Args:
+        slide_number: 1-based slide index.
+        data: Hierarchy dict: {"name": "CEO", "title": "Chief Executive",
+              "children": [{"name": "VP Sales", ...}, ...]}.
+        left: Left boundary in points.
+        top: Top boundary in points.
+        width: Total width in points.
+        height: Total height in points.
+
+    Returns:
+        Dict with slide_number.
+    """
+    app = _get_app()
+    prs = app.ActivePresentation
+    slide = prs.Slides(slide_number)
+
+    # Calculate depth for sizing
+    def _depth(node):
+        children = node.get("children", [])
+        if not children:
+            return 1
+        return 1 + max(_depth(c) for c in children)
+
+    depth = _depth(data)
+    box_w = 130
+    box_h = 45
+    v_gap = max(20, (height - depth * box_h) / max(depth, 1))
+    h_gap = 20
+    cx = left + width / 2
+    _draw_org_tree(slide, data, cx, top, box_w, box_h, h_gap, v_gap)
+    return {"slide_number": slide_number}
+
+
+def create_pyramid_diagram(
+    slide_number: int,
+    items: list[str],
+    left: float = 200,
+    top: float = 60,
+    width: float = 560,
+    height: float = 420,
+    colors: list[tuple[int, int, int]] | None = None,
+) -> dict:
+    """Create a pyramid/triangle diagram.
+
+    Args:
+        slide_number: 1-based slide index.
+        items: List of strings from top (smallest) to bottom (largest).
+        left: Left position in points.
+        top: Top position in points.
+        width: Total width in points.
+        height: Total height in points.
+        colors: Optional list of (R,G,B) tuples for each layer.
+
+    Returns:
+        Dict with slide_number.
+    """
+    app = _get_app()
+    prs = app.ActivePresentation
+    slide = prs.Slides(slide_number)
+    n = len(items)
+    if not colors:
+        # Generate gradient from dark to light blue
+        colors = []
+        for i in range(n):
+            ratio = i / max(n - 1, 1)
+            r = int(41 + ratio * 100)
+            g = int(65 + ratio * 100)
+            b = int(122 + ratio * 80)
+            colors.append((r, g, b))
+
+    layer_h = height / n
+    for i, item in enumerate(items):
+        # Each layer is a trapezoid approximated by a rectangle
+        # Width grows from top to bottom
+        ratio_top = (i) / n
+        ratio_bottom = (i + 1) / n
+        layer_w = width * (0.2 + 0.8 * (ratio_top + ratio_bottom) / 2)
+        layer_left = left + (width - layer_w) / 2
+        layer_top = top + i * layer_h
+
+        shape = slide.Shapes.AddShape(
+            MSO_SHAPE_ISOSCELES_TRIANGLE if i == 0 and n > 1
+            else MSO_SHAPE_RECTANGLE,
+            layer_left, layer_top, layer_w, layer_h - 2,
+        )
+        color = colors[i] if i < len(colors) else (100, 100, 200)
+        shape.Fill.Solid()
+        shape.Fill.ForeColor.RGB = rgb(*color)
+        shape.Line.Visible = False
+
+        # Add text label next to or on the shape
+        txt = slide.Shapes.AddTextbox(
+            MSO_TEXT_ORIENTATION_HORIZONTAL,
+            layer_left, layer_top, layer_w, layer_h - 2,
+        )
+        txt.TextFrame.TextRange.Text = item
+        txt.TextFrame.TextRange.Font.Size = 11
+        txt.TextFrame.TextRange.Font.Color.RGB = rgb(255, 255, 255)
+        txt.TextFrame.TextRange.Font.Bold = True
+        txt.TextFrame.TextRange.ParagraphFormat.Alignment = PP_ALIGN_CENTER
+        txt.TextFrame.WordWrap = True
+        txt.Fill.Background()
+        txt.Line.Visible = False
+
+    return {"slide_number": slide_number}
+
+
+def create_circular_diagram(
+    slide_number: int,
+    items: list[str],
+    center_text: str | None = None,
+    left: float = 180,
+    top: float = 40,
+    width: float = 600,
+    height: float = 460,
+    colors: list[tuple[int, int, int]] | None = None,
+) -> dict:
+    """Create a circular/radial diagram with items around a center.
+
+    Args:
+        slide_number: 1-based slide index.
+        items: List of item labels arranged in a circle.
+        center_text: Optional text for the center circle.
+        left: Left position in points.
+        top: Top position in points.
+        width: Total width in points.
+        height: Total height in points.
+        colors: Optional list of (R,G,B) tuples.
+
+    Returns:
+        Dict with slide_number.
+    """
+    import math
+
+    app = _get_app()
+    prs = app.ActivePresentation
+    slide = prs.Slides(slide_number)
+    n = len(items)
+
+    if not colors:
+        colors = []
+        for i in range(n):
+            hue = i / max(n, 1)
+            r = int(80 + 120 * abs(math.sin(hue * math.pi * 2)))
+            g = int(80 + 120 * abs(math.sin(hue * math.pi * 2 + 2)))
+            b = int(80 + 120 * abs(math.sin(hue * math.pi * 2 + 4)))
+            colors.append((r, g, b))
+
+    cx = left + width / 2
+    cy = top + height / 2
+    radius = min(width, height) / 2 - 50
+    item_w = 100
+    item_h = 50
+
+    # Center circle
+    center_r = 45
+    center_shape = slide.Shapes.AddShape(
+        MSO_SHAPE_OVAL,
+        cx - center_r, cy - center_r, center_r * 2, center_r * 2,
+    )
+    center_shape.Fill.Solid()
+    center_shape.Fill.ForeColor.RGB = rgb(41, 65, 122)
+    center_shape.Line.Visible = False
+    if center_text and center_shape.HasTextFrame:
+        center_shape.TextFrame.TextRange.Text = center_text
+        center_shape.TextFrame.TextRange.Font.Size = 11
+        center_shape.TextFrame.TextRange.Font.Bold = True
+        center_shape.TextFrame.TextRange.Font.Color.RGB = rgb(255, 255, 255)
+        center_shape.TextFrame.TextRange.ParagraphFormat.Alignment = PP_ALIGN_CENTER
+        center_shape.TextFrame.WordWrap = True
+
+    for i, item in enumerate(items):
+        angle = 2 * math.pi * i / n - math.pi / 2  # Start from top
+        ix = cx + radius * math.cos(angle) - item_w / 2
+        iy = cy + radius * math.sin(angle) - item_h / 2
+
+        color = colors[i] if i < len(colors) else (100, 100, 200)
+        shape = slide.Shapes.AddShape(
+            MSO_SHAPE_ROUNDED_RECTANGLE, ix, iy, item_w, item_h,
+        )
+        shape.Fill.Solid()
+        shape.Fill.ForeColor.RGB = rgb(*color)
+        shape.Line.Visible = False
+        if shape.HasTextFrame:
+            shape.TextFrame.TextRange.Text = item
+            shape.TextFrame.TextRange.Font.Size = 9
+            shape.TextFrame.TextRange.Font.Bold = True
+            shape.TextFrame.TextRange.Font.Color.RGB = rgb(255, 255, 255)
+            shape.TextFrame.TextRange.ParagraphFormat.Alignment = PP_ALIGN_CENTER
+            shape.TextFrame.WordWrap = True
+
+        # Draw connector from center to item
+        line = slide.Shapes.AddLine(cx, cy, ix + item_w / 2, iy + item_h / 2)
+        line.Line.ForeColor.RGB = rgb(150, 150, 150)
+        line.Line.Weight = 1.0
+        # Send line behind the shapes
+        line.ZOrder(MSO_SEND_TO_BACK)
+
+    return {"slide_number": slide_number}
+
+
+def create_matrix_diagram(
+    slide_number: int,
+    quadrants: list[dict],
+    title: str | None = None,
+    x_label: str | None = None,
+    y_label: str | None = None,
+    left: float = 100,
+    top: float = 60,
+    width: float = 760,
+    height: float = 420,
+) -> dict:
+    """Create a 2x2 matrix diagram.
+
+    Args:
+        slide_number: 1-based slide index.
+        quadrants: List of 4 dicts: [{"title": "Q1", "items": ["item1"]}, ...].
+                   Order: top-left, top-right, bottom-left, bottom-right.
+        title: Optional matrix title.
+        x_label: Optional X-axis label.
+        y_label: Optional Y-axis label.
+        left: Left position in points.
+        top: Top position in points.
+        width: Total width in points.
+        height: Total height in points.
+
+    Returns:
+        Dict with slide_number.
+    """
+    app = _get_app()
+    prs = app.ActivePresentation
+    slide = prs.Slides(slide_number)
+
+    colors = [
+        (52, 109, 179),   # top-left blue
+        (76, 153, 96),    # top-right green
+        (204, 153, 0),    # bottom-left yellow
+        (192, 80, 77),    # bottom-right red
+    ]
+
+    # Title
+    title_h = 30 if title else 0
+    if title:
+        txt = slide.Shapes.AddTextbox(
+            MSO_TEXT_ORIENTATION_HORIZONTAL,
+            left, top, width, title_h,
+        )
+        txt.TextFrame.TextRange.Text = title
+        txt.TextFrame.TextRange.Font.Size = 16
+        txt.TextFrame.TextRange.Font.Bold = True
+        txt.TextFrame.TextRange.ParagraphFormat.Alignment = PP_ALIGN_CENTER
+        txt.Fill.Background()
+        txt.Line.Visible = False
+
+    # Axis labels offset
+    label_margin = 25 if y_label else 0
+    matrix_left = left + label_margin
+    matrix_top = top + title_h + 5
+    matrix_w = width - label_margin
+    matrix_h = height - title_h - (25 if x_label else 0)
+    cell_w = matrix_w / 2 - 3
+    cell_h = matrix_h / 2 - 3
+
+    positions = [
+        (matrix_left, matrix_top),                      # top-left
+        (matrix_left + cell_w + 6, matrix_top),         # top-right
+        (matrix_left, matrix_top + cell_h + 6),         # bottom-left
+        (matrix_left + cell_w + 6, matrix_top + cell_h + 6),  # bottom-right
+    ]
+
+    for i, (px, py) in enumerate(positions):
+        if i >= len(quadrants):
+            break
+        q = quadrants[i]
+        color = colors[i]
+        shape = slide.Shapes.AddShape(
+            MSO_SHAPE_ROUNDED_RECTANGLE, px, py, cell_w, cell_h,
+        )
+        shape.Fill.Solid()
+        shape.Fill.ForeColor.RGB = rgb(*color)
+        shape.Fill.Transparency = 0.15
+        shape.Line.Visible = False
+
+        # Quadrant title and items
+        content = q.get("title", "")
+        items = q.get("items", [])
+        if items:
+            content += "\n" + "\n".join("• " + it for it in items)
+        if shape.HasTextFrame:
+            tf = shape.TextFrame
+            tf.WordWrap = True
+            tf.MarginLeft = 8
+            tf.MarginTop = 8
+            tr = tf.TextRange
+            tr.Text = content
+            tr.Font.Size = 9
+            tr.Font.Color.RGB = rgb(255, 255, 255)
+            # Bold the title line
+            if tr.Paragraphs().Count > 0:
+                tr.Paragraphs(1).Font.Bold = True
+                tr.Paragraphs(1).Font.Size = 12
+
+    # Y-axis label
+    if y_label:
+        yl = slide.Shapes.AddTextbox(
+            MSO_TEXT_ORIENTATION_HORIZONTAL,
+            left, matrix_top, label_margin, matrix_h,
+        )
+        yl.TextFrame.TextRange.Text = y_label
+        yl.TextFrame.TextRange.Font.Size = 10
+        yl.TextFrame.TextRange.Font.Bold = True
+        yl.TextFrame.Orientation = 4  # msoTextOrientationUpward
+        yl.TextFrame.TextRange.ParagraphFormat.Alignment = PP_ALIGN_CENTER
+        yl.Fill.Background()
+        yl.Line.Visible = False
+
+    # X-axis label
+    if x_label:
+        xl = slide.Shapes.AddTextbox(
+            MSO_TEXT_ORIENTATION_HORIZONTAL,
+            matrix_left, matrix_top + matrix_h + 5, matrix_w, 20,
+        )
+        xl.TextFrame.TextRange.Text = x_label
+        xl.TextFrame.TextRange.Font.Size = 10
+        xl.TextFrame.TextRange.Font.Bold = True
+        xl.TextFrame.TextRange.ParagraphFormat.Alignment = PP_ALIGN_CENTER
+        xl.Fill.Background()
+        xl.Line.Visible = False
+
+    return {"slide_number": slide_number}
+
+
+# ============================================================
+# Presentation-wide Operations
+# ============================================================
+
+def set_all_slides_background(
+    color: tuple[int, int, int] | None = None,
+    image_path: str | None = None,
+) -> dict:
+    """Set background for all slides.
+
+    Args:
+        color: Solid background color as (R, G, B).
+        image_path: Path to background image.
+
+    Returns:
+        Dict with slide_count.
+    """
+    app = _get_app()
+    prs = app.ActivePresentation
+    count = prs.Slides.Count
+    for i in range(1, count + 1):
+        slide = prs.Slides(i)
+        slide.FollowMasterBackground = False
+        if image_path:
+            abs_path = ensure_absolute_path(image_path)
+            slide.Background.Fill.UserPicture(abs_path)
+        elif color:
+            slide.Background.Fill.Solid()
+            slide.Background.Fill.ForeColor.RGB = rgb(*color)
+    return {"slide_count": count}
+
+
+def apply_font_to_all(font_name: str, target: str = "all") -> dict:
+    """Apply font to all text in the presentation.
+
+    Args:
+        font_name: Font family name to apply.
+        target: "all" for all text, "titles" for title shapes only,
+                "body" for body shapes only.
+
+    Returns:
+        Dict with slide_count and shapes_modified count.
+    """
+    app = _get_app()
+    prs = app.ActivePresentation
+    modified = 0
+    for s in range(1, prs.Slides.Count + 1):
+        slide = prs.Slides(s)
+        for sh in range(1, slide.Shapes.Count + 1):
+            shape = slide.Shapes(sh)
+            if not shape.HasTextFrame:
+                continue
+            is_title = False
+            try:
+                if slide.Shapes.HasTitle and shape.Name == slide.Shapes.Title.Name:
+                    is_title = True
+            except Exception:
+                pass
+
+            if target == "titles" and not is_title:
+                continue
+            if target == "body" and is_title:
+                continue
+
+            shape.TextFrame.TextRange.Font.Name = font_name
+            modified += 1
+    return {"slide_count": prs.Slides.Count, "shapes_modified": modified}
+
+
+def get_presentation_summary() -> dict:
+    """Return presentation summary: slide count, total shapes, total text chars, fonts used.
+
+    Returns:
+        Dict with slide_count, total_shapes, total_text_chars, and fonts_used.
+    """
+    app = _get_app()
+    prs = app.ActivePresentation
+    total_shapes = 0
+    total_chars = 0
+    fonts_used = set()
+    for s in range(1, prs.Slides.Count + 1):
+        slide = prs.Slides(s)
+        total_shapes += slide.Shapes.Count
+        for sh in range(1, slide.Shapes.Count + 1):
+            shape = slide.Shapes(sh)
+            if shape.HasTextFrame:
+                text = shape.TextFrame.TextRange.Text
+                total_chars += len(text)
+                try:
+                    for p in range(1, shape.TextFrame.TextRange.Paragraphs().Count + 1):
+                        para = shape.TextFrame.TextRange.Paragraphs(p)
+                        fname = para.Font.Name
+                        if fname:
+                            fonts_used.add(fname)
+                except Exception:
+                    pass
+    return {
+        "slide_count": prs.Slides.Count,
+        "total_shapes": total_shapes,
+        "total_text_chars": total_chars,
+        "fonts_used": sorted(fonts_used),
+    }
