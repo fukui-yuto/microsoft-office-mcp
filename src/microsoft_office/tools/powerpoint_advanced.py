@@ -53,11 +53,13 @@ def powerpoint_create_title_slide_design(
     title: str,
     subtitle: str | None = None,
     style: str = "modern_gradient",
+    color_scheme: str | None = None,
 ) -> str:
-    """プロフェッショナルなタイトルスライドをデザインします。style: modern_gradient, minimal_white, bold_split, dark_premium, geometric"""
+    """プロフェッショナルなタイトルスライドをデザインします。style: modern_gradient, minimal_white, bold_split, dark_premium, geometric。color_scheme: corporate_blue, modern_dark, nature_green, sunset_warm, ocean_breeze, monochrome, royal_purple, tech_neon, pastel_soft, bold_contrast"""
     try:
         result = ppt_adv.create_title_slide_design(
             slide_number, title, subtitle=subtitle, style=style,
+            color_scheme=color_scheme,
         )
         return f"スライド {result['slide_number']} にタイトルデザイン '{result['style']}' を適用しました"
     except Exception as e:
@@ -105,12 +107,14 @@ def powerpoint_create_closing_slide(
     subtitle: str | None = None,
     contact_info: str | None = None,
     style: str = "elegant",
+    color_scheme: str | None = None,
 ) -> str:
-    """クロージング（Thank You）スライドを作成します。style: elegant, minimal, bold"""
+    """クロージング（Thank You）スライドを作成します。style: elegant, minimal, bold。color_scheme: corporate_blue等のカラースキーム名"""
     try:
         result = ppt_adv.create_closing_slide(
             slide_number, title=title, subtitle=subtitle,
             contact_info=contact_info, style=style,
+            color_scheme=color_scheme,
         )
         return f"スライド {result['slide_number']} にクロージングデザイン '{result['style']}' を適用しました"
     except Exception as e:
@@ -316,13 +320,15 @@ def powerpoint_create_two_column_slide(
     left_content: str,
     right_content: str,
     style: str = "balanced",
+    color_scheme: str | None = None,
 ) -> str:
-    """2カラムレイアウトスライドを作成します。content: JSON文字列 {"heading": "...", "items": ["..."]}。style: balanced, emphasis_left, emphasis_right"""
+    """2カラムレイアウトスライドを作成します。content: JSON文字列 {"heading": "...", "items": ["..."]}。style: balanced, emphasis_left, emphasis_right。color_scheme: corporate_blue等のカラースキーム名"""
     try:
         left = json.loads(left_content) if isinstance(left_content, str) else left_content
         right = json.loads(right_content) if isinstance(right_content, str) else right_content
         result = ppt_adv.create_two_column_slide(
             slide_number, title, left, right, style=style,
+            color_scheme=color_scheme,
         )
         return f"スライド {result['slide_number']} に2カラムレイアウト（{result['style']}）を作成しました"
     except Exception as e:
@@ -355,12 +361,14 @@ def powerpoint_create_three_column_slide(
     title: str,
     columns: str,
     style: str = "cards",
+    color_scheme: str | None = None,
 ) -> str:
-    """3カラムレイアウトスライドを作成します。columns: JSON文字列 [{"heading": "...", "items": ["..."]}] (3つ)。style: cards, clean, icons"""
+    """3カラムレイアウトスライドを作成します。columns: JSON文字列 [{"heading": "...", "items": ["..."]}] (3つ)。style: cards, clean, icons。color_scheme: corporate_blue等のカラースキーム名"""
     try:
         cols = json.loads(columns) if isinstance(columns, str) else columns
         result = ppt_adv.create_three_column_slide(
             slide_number, title, cols, style=style,
+            color_scheme=color_scheme,
         )
         return f"スライド {result['slide_number']} に3カラムレイアウト（{result['style']}）を作成しました"
     except Exception as e:
@@ -372,12 +380,14 @@ def powerpoint_create_stat_highlight(
     slide_number: int,
     stats: str,
     style: str = "big_numbers",
+    color_scheme: str | None = None,
 ) -> str:
-    """統計ハイライトスライドを作成します。stats: JSON文字列 [{"value": "95%", "label": "Customer Satisfaction", "color": [0,150,255]}]。style: big_numbers, circles, bars"""
+    """統計ハイライトスライドを作成します。stats: JSON文字列 [{"value": "95%", "label": "Customer Satisfaction", "color": [0,150,255]}]。style: big_numbers, circles, bars。color_scheme: corporate_blue等のカラースキーム名"""
     try:
         stats_list = json.loads(stats) if isinstance(stats, str) else stats
         result = ppt_adv.create_stat_highlight(
             slide_number, stats_list, style=style,
+            color_scheme=color_scheme,
         )
         return f"スライド {result['slide_number']} に統計ハイライト（{result['style']}）を作成しました"
     except Exception as e:
@@ -482,12 +492,14 @@ def powerpoint_create_icon_list_slide(
     title: str,
     items: str,
     style: str = "horizontal",
+    color_scheme: str | None = None,
 ) -> str:
-    """アイコン付きリストスライドを作成します。items: JSON文字列 [{"icon_text": "01", "title": "Step One", "description": "Details..."}]。style: horizontal, vertical, grid"""
+    """アイコン付きリストスライドを作成します。items: JSON文字列 [{"icon_text": "01", "title": "Step One", "description": "Details..."}]。style: horizontal, vertical, grid。color_scheme: corporate_blue等のカラースキーム名"""
     try:
         items_list = json.loads(items) if isinstance(items, str) else items
         result = ppt_adv.create_icon_list_slide(
             slide_number, title, items_list, style=style,
+            color_scheme=color_scheme,
         )
         return f"スライド {result['slide_number']} にアイコンリスト（{result['style']}）を作成しました"
     except Exception as e:
