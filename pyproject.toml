@@ -1,0 +1,20 @@
+[project]
+name = "microsoft-office"
+version = "0.1.0"
+description = "MCP server for controlling Microsoft Office (PowerPoint, Word, Excel) via COM automation"
+readme = "README.md"
+authors = [
+    { name = "Yuto", email = "yuto0828.pc@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "mcp[cli]>=1.27.0",
+    "pywin32>=311",
+]
+
+[project.scripts]
+microsoft-office = "microsoft_office.server:main"
+
+[build-system]
+requires = ["uv_build>=0.11.7,<0.12.0"]
+build-backend = "uv_build"

@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "microsoft-office": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--directory",
+        "C:\\Users\\yuto\\Desktop\\GitHub\\microsoft-office",
+        "microsoft-office"
+      ]
+    }
+  }
+}
